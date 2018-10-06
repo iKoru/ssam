@@ -1,0 +1,1 @@
+sudo -H -u postgres bash -c '/etc/init.d/postgresql restart &'
