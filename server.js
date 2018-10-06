@@ -10,6 +10,9 @@ var async = require('async');
 var socketio = require('socket.io');
 var express = require('express');
 
+var {Pool, types} = require('pg');
+var config = require('./config');
+var moment = require('moment');
 //
 // ## SimpleServer `SimpleServer(obj)`
 //
@@ -78,6 +81,17 @@ function broadcast(event, data) {
   });
 }
 
+const pool = new Pool(config);
+pool.query('show timezone', (err, res)=>{
+  console.log("postgres db connection test");
+  console.log(err, res);
+})
+pool.query('select current_timestamp now', (err, res)=>{
+  console.log("postgres db connection test");
+  console.log(err, res);
+  console.log(res.rows[0].now);
+  pool.end();
+})
 server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
   var addr = server.address();
   console.log("Chat server listening at", addr.address + ":" + addr.port);
