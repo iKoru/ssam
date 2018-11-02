@@ -10,6 +10,7 @@ var async = require('async');
 var socketio = require('socket.io');
 var express = require('express');
 
+var jwt = require('jsonwebtoken');
 var {Pool, types} = require('pg');
 var config = require('./config');
 var moment = require('moment');
@@ -24,9 +25,28 @@ var server = http.createServer(router);
 var io = socketio.listen(server);
 
 router.use(express.static(path.resolve(__dirname, 'client')));
+router.use(require('body-parser').json());
 var messages = [];
 var sockets = [];
+router.post('/signin', function(req, res){
+  let userId = req.body.userId;
+  let password = req.body.password;
+  if(userId === 'test' || password === 'xptmxm1!'){
+    res.json(jwt.sign({userId:userId}, config.jwtKey, config.jwtOptions));
+  }else{
+    res.status(400).json({message:'잘못된 접근입니다.'});
+  }
+});
 
+router.get('/user', function(req, res){
+  let token = req.headers['x-auth'];
+  let user = jwt.verify(token, config.jwtKey, config.jwtOptions);
+  if(user){
+    res.json({status: "NORMAL", ...user});
+  }else{
+    res.status(400);
+  }
+});
 io.on('connection', function (socket) {
     messages.forEach(function (data) {
       socket.emit('message', data);
@@ -81,12 +101,22 @@ function broadcast(event, data) {
   });
 }
 
-const pool = new Pool(config);
+var TIMESTAMPTZ_OID = 1184
+var TIMESTAMP_OID = 1114
+
+//types.setTypeParser(TIMESTAMPTZ_OID, val => val === null? null : moment(val.substring(0, val.length-3)));
+//types.setTypeParser(TIMESTAMP_OID, val => val === null? null : moment(val.substring(0, val.length-3)));
+//types.setTypeParser(TIMESTAMPTZ_OID, val => val === null? null : new Date(val.substring(0, val.length-3)));
+//types.setTypeParser(TIMESTAMP_OID, val => val === null? null : new Date(val.substring(0, val.length-3)));
+//types.setTypeParser(TIMESTAMP_OID, val => val);
+//types.setTypeParser(TIMESTAMPTZ_OID, val => val);
+
+const pool = new Pool(config.dbOptions);
 pool.query('show timezone', (err, res)=>{
   console.log("postgres db connection test");
   console.log(err, res);
 })
-pool.query('select current_timestamp now', (err, res)=>{
+pool.query('select localtimestamp', (err, res)=>{
   console.log("postgres db connection test");
   console.log(err, res);
   console.log(res.rows[0].now);
