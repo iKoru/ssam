@@ -3,96 +3,60 @@
 //
 // A simple chat server using Socket.IO, Express, and Async.
 //
-var http = require('http');
-var path = require('path');
+const http = require('http');
+const path = require('path');
 
-var async = require('async');
-var socketio = require('socket.io');
-var express = require('express');
+const async = require('async');
+const express = require('express');
 
-var {Pool, types} = require('pg');
-var config = require('./config');
-var moment = require('moment');
+const {Pool, types} = require('pg');
+const config = require('./config');
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+const logger = require('morgan');
+const compression = require('compression');
+
+const app = express();
+const router = require('./server/router');
+
+
 //
 // ## SimpleServer `SimpleServer(obj)`
 //
 // Creates a new instance of SimpleServer with the following options:
 //  * `port` - The HTTP port to listen on. If `process.env.PORT` is set, _it overrides this value_.
 //
-var router = express();
-var server = http.createServer(router);
-var io = socketio.listen(server);
+app.use(logger(process.env.NODE_ENV));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(cookieParser());
+app.use(compression());
+app.use(express.static(path.resolve(__dirname, 'client')));
 
-router.use(express.static(path.resolve(__dirname, 'client')));
-var messages = [];
-var sockets = [];
+router(app);//take over to router
 
-io.on('connection', function (socket) {
-    messages.forEach(function (data) {
-      socket.emit('message', data);
-    });
+var TIMESTAMPTZ_OID = 1184
+var TIMESTAMP_OID = 1114
 
-    sockets.push(socket);
+//types.setTypeParser(TIMESTAMPTZ_OID, val => val === null? null : moment(val.substring(0, val.length-3)));
+//types.setTypeParser(TIMESTAMP_OID, val => val === null? null : moment(val.substring(0, val.length-3)));
+//types.setTypeParser(TIMESTAMPTZ_OID, val => val === null? null : new Date(val.substring(0, val.length-3)));
+//types.setTypeParser(TIMESTAMP_OID, val => val === null? null : new Date(val.substring(0, val.length-3)));
+//types.setTypeParser(TIMESTAMP_OID, val => val);
+//types.setTypeParser(TIMESTAMPTZ_OID, val => val);
 
-    socket.on('disconnect', function () {
-      sockets.splice(sockets.indexOf(socket), 1);
-      updateRoster();
-    });
-
-    socket.on('message', function (msg) {
-      var text = String(msg || '');
-
-      if (!text)
-        return;
-
-      socket.get('name', function (err, name) {
-        var data = {
-          name: name,
-          text: text
-        };
-
-        broadcast('message', data);
-        messages.push(data);
-      });
-    });
-
-    socket.on('identify', function (name) {
-      socket.set('name', String(name || 'Anonymous'), function (err) {
-        updateRoster();
-      });
-    });
-  });
-
-function updateRoster() {
-  async.map(
-    sockets,
-    function (socket, callback) {
-      socket.get('name', callback);
-    },
-    function (err, names) {
-      broadcast('roster', names);
-    }
-  );
-}
-
-function broadcast(event, data) {
-  sockets.forEach(function (socket) {
-    socket.emit(event, data);
-  });
-}
-
-const pool = new Pool(config);
+const pool = new Pool(config.dbOptions);
 pool.query('show timezone', (err, res)=>{
   console.log("postgres db connection test");
   console.log(err, res);
 })
-pool.query('select current_timestamp now', (err, res)=>{
+pool.query('select localtimestamp', (err, res)=>{
   console.log("postgres db connection test");
   console.log(err, res);
   console.log(res.rows[0].now);
   pool.end();
 })
-server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
-  var addr = server.address();
+app.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
+  var addr = app.address();
   console.log("Chat server listening at", addr.address + ":" + addr.port);
 });
