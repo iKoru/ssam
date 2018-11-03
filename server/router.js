@@ -1,6 +1,6 @@
+const indexRouter = require('./routes/signRouter');
 
-export default function (router){
-    router.use('/signin', function(req, res){
-        
-    });
+module.exports = function(router) {
+    router.use('/', indexRouter(router));
+
 }

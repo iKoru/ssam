@@ -3,3 +3,4 @@ config.js
 db.sh
 SSAM.sql
 node_modules/*
+yarn-error.log
