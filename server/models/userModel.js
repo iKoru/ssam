@@ -35,3 +35,7 @@ exports.resetPassword = async(userId, email) => {
 exports.getUsers = async(userId, nickName, email, groupId, status, sortTarget = "userId", sortType = "desc", page = 1) => {
 
 }
+
+exports.getProfile = async(nickName) => {
+
+}
