@@ -1,6 +1,7 @@
-const indexRouter = require('./routes/signRouter');
+const signRouter = require('./routes/signRouter'),
+    mainRouter = require('./routes/mainRouter');
 
-module.exports = function(router) {
-    router.use('/', indexRouter(router));
-
+module.exports = function (router) {
+    router.use('/', mainRouter);
+    router.use('/', signRouter);
 }
