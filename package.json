@@ -12,6 +12,7 @@
     "cookie-parser": "^1.4.3",
     "express": "^4.16.4",
     "jsonwebtoken": "^8.3.0",
+    "jwt-decode": "^2.2.0",
     "moment": "^2.22.2",
     "morgan": "^1.9.1",
     "pg": "^7.5.0",
