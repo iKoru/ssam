@@ -11,7 +11,11 @@ module.exports = (redirectPath) => {
                     resolve(result);
                 });
             }).then((result) => {
-                res.redirect(redirectPath);
+                if (redirectPath) {
+                    res.redirect(307, redirectPath);
+                } else {
+                    res.status(400).end();
+                }
             }).catch((e) => {
                 next();
             })
