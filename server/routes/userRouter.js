@@ -2,6 +2,10 @@ const router = require('express').Router();
 const adminOnly = require('../middlewares/adminOnly'),
   requiredSignin = require('../middlewares/requiredSignin');
 //based on /user
+router.put('/', adminOnly, (req, res) => {
+  res.status(200).end();
+});
+
 router.put('/', requiredSignin, (req, res) => {
   res.status(200).end();
 });

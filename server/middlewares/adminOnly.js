@@ -13,7 +13,7 @@ const auth = (req, res, next) => {
 
   const p = new Promise((resolve, reject) => {
     jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
-      if (err) reject(err)
+      if (err) reject(err);
       resolve(result);
     });
   })
@@ -23,7 +23,7 @@ const auth = (req, res, next) => {
       message: `잘못된 접근입니다.[${error.message}]`
     })
   }
-  p.then((result) => {
+  p.then(async (result) => {
     req.userObject = await userModel.getUser(result.userId);
     if(req.userObject && req.userObject.isAdmin){
       next();
