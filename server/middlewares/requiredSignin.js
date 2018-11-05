@@ -7,7 +7,6 @@ const auth = (req, res, next) => {
     console.log("token : ", token);
     if (!token) {
         if (req.method === 'GET' || req.method === 'DELETE') {
-            console.log(req.originalUrl);
             return res.redirect(307, `/signin${util.objectToQuerystring({ method: req.method, path: req.path, ...req.query })}`);
         } else {
             return res.redirect(307, '/signin');
