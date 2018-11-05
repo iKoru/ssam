@@ -5,14 +5,7 @@ const router = require('express').Router();
 const requiredSignin = require('../middlewares/requiredSignin'),
   visitorOnly = require('../middlewares/visitorOnly');
 
-router.get('/user', requiredSignin, (req, res) => {
-  if (req.userObject) {
-    res.json({ status: "NORMAL", ...req.userObject });
-  } else {
-    res.status(400).end();
-  }
-});
-
+//based on /
 router.get('/signin', visitorOnly('/'), (req, res) => {
   res.end();
 });
@@ -31,8 +24,12 @@ router.get('/signup', visitorOnly('/'), (req, res) => {//회원가입 페이지 
 
 });
 
-router.post('/user', (req, res) => {//회원가입
+router.get('/resetPassword', visitorOnly('/'), (req, res) => {
+  
+});
 
+router.post('/resetPassword', visitorOnly('/'), (req, res)=> {
+  
 });
 
 router.post('/refresh', (req, res) => {
@@ -56,5 +53,4 @@ router.post('/refresh', (req, res) => {
     }
   });
 });
-
 module.exports = router;
