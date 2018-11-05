@@ -1,5 +1,5 @@
 const { Pool } = require('pg'),
-    config = require('../../config'), { partialUUID } = require('../../util'),
+    config = require('../../config'), { partialUUID } = require('../util'),
     pool = new Pool(config.dbOptions),
     logger = require('../logger');
 
