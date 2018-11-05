@@ -16,3 +16,7 @@ exports.objectToQuerystring = (obj) => {
     }
   }, '')
 };
+
+exports.isNumeric = (n) => {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
