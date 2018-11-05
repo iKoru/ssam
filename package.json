@@ -1,21 +1,32 @@
 {
-  "name": "SSAM",
-  "version": "0.1.0",
-  "description": "SSAM community - community for all teachers",
-  "main": "server.js",
-  "repository": "",
-  "author": "iKoru <glassonyou@gmail.com>",
-  "dependencies": {
-    "@vue/cli": "^3.0.4",
-    "compression": "^1.7.3",
-    "cookie-parser": "^1.4.3",
-    "express": "^4.16.4",
-    "fs": "^0.0.1-security",
-    "jsonwebtoken": "^8.3.0",
-    "jwt-decode": "^2.2.0",
-    "moment": "^2.22.2",
-    "morgan": "^1.9.1",
-    "pg": "^7.5.0",
-    "winston": "^3.1.0"
-  }
+    "name": "SSAM",
+    "version": "0.1.0",
+    "description": "SSAM community - community for all teachers",
+    "main": "server.js",
+    "repository": "",
+    "author": "iKoru <glassonyou@gmail.com>",
+    "scripts": {
+        "test": "jest"
+    },
+    "dependencies": {
+        "@vue/cli": "^3.0.4",
+        "compression": "^1.7.3",
+        "cookie-parser": "^1.4.3",
+        "express": "^4.16.4",
+        "fs": "^0.0.1-security",
+        "jsonwebtoken": "^8.3.0",
+        "jwt-decode": "^2.2.0",
+        "moment": "^2.22.2",
+        "morgan": "^1.9.1",
+        "pg": "^7.5.0",
+        "winston": "^3.1.0",
+        "winston-daily-rotate-file": "^3.4.1"
+    },
+    "devDependencies": {
+        "jest-cli": "^23.6.0"
+    },
+    "jest": {
+        "testEnvironment": "node",
+        "testRegex": "(^/test/.*|\\.(test))\\.(js)$"
+    }
 }
