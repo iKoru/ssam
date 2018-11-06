@@ -28,3 +28,8 @@ exports.partialUUID = () => {
 exports.UUID = () => {
     return partialUUID() + partialUUID() + '-' + partialUUID() + '-' + partialUUID() + '-' + partialUUID() + '-' + partialUUID() + partialUUID() + partialUUID();
 }
+
+exports.getTodayYYYYMMDD = () => {
+    const today = new Date();
+    return `${today.getFullYear()}${(today.getMonth()<9?'0'+today.getMonth():today.getMonth())}${today.getDate()<10?'0'+today.getDate():today.getDate()}`;
+}
