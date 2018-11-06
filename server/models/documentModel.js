@@ -1,4 +1,4 @@
-const pool = require('./db');
+const pool = require('./db').instance;
 
 exports.getDocuments = async(boardId, searchQuery, documentId, page = 1, searchTarget = "title", sortTarget = "writeDateTime", sortType = "desc") => {
     //documentId: document list -> around it

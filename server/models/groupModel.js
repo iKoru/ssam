@@ -1,4 +1,4 @@
-const pool = require('./db');
+const pool = require('./db').instance;
 
 exports.getGroups = async(page = 1, isAdmin = false) => {
 

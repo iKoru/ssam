@@ -1,4 +1,4 @@
-const pool = require('./db');
+const pool = require('./db').instance;
 
 exports.createSigninLog = async(userId, ip, isSuccess) => {
     await pool.executeQuery('INSERT INTO SS_HST_USER_SIGNIN(USER_ID, SIGNIN_TIMESTAMP, IP, IS_SUCCESS) VALUES($1, current_timestamp, $2, $3)', [userId, ip, isSuccess]);

@@ -1,4 +1,4 @@
-const pool = require('./db');
+const pool = require('./db').instance;
 
 exports.getChats = async(userId, page = 1) => {
 

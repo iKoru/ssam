@@ -1,4 +1,4 @@
-const pool = require('./db');
+const pool = require('./db').instance;
 
 exports.checkUserId = async(userId) => {
     return await pool.executeQuery('SELECT COUNT(*) count FROM SS_MST_USER WHERE USER_ID = $1 LIMIT 1', [userId]);
@@ -13,7 +13,10 @@ exports.checkEmail = async(email) => {
 }
 
 exports.createUser = async(user) => {
-
+    return await pool.executeQuery(`INSERT INTO SS_MST_USER
+    (USER_ID, LOUNGE_NICKNAME, TOPIC_NICKNAME, EMAIL, PASSWORD, IS_ADMIN, 
+    
+    `)
 }
 
 exports.updateUser = async(user) => {

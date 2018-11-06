@@ -1,4 +1,4 @@
-const pool = require('./db');
+const pool = require('./db').instance;
 
 exports.getDocumentReports = async(documentId, nickName, status, page = 1) => {
     //if documentId is null, select all document's reports. admin access only in this case.

@@ -1,4 +1,4 @@
-const pool = require('./db');
+const pool = require('./db').instance;
 
 exports.getScraps = async(userId, scrapGroupId, page = 1) => {
 
