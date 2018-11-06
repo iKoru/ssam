@@ -3,7 +3,7 @@ let singleton = {};
 
 if(Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1){
     const pg = require('pg'),
-        config = require('../../config'), { partialUUID } = require('../util'),
+        config = require('../../config'),
         logger = require('../logger'),
         pool = new pg.Pool(config.dbOptions);
         
@@ -18,27 +18,27 @@ if(Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1){
         logger.error('UNEXPECTED ERROR ON IDLE CLIENT', err);
     });
     
-    pool.executeQuery = async(input, callback) => {
+    pool.executeQuery = async(name, input, callback) => {
         try {
             const client = await pool.connect();
             let res = null;
             try {
-                res = await pool.query({ name: partialUUID(), text: input.text, values: input.values }, callback)
+                res = await pool.query({ name: name, text: input.text, values: input.values }, callback);
                 logger.log(`EXECUTING QUERY : ${input.text}, ${input.values}`);
             } finally {
                 client.release();
             }
-            switch(res.command){
-                case 'SELECT':
-                    return res.rows;
-                default:
-                    return res;
+            logger.log("QUERY RESULT : ", res);
+            if(res.command === 'SELECT'){
+                return res.rows;
+            }else{
+                return res.rowCount;
             }
         } catch (e) {
             logger.error('EXECUTING QUERY ERROR : ', e.stack);
             logger.error('TRIED QUERY TO EXECUTE : ', input.text, input.values);
         }
-    }
+    };
     global[pool_key] = pool;
 }
 Object.defineProperty(singleton, "instance", {
