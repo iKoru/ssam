@@ -1,6 +1,7 @@
 const pool = require('./db').instance;
 const builder = require('squel').useFlavour('postgres');
-const util = require('../util');
+const util = require('../util'), logger = require('../logger');
+const groupModel = require('./groupModel');
 
 exports.checkUserId = async(userId) => {
     return await pool.executeQuery('checkUserId',
@@ -22,7 +23,6 @@ exports.checkNickName = async(userId, nickName) => {
             .where('USER_ID <> ?', userId)
             .limit(1)
             .toParam()
-        //'SELECT COUNT(*) count FROM SS_MST_USER WHERE (LOUNGE_NICKNAME = $1 OR TOPIC_NICKNAME = $1) AND USER_ID <> $2 LIMIT 1', [nickName, userId]
     );
 }
 
@@ -34,13 +34,12 @@ exports.checkEmail = async(email) => {
             .where('EMAIL = ?', email)
             .limit(1)
             .toParam()
-        //'SELECT COUNT(*) count FROM SS_MST_USER WHERE EMAIL = $1 LIMIT 1', [email]
     );
 }
 
 exports.createUser = async(user) => {
     const nickName = util.partialUUID() + util.partialUUID();
-    return await pool.executeQuery('createUser',
+    let result = await pool.executeQuery('createUser',
         builder.insert()
             .into('SS_MST_USER')
             .setFields({
@@ -53,21 +52,131 @@ exports.createUser = async(user) => {
                 INVITER:user.inviter
             })
             .toParam()
-    // `INSERT INTO SS_MST_USER
-    // (USER_ID, LOUNGE_NICKNAME, TOPIC_NICKNAME, EMAIL, PASSWORD, IS_ADMIN, 
-    
-    // `)
+    );
+    if(result === 1 && user.inviter){
+        await pool.executeQuery('updateInviter',
+            builder.update()
+                .table('SS_MST_USER')
+                .set('INVITED_COUNT', builder.str('INVITED_COUNT + 1'))
+                .where('INVITE_CODE = ?', user.inviter)
+                .toParam()
+        )
+    }
+    return result;
+}
+
+exports.updateUserInfo = async(user) => {
+    try{
+        let result = await pool.executeQuery('updateUserInfo',
+            builder.update()
+                .table('SS_MST_USER')
+                .set('LOUNGE_NICKNAME', user.loungeNickName || builder.rstr('LOUNGE_NICKNAME'))
+                .set('TOPIC_NICKNAME', user.topicNickName || builder.rstr('TOPIC_NICKNAME'))
+                .set('PICTURE_PATH', user.picturePath || builder.rstr('PICTURE_PATH'))
+                .set('IS_OPEN_INFO', user.isOpenInfo === undefined? builder.rstr('IS_OPEN_INFO') : user.isOpenInfo)
+                .set('INFO_MODIFIED_DATE', (user.loungeNickName || user.topicNickName || user.picturePath || (user.isOpenInfo !== undefined)) ? util.getYYYYMMDD() : builder.rstr('INFO_MODIFIED_DATE'))
+                .where('USER_ID = ?', user.userId)
+                .toParam()
+        );
+        if(result > 0){
+            if(user.grade){
+                await pool.executeQuery('deleteUserGrade',
+                    builder.delete()
+                        .from('SS_MST_USER_GROUP')
+                        .where('USER_ID = ?', user.userId)
+                        .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'G\''))
+                );
+                const grade = await groupModel.getGroup(user.grade)[0];
+                if(grade){
+                    let expireDate;
+                    if(grade.expirePeriod > 0){
+                        expireDate = new Date();
+                        expireDate.setDate(expireDate.getDate() + grade.expirePeriod);
+                    }else{
+                        expireDate = '99991231';
+                    }
+                    await pool.executeQuery('insertUserGrade',
+                        builder.insert()
+                            .into('SS_MST_USER_GROUP')
+                            .set('USER_ID', user.userId)
+                            .set('GROUP_ID', user.grade)
+                            .set('EXPIRE_DATE', expireDate)
+                    );
+                }
+            }
+            if(user.major){
+                await pool.executeQuery('deleteUserMajor',
+                    builder.delete()
+                        .from('SS_MST_USER_GROUP')
+                        .where('USER_ID = ?', user.userId)
+                        .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'M\''))
+                );
+                const major = await groupModel.getGroup(user.major)[0];
+                if(major){
+                    let expireDate;
+                    if(major.expirePeriod > 0){
+                        expireDate = new Date();
+                        expireDate.setDate(expireDate.getDate() + major.expirePeriod);
+                    }else{
+                        expireDate = '99991231';
+                    }
+                    await pool.executeQuery('insertUserMajor',
+                        builder.insert()
+                            .into('SS_MST_USER_GROUP')
+                            .set('USER_ID', user.userId)
+                            .set('GROUP_ID', user.major)
+                            .set('EXPIRE_DATE', expireDate)
+                    );
+                }
+            }
+            if(user.region){
+                await pool.executeQuery('deleteUserRegion',
+                    builder.delete()
+                        .from('SS_MST_USER_GROUP')
+                        .where('USER_ID = ?', user.userId)
+                        .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'R\''))
+                );
+                const region = await groupModel.getGroup(user.region)[0];
+                if(region){
+                    let expireDate;
+                    if(region.expirePeriod > 0){
+                        expireDate = new Date();
+                        expireDate.setDate(expireDate.getDate() + region.expirePeriod);
+                    }else{
+                        expireDate = '99991231';
+                    }
+                    await pool.executeQuery('insertUserMajor',
+                        builder.insert()
+                            .into('SS_MST_USER_GROUP')
+                            .set('USER_ID', user.userId)
+                            .set('GROUP_ID', user.region)
+                            .set('EXPIRE_DATE', expireDate)
+                    );
+                }
+            }
+        }
+    } catch(e){
+        logger.error('update user error!', user, e);
+    }
+}
+
+exports.updateUserPassword = async(user) => {
+    return await pool.executeQuery('updateUserPassword',
+        builder.update()
+            .table('SS_MST_USER')
+            .set('PASSWORD', user.password || builder.rstr('PASSWORD'))
+            .set('PASSWORD_CHANGE_DATE', user.password ? util.getYYYYMMDD() : builder.rstr('PASSWORD_CHANGE_DATE'))
+            .where('USER_ID = ?', user.userId)
+            .toParam()
     );
 }
 
-exports.updateUser = async(user) => {
-    const userId = user.userId;
-    delete user.userId;
-    return await pool.executeQuery('updateUser',
+exports.updateUserAdmin = async(user) => {
+    return await pool.executeQuery('updateUserAdmin',
         builder.update()
             .table('SS_MST_USER')
-            .setFields(user)
-            .where('USER_ID = ?', userId)
+            .set('IS_ADMIN', user.isAdmin === undefined?builder.rstr('IS_ADMIN'):user.isAdmin)
+            .where('USER_ID = ?', user.userId)
             .toParam()
     );
 }
@@ -112,7 +221,7 @@ exports.getUsers = async(userId, nickName, email, groupId, status, sortTarget = 
                     .distinct('USER_ID')
                     .from('SS_MST_USER_GROUP')
                     .where('GROUP_ID = ?', groupId)
-                    .where(`EXPIRE_DATE > '${util.getTodayYYYYMMDD()}'`)
+                    .where(`EXPIRE_DATE > '${util.getYYYYMMDD()}'`)
             ):null)
             .where(status?builder.str('STATUS = ?', status):null)
             .order(sortTarget, isAscending)
