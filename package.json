@@ -9,7 +9,6 @@
         "test": "jest --detectOpenHandles --silent"
     },
     "dependencies": {
-        "@vue/cli": "^3.0.4",
         "compression": "^1.7.3",
         "cookie-parser": "^1.4.3",
         "express": "^4.16.4",
@@ -19,6 +18,7 @@
         "moment": "^2.22.2",
         "morgan": "^1.9.1",
         "pg": "^7.5.0",
+        "squel": "^5.12.2",
         "winston": "^3.1.0",
         "winston-daily-rotate-file": "^3.4.1"
     },
@@ -29,6 +29,8 @@
     "jest": {
         "testEnvironment": "node",
         "testRegex": "^test.*|\\.(test)\\.(js)$",
-        "testPathIgnorePatterns":[".c9/metadata/"]
+        "testPathIgnorePatterns": [
+            ".c9/metadata/"
+        ]
     }
 }

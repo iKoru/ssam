@@ -18,13 +18,13 @@ if(Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1){
         logger.error('UNEXPECTED ERROR ON IDLE CLIENT', err);
     });
     
-    pool.executeQuery = async(query, parameters, callback) => {
+    pool.executeQuery = async(input, callback) => {
         try {
             const client = await pool.connect();
             let res = null;
             try {
-                res = await pool.query({ name: partialUUID(), text: query, values: parameters }, callback)
-                logger.log(`EXECUTING QUERY : ${query}, ${parameters}`);
+                res = await pool.query({ name: partialUUID(), text: input.text, values: input.values }, callback)
+                logger.log(`EXECUTING QUERY : ${input.text}, ${input.values}`);
             } finally {
                 client.release();
             }
@@ -36,7 +36,7 @@ if(Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1){
             }
         } catch (e) {
             logger.error('EXECUTING QUERY ERROR : ', e.stack);
-            logger.error('TRIED QUERY TO EXECUTE : ', query, parameters);
+            logger.error('TRIED QUERY TO EXECUTE : ', input.text, input.values);
         }
     }
     global[pool_key] = pool;
