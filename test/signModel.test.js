@@ -1,7 +1,7 @@
 const signModel = require('../server/models/signModel');
 
-test('create signin log(not registered userId -> error)', async () => {
-    expect(await signModel.createSigninLog('test', '127.0.0.1', false)).toBeUndefined()
+test('create signin log', async () => {
+    expect(await signModel.createSigninLog('orange', '127.0.0.1', false)).toEqual(1)
 });
 
 test('select signin log', async () => {
