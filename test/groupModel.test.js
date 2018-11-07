@@ -1,6 +1,6 @@
 /* global expect */
 const groupModel = require('../server/models/groupModel');
-
+const constants = require('../server/constants');
 test('insert group', async() => {
     expect(await groupModel.createGroup({
         groupName: '테스트 그룹',
@@ -47,9 +47,11 @@ test('get groups and group by group id', async() => {
     expect(groups).toHaveLength(8);
     groups.forEach(async(group) => {
         let dbGroup = (await groupModel.getGroup(group.groupId));
-        expect(dbGroup).toHaveLength(1);
-        dbGroup = dbGroup[0];
-        expect(dbGroup).toEqual(group);
+        if (dbGroup.length > 0) {
+            expect(dbGroup).toHaveLength(1);
+            dbGroup = dbGroup[0];
+            expect(dbGroup).toEqual(group);
+        }
     });
 });
 
@@ -77,9 +79,11 @@ test('delete group', async() => {
 });
 
 test('create user group', async() => {
-
+    expect(await groupModel.createUserGroup('orange2', 1)).toHaveProperty('code', constants.dbErrorCode.FKVIOLATION);
+    expect(await groupModel.createUserGroup('orange', 1)).toEqual(1);
+    expect(await groupModel.getUserGroup('orange')).toHaveLength(1);
 });
 
 test('delete user group', async() => {
-
+    expect(await groupModel.deleteUserGroup('orange', 1)).toEqual(1);
 });

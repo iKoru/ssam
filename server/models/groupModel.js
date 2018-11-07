@@ -26,7 +26,7 @@ exports.getGroup = getGroup;
 
 exports.getGroups = async(isAdmin, groupType = ['N', 'M', 'G', 'R'], page = 1) => {
     return isAdmin ?
-        await pool.executeQuery(null,
+        await pool.executeQuery('getGroupsForAdmin' + groupType.length,
             builder.select()
             .fields({
                 'GROUP_ID': '"groupId"',
@@ -45,7 +45,7 @@ exports.getGroups = async(isAdmin, groupType = ['N', 'M', 'G', 'R'], page = 1) =
             .order('ORDER_NUMBER')
             .toParam()
         ) :
-        await pool.executeQuery(null,
+        await pool.executeQuery('getGroups' + groupType.length,
             builder.select()
             .fields({
                 'GROUP_ID': '"groupId"',
@@ -137,11 +137,30 @@ exports.createUserGroup = async(userId, groupId) => {
 }
 
 exports.deleteUserGroup = async(userId, groupId) => {
-    return await pool.executeQuery('deleteGroup',
+    return await pool.executeQuery('deleteUserGroup',
         builder.delete()
         .from('SS_MST_USER_GROUP')
         .where('USER_ID = ?', userId)
         .where('GROUP_ID = ?', groupId)
+        .toParam()
+    );
+}
+
+exports.getUserGroup = async(userId) => {
+    const today = util.getYYYYMMDD();
+    return await pool.executeQuery('getUserGroup',
+        builder.select()
+        .fields({
+            'MGROUP.GROUP_ID': '"groupId"',
+            'MGROUP.GROUP_NAME': '"groupName"',
+            'MGROUP.GROUP_DESCRIPTION': '"groupDescription"',
+            'MGROUP.GROUP_ICON_PATH': '"groupIconPath"',
+            'MGROUP.GROUP_TYPE': '"groupType"',
+            'MGROUP.PARENT_GROUP_ID': '"parentGroupId"'
+        })
+        .from(builder.select().fields(['USER_ID', 'GROUP_ID']).from('SS_MST_USER_GROUP').where('USER_ID = ?', userId).where('EXPIRE_DATE > ?', today), 'USERGROUP')
+        .join('SS_MST_GROUP', 'MGROUP', 'MGROUP.GROUP_ID = USERGROUP.GROUP_ID')
+        .order('MGROUP.ORDER_NUMBER')
         .toParam()
     );
 }
