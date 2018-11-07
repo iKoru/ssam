@@ -24,9 +24,6 @@ const logger = createLogger({
         myFormat
     ),
     transports: [
-        new winston.transports.Console({
-            timestamp: timestamp
-        }),
         new(require('winston-daily-rotate-file'))({
             filename: `${logDirectory}/ssam.log`,
             timestamp: timestamp,
