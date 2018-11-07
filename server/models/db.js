@@ -1,4 +1,5 @@
-const pool_key = Symbol.for("SSAM.DB.CONNECTION.POOL");
+const pool_key = Symbol.for("SSAM.DB.CONNECTION.POOL"),
+    builder_key = Symbol.for('SSAM.DB.SQL.BUILDER');
 const { UUID } = require('../util');
 let singleton = {};
 
@@ -44,9 +45,17 @@ if (Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1) {
     };
     global[pool_key] = pool;
 }
+if (Object.getOwnPropertySymbols(global).indexOf(builder_key) <= -1) {
+    global[builder_key] = require('squel').useFlavour('postgres');
+}
 Object.defineProperty(singleton, "instance", {
     get: function() {
         return global[pool_key];
+    }
+})
+Object.defineProperty(singleton, "builder", {
+    get: function() {
+        return global[builder_key];
     }
 })
 Object.freeze(singleton);
