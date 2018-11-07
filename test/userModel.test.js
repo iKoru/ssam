@@ -76,3 +76,8 @@ test('get profile', async () => {
    expect(await userModel.getProfile('41f7')).toHaveProperty('nickName', '41f7');
    expect(await userModel.getProfile()).toEqual({});
 });
+
+test('update user info (except group)', async () => {
+   expect(await userModel.updateUserInfo({userId:'orange'})).toBeGreaterThan(0);
+   expect(await userModel.updateUserInfo({userId:'orange2'})).toEqual(0);
+});
