@@ -21,9 +21,11 @@ exports.isNumeric = (n) => {
     return !isNaN(parseFloat(n)) && isFinite(n);
 }
 
-exports.partialUUID = () => {
+const partialUUID = () => {
     return ((1 + Math.random()) * 0x10000 | 0).toString(16).substring(1);
-}
+};
+
+exports.partialUUID = partialUUID;
 
 exports.UUID = () => {
     return partialUUID() + partialUUID() + '-' + partialUUID() + '-' + partialUUID() + '-' + partialUUID() + '-' + partialUUID() + partialUUID() + partialUUID();
