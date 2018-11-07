@@ -70,11 +70,13 @@ exports.updateUserInfo = async(user) => {
         let result = await pool.executeQuery(null,
             builder.update()
                 .table('SS_MST_USER')
-                .set('LOUNGE_NICKNAME', user.loungeNickName || builder.rstr('LOUNGE_NICKNAME'))
-                .set('TOPIC_NICKNAME', user.topicNickName || builder.rstr('TOPIC_NICKNAME'))
-                .set('PICTURE_PATH', user.picturePath || builder.rstr('PICTURE_PATH'))
-                .set('IS_OPEN_INFO', user.isOpenInfo === undefined? builder.rstr('IS_OPEN_INFO') : user.isOpenInfo)
-                .set('INFO_MODIFIED_DATE', (user.loungeNickName || user.topicNickName || user.picturePath || (user.isOpenInfo !== undefined)) ? util.getYYYYMMDD() : builder.rstr('INFO_MODIFIED_DATE'))
+                .setFields({
+                    'LOUNGE_NICKNAME': user.loungeNickName || builder.rstr('LOUNGE_NICKNAME'),
+                    'TOPIC_NICKNAME': user.topicNickName || builder.rstr('TOPIC_NICKNAME'),
+                    'PICTURE_PATH': user.picturePath || builder.rstr('PICTURE_PATH'),
+                    'IS_OPEN_INFO': user.isOpenInfo === undefined? builder.rstr('IS_OPEN_INFO') : user.isOpenInfo,
+                    'INFO_MODIFIED_DATE': (user.loungeNickName || user.topicNickName || user.picturePath || (user.isOpenInfo !== undefined)) ? util.getYYYYMMDD() : builder.rstr('INFO_MODIFIED_DATE')
+                })
                 .where('USER_ID = ?', user.userId)
                 .toParam()
         );
@@ -85,24 +87,9 @@ exports.updateUserInfo = async(user) => {
                         .from('SS_MST_USER_GROUP')
                         .where('USER_ID = ?', user.userId)
                         .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'G\''))
+                        .toParam()
                 );
-                const grade = await groupModel.getGroup(user.grade)[0];
-                if(grade){
-                    let expireDate;
-                    if(grade.expirePeriod > 0){
-                        expireDate = new Date();
-                        expireDate.setDate(expireDate.getDate() + grade.expirePeriod);
-                    }else{
-                        expireDate = '99991231';
-                    }
-                    result += await pool.executeQuery('insertUserGrade',
-                        builder.insert()
-                            .into('SS_MST_USER_GROUP')
-                            .set('USER_ID', user.userId)
-                            .set('GROUP_ID', user.grade)
-                            .set('EXPIRE_DATE', expireDate)
-                    );
-                }
+                result += await groupModel.createUserGroup(user.userId, user.grade);
             }
             if(user.major){
                 await pool.executeQuery('deleteUserMajor',
@@ -110,24 +97,9 @@ exports.updateUserInfo = async(user) => {
                         .from('SS_MST_USER_GROUP')
                         .where('USER_ID = ?', user.userId)
                         .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'M\''))
+                        .toParam()
                 );
-                const major = await groupModel.getGroup(user.major)[0];
-                if(major){
-                    let expireDate;
-                    if(major.expirePeriod > 0){
-                        expireDate = new Date();
-                        expireDate.setDate(expireDate.getDate() + major.expirePeriod);
-                    }else{
-                        expireDate = '99991231';
-                    }
-                    result += await pool.executeQuery('insertUserMajor',
-                        builder.insert()
-                            .into('SS_MST_USER_GROUP')
-                            .set('USER_ID', user.userId)
-                            .set('GROUP_ID', user.major)
-                            .set('EXPIRE_DATE', expireDate)
-                    );
-                }
+                result += await groupModel.createUserGroup(user.userId, user.major);
             }
             if(user.region){
                 await pool.executeQuery('deleteUserRegion',
@@ -135,24 +107,9 @@ exports.updateUserInfo = async(user) => {
                         .from('SS_MST_USER_GROUP')
                         .where('USER_ID = ?', user.userId)
                         .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'R\''))
+                        .toParam()
                 );
-                const region = await groupModel.getGroup(user.region)[0];
-                if(region){
-                    let expireDate;
-                    if(region.expirePeriod > 0){
-                        expireDate = new Date();
-                        expireDate.setDate(expireDate.getDate() + region.expirePeriod);
-                    }else{
-                        expireDate = '99991231';
-                    }
-                    result += await pool.executeQuery('insertUserMajor',
-                        builder.insert()
-                            .into('SS_MST_USER_GROUP')
-                            .set('USER_ID', user.userId)
-                            .set('GROUP_ID', user.region)
-                            .set('EXPIRE_DATE', expireDate)
-                    );
-                }
+                result += await groupModel.createUserGroup(user.userId, user.region);
             }
         }
         return result;
@@ -165,8 +122,10 @@ exports.updateUserPassword = async(user) => {
     return await pool.executeQuery(null,
         builder.update()
             .table('SS_MST_USER')
-            .set('PASSWORD', user.password || builder.rstr('PASSWORD'))
-            .set('PASSWORD_CHANGE_DATE', user.password ? util.getYYYYMMDD() : builder.rstr('PASSWORD_CHANGE_DATE'))
+            .setFields({
+                'PASSWORD': user.password || builder.rstr('PASSWORD'),
+                'PASSWORD_CHANGE_DATE': user.password ? util.getYYYYMMDD() : builder.rstr('PASSWORD_CHANGE_DATE')
+            })
             .where('USER_ID = ?', user.userId)
             .toParam()
     );
