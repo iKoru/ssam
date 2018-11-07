@@ -6,7 +6,7 @@
     "repository": "",
     "author": "iKoru <glassonyou@gmail.com>",
     "scripts": {
-        "test": "jest --detectOpenHandles --silent"
+        "test": "jest --detectOpenHandles --runInBand --silent"
     },
     "dependencies": {
         "bcrypt": "^3.0.2",
