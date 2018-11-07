@@ -29,7 +29,7 @@ if(Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1){
             } finally {
                 client.release();
             }
-            logger.log("QUERY RESULT : ", res);
+            logger.log("QUERY RESULT : ", JSON.stringify(res));
             if(res.command === 'SELECT'){
                 return res.rows;
             }else{
