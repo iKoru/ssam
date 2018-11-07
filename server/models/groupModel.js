@@ -1,5 +1,5 @@
-const pool = require('./db').instance;
-const builder = require('squel').useFlavour('postgres');
+const pool = require('./db').instance,
+    builder = require('./db').builder;
 const util = require('../util');
 
 const getGroup = async(groupId) => {
