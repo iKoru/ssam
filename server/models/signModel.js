@@ -3,7 +3,7 @@ const builder = require('squel').useFlavour('postgres');
 const util = require('../util');
 
 exports.createSigninLog = async(userId, ip, isSuccess) => {
-    const result = await pool.executeQuery('createSigninLog',
+    let result = await pool.executeQuery('createSigninLog',
         builder.insert()
             .into('SS_HST_USER_SIGNIN')
             .set('USER_ID', userId)
@@ -18,6 +18,7 @@ exports.createSigninLog = async(userId, ip, isSuccess) => {
                 .table('SS_MST_USER')
                 .set('LAST_SIGNIN_DATE', util.getYYYYMMDD())
                 .where('USER_ID = ?', userId)
+                .toParam()
         );
     }
     return result;
