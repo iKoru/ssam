@@ -2,23 +2,23 @@ const pool_key = Symbol.for("SSAM.DB.CONNECTION.POOL");
 const { UUID } = require('../util');
 let singleton = {};
 
-if(Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1){
+if (Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1) {
     const pg = require('pg'),
         config = require('../../config'),
         logger = require('../logger'),
         pool = new pg.Pool(config.dbOptions);
-        
-    pg.types.setTypeParser(20, 'text', parseFloat);//INT8
-    pg.types.setTypeParser(21, 'text', parseInt);//INT2
-    pg.types.setTypeParser(23, 'text', parseInt);//INT4
-    pg.types.setTypeParser(700, 'text', parseFloat);//FLOAT4
-    pg.types.setTypeParser(701, 'text', parseFloat);//FLOAT8
-    pg.types.setTypeParser(1700, 'text', parseFloat);//NUMERIC
-    
+
+    pg.types.setTypeParser(20, 'text', parseFloat); //INT8
+    pg.types.setTypeParser(21, 'text', parseInt); //INT2
+    pg.types.setTypeParser(23, 'text', parseInt); //INT4
+    pg.types.setTypeParser(700, 'text', parseFloat); //FLOAT4
+    pg.types.setTypeParser(701, 'text', parseFloat); //FLOAT8
+    pg.types.setTypeParser(1700, 'text', parseFloat); //NUMERIC
+
     pool.on('error', (err) => {
         logger.error('UNEXPECTED ERROR ON IDLE CLIENT', err);
     });
-    
+
     pool.executeQuery = async(name, input, callback) => {
         try {
             const client = await pool.connect();
@@ -30,21 +30,22 @@ if(Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1){
                 client.release();
             }
             logger.log("QUERY RESULT : ", JSON.stringify(res));
-            if(res.command === 'SELECT'){
+            if (res.command === 'SELECT') {
                 return res.rows;
-            }else{
+            } else {
                 return res.rowCount;
             }
         } catch (e) {
             logger.error('EXECUTING QUERY ERROR : ', e.stack);
             logger.error('TRIED QUERY TO EXECUTE : ', input.text, input.values);
+            logger.error(e);
             return e;
         }
     };
     global[pool_key] = pool;
 }
 Object.defineProperty(singleton, "instance", {
-    get: function(){
+    get: function() {
         return global[pool_key];
     }
 })
