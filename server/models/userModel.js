@@ -95,7 +95,7 @@ exports.updateUserInfo = async(user) => {
                     }else{
                         expireDate = '99991231';
                     }
-                    await pool.executeQuery('insertUserGrade',
+                    result += await pool.executeQuery('insertUserGrade',
                         builder.insert()
                             .into('SS_MST_USER_GROUP')
                             .set('USER_ID', user.userId)
@@ -120,7 +120,7 @@ exports.updateUserInfo = async(user) => {
                     }else{
                         expireDate = '99991231';
                     }
-                    await pool.executeQuery('insertUserMajor',
+                    result += await pool.executeQuery('insertUserMajor',
                         builder.insert()
                             .into('SS_MST_USER_GROUP')
                             .set('USER_ID', user.userId)
@@ -145,7 +145,7 @@ exports.updateUserInfo = async(user) => {
                     }else{
                         expireDate = '99991231';
                     }
-                    await pool.executeQuery('insertUserMajor',
+                    result += await pool.executeQuery('insertUserMajor',
                         builder.insert()
                             .into('SS_MST_USER_GROUP')
                             .set('USER_ID', user.userId)
@@ -155,6 +155,7 @@ exports.updateUserInfo = async(user) => {
                 }
             }
         }
+        return result;
     } catch(e){
         logger.error('update user error!', user, e);
     }
