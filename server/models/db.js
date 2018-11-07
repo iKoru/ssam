@@ -1,4 +1,5 @@
 const pool_key = Symbol.for("SSAM.DB.CONNECTION.POOL");
+const { UUID } = require('../util');
 let singleton = {};
 
 if(Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1){
@@ -23,7 +24,7 @@ if(Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1){
             const client = await pool.connect();
             let res = null;
             try {
-                res = await pool.query({ name: name, text: input.text, values: input.values }, callback);
+                res = await pool.query({ name: name || UUID(), text: input.text, values: input.values }, callback);
                 logger.log(`EXECUTING QUERY : ${input.text}, ${input.values}`);
             } finally {
                 client.release();
@@ -37,6 +38,7 @@ if(Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1){
         } catch (e) {
             logger.error('EXECUTING QUERY ERROR : ', e.stack);
             logger.error('TRIED QUERY TO EXECUTE : ', input.text, input.values);
+            return e;
         }
     };
     global[pool_key] = pool;
