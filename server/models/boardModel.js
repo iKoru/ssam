@@ -261,10 +261,46 @@ exports.updateBoard = async(board) => {
 }
 
 exports.getUserBoardAuth = async(userId, boardId) => {
-    return await pool.executeQuery('getUserBoarAuth',
+    return await pool.executeQuery('getUserBoardAuth',
         builder.select()
         .field('AUTH_TYPE', '"authType"')
         .from(builder.select().field('GROUP_ID').from('SS_MST_USER_GROUP').where('USER_ID = ?', userId), 'GROUPS')
-        .join('SS_MST_BOARD_AUTH', 'AUTH', 'AUTH.')
+        .join(builder.select().fields(['ALLOWED_GROUP_ID', 'BOARD_ID', 'AUTH_TYPE']).from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId), 'AUTH', 'AUTH.ALLOWED_GROUP_ID = GROUPS.GROUP_ID')
     )
+}
+
+exports.checkUserBoardReadable = async(userId, boardId) => {
+    const board = await getBoard(boardId);
+    if (!board || !board[0]) {
+        return [{ count: 0 }];
+    } else if (board[0].allGroupAuth !== 'NONE') {
+        return [{ count: 1 }];
+    } else {
+        return pool.executeQuery('checkUserBoardReadable',
+            builder.select()
+            .field('COUNT(*)', 'count')
+            .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId), 'AUTH')
+            .where('ALLOWED_GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_USER_GROUP WHERE USER_ID = ?)', userId)
+            .limit(1)
+            .toParam()
+        );
+    }
+}
+
+exports.checkUserBoardWritable = async(userId, boardId) => {
+    const board = await getBoard(boardId);
+    if (!board || !board[0]) {
+        return [{ count: 0 }];
+    } else if (board[0].allGroupAuth === 'READWRITE') {
+        return [{ count: 1 }];
+    } else {
+        return pool.executeQuery('checkUserBoardReadable',
+            builder.select()
+            .field('COUNT(*)', 'count')
+            .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId).where('AUTH_TYPE = \'READWRITE\''), 'AUTH')
+            .where('ALLOWED_GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_USER_GROUP WHERE USER_ID = ?)', userId)
+            .limit(1)
+            .toParam()
+        );
+    }
 }
