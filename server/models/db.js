@@ -25,11 +25,11 @@ if (Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1) {
             const client = await pool.connect();
             let res = null;
             try {
-                res = name? await pool.query({ name: name, text: input.text, values: input.values }, callback)
-                        : await pool.query(input.text, input.values, callback);
+                res = name ? await pool.query({ name: name, text: input.text, values: input.values }, callback) :
+                    await pool.query(input.text, input.values, callback);
                 logger.log(`EXECUTING QUERY : ${input.text}, ${input.values}`);
             } finally {
-                client.release();
+                await client.release();
             }
             logger.log("QUERY RESULT : ", JSON.stringify(res));
             if (res.command === 'SELECT') {
