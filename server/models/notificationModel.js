@@ -2,6 +2,27 @@ const pool = require('./db').instance,
     builder = require('./db').builder,
     {getYYYYMMDDHH24MISS} = require('../util');
 
+exports.getNotification = async(notificationId) => {
+    return await pool.executeQuery('getNotification',
+        builder.select()
+            .fields({
+                'NOTIFICATION_ID':'"notificationId"',
+                'CREATED_DATETIME':'"createdDatetime"',
+                'TYPE':'"type"',
+                'TEMPLATE':'"template"',
+                'VARIABLE1':'"variable1"',
+                'VARIABLE2':'"variable2"',
+                'VARIABLE3':'"variable3"',
+                'VARIABLE4':'"variable4"',
+                'IS_READ':'"isRead"',
+                'HREF':'"href"'
+            })
+            .from('SS_HST_USER_NOTIFICATION')
+            .where('NOTIFICATION_ID = ?', notificationId)
+            .toParam()
+    );
+}
+
 exports.getNotifications = async(userId, datetimeBefore = null, type = null) => {
     if(!userId || userId === ''){
         return [];
@@ -28,7 +49,7 @@ exports.getNotifications = async(userId, datetimeBefore = null, type = null) => 
         query.where('TYPE = ?', type);
     }
     return await pool.executeQuery('getNotifications' + (datetimeBefore?'date':'') + (type?'type':''),
-        builder.order('CREATED_DATETIME', false).limit(10)
+        query.order('CREATED_DATETIME', false).limit(10)
         .toParam()
     );
 }
