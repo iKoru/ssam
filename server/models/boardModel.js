@@ -26,7 +26,7 @@ exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boar
             'BOARD_DESCRIPTION': '"boardDescription"',
             'BOARD_TYPE': '"boardType"',
             'STATUS': '"status"',
-            'ALLOW_ALL_GROUPS': '"allowAllGroups"',
+            'ALL_GROUP_AUTH': '"allGroupAuth"',
             'IS_ANONYMOUSABLE': '"isAnonymousable"',
             'RESERVED_DATE': '"reservedDate"',
             'RESERVED_CONTENTS': '"reservedContents"'
@@ -88,7 +88,7 @@ const getBoard = async(boardId) => {
             'BOARD_DESCRIPTION': '"boardDescription"',
             'BOARD_TYPE': '"boardType"',
             'STATUS': '"status"',
-            'ALLOW_ALL_GROUPS': '"allowAllGroups"',
+            'ALL_GROUP_AUTH': '"allGroupAuth"',
             'IS_ANONYMOUSABLE': '"isAnonymousable"',
             'RESERVED_DATE': '"reservedDate"',
             'RESERVED_CONTENTS': '"reservedContents"'
@@ -171,8 +171,7 @@ exports.createUserBoard = async(userId, boardId) => {
     if (!board) {
         return 0;
     }
-    console.log(board);
-    if (!board.allowAllGroups) {
+    if (board.allGroupAuth === 'NONE') {
         const groups = (await groupModel.getUserGroup(userId)).map(x => x.groupId);
         let auths = await getBoardAuth(boardId);
         if (auths.filter(x => groups.includes(x)).length < 1) {
@@ -206,7 +205,7 @@ exports.createBoard = async(board) => {
             'BOARD_DESCRIPTION': board.boardDescription,
             'BOARD_TYPE': board.boardType,
             'IS_ANONYMOUSABLE': board.isAnonymousable,
-            'ALLOW_ALL_GROUPS': board.allowAllGroups
+            'ALL_GROUP_AUTH': board.allGroupAuth
         })
         .toParam()
     );
@@ -243,8 +242,8 @@ exports.updateBoard = async(board) => {
     if (board.status) {
         query.set('STATUS', board.status)
     }
-    if (board.allowAllGroups !== undefined) {
-        query.set('ALLOW_ALL_GROUPS', board.allowAllGroups)
+    if (board.allGroupAuth) {
+        query.set('ALL_GROUP_AUTH', board.allGroupAuth)
     }
     if (board.isAnonymousable !== undefined) {
         query.set('IS_ANONYMOUSABLE', board.isAnonymousable)
@@ -259,4 +258,13 @@ exports.updateBoard = async(board) => {
         query.where('BOARD_ID = ?', board.boardId)
         .toParam()
     );
+}
+
+exports.getUserBoardAuth = async(userId, boardId) => {
+    return await pool.executeQuery('getUserBoarAuth',
+        builder.select()
+        .field('AUTH_TYPE', '"authType"')
+        .from(builder.select().field('GROUP_ID').from('SS_MST_USER_GROUP').where('USER_ID = ?', userId), 'GROUPS')
+        .join('SS_MST_BOARD_AUTH', 'AUTH', 'AUTH.')
+    )
 }

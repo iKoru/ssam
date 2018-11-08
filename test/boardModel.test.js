@@ -21,7 +21,7 @@ test('create board', async() => {
         boardType: 'T',
         isAnonymousable: false,
         ownerId: 'blue',
-        allowAllGroups: true
+        allGroupAuth: 'READONLY'
     })).toEqual(1);
 });
 
@@ -37,14 +37,14 @@ test('update board', async() => {
     board = board[0];
     board.boardType = 'L';
     board.isAnonymousable = true;
-    board.allowAllGroups = false;
+    board.allGroupAuth = 'NONE';
     board.reservedDate = util.getYYYYMMDD();
-    board.reservedContents = JSON.stringify({ boardType: 'T', isAnonymousable: false, allowAllGroups: true });
+    board.reservedContents = JSON.stringify({ boardType: 'T', isAnonymousable: false, allGroupAuth: 'READONLY' });
     expect(await boardModel.updateBoard(board)).toEqual(1);
     let board2 = (await boardModel.getBoard(board.boardId))[0];
     expect(board.isAnonymousable).toEqual(board2.isAnonymousable);
     expect(board.boardType).toEqual(board2.boardType);
-    expect(board.allowAllGroups).toEqual(board2.allowAllGroups);
+    expect(board.allGroupAuth).toEqual(board2.allGroupAuth);
     expect(JSON.parse(board.reservedContents)).toEqual(board2.reservedContents);
 
 });
