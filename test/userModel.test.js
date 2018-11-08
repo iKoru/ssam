@@ -4,21 +4,25 @@ const bcrypt = require('bcrypt');
 const util = require('../server/util');
 test('check user Id if already exists', async() => {
     expect(await userModel.checkUserId('test')).toEqual([{ count: 0 }]);
+    expect(await userModel.checkUserId('orange')).toEqual([{count:1}]);
 });
 
 test('check nickname if already exists', async() => {
-    expect(await userModel.checkNickName('test')).toEqual([{ count: 0 }]);
+    expect(await userModel.checkNickName('test', 'test')).toEqual([{ count: 0 }]);
+    expect(await userModel.checkNickName('orange', '41f7')).toEqual([{count:0}]);
+    expect(await userModel.checkNickName('blue', '41f7')).toEqual([{count:1}]);
 });
 
 test('check email if already exists', async() => {
     expect(await userModel.checkEmail('test@test.com')).toEqual([{ count: 0 }]);
+    expect(await userModel.checkEmail('orange@ssam.com')).toEqual([{count:1}]);
 });
 
 test('insert user test', async() => {
     const hash = await bcrypt.hash('xptmxm1!', 10);
     expect(await userModel.createUser({
         userId: 'orange2',
-        email: 'orange@ssam.com',
+        email: 'orange2@ssam.com',
         password: hash,
         inviter: '41f7'
     })).toEqual(1);
@@ -56,7 +60,7 @@ test('updateUserPassword', async() => {
 });
 
 test('select users', async() => {
-    expect(await userModel.getUsers()).toHaveLength(1);
+    expect((await userModel.getUsers()).length).toBeGreaterThan(0);
     expect(await userModel.getUsers('test')).toHaveLength(0);
     expect(await userModel.getUsers('orange')).toHaveLength(1);
     expect(await userModel.getUsers(null, '41f7')).toHaveLength(1);
@@ -64,11 +68,11 @@ test('select users', async() => {
     expect(await userModel.getUsers(null, null, 'orange2@ssam.com')).toHaveLength(0);
     expect(await userModel.getUsers(null, null, null, 1)).toHaveLength(0);
     expect(await userModel.getUsers(null, null, null, null, 'BLOCKED')).toHaveLength(0);
-    expect(await userModel.getUsers(null, null, null, null, 'NORMAL')).toHaveLength(1);
-    expect(await userModel.getUsers(null, null, null, null, null, 'LOUNGE_NICKNAME')).toHaveLength(1);
-    expect(await userModel.getUsers(null, null, null, null, null, 'EMAIL')).toHaveLength(1);
-    expect(await userModel.getUsers(null, null, null, null, null, 'USER_ID')).toHaveLength(1);
-    expect(await userModel.getUsers(null, null, null, null, null, 'PICTURE_PATH', false)).toHaveLength(1);
+    expect((await userModel.getUsers(null, null, null, null, 'NORMAL')).length).toBeGreaterThan(0);
+    expect((await userModel.getUsers(null, null, null, null, null, 'LOUNGE_NICKNAME')).length).toBeGreaterThan(0);
+    expect((await userModel.getUsers(null, null, null, null, null, 'EMAIL')).length).toBeGreaterThan(0);
+    expect((await userModel.getUsers(null, null, null, null, null, 'USER_ID')).length).toBeGreaterThan(0);
+    expect((await userModel.getUsers(null, null, null, null, null, 'PICTURE_PATH', false)).length).toBeGreaterThan(0);
     expect(await userModel.getUsers(null, null, null, null, null, undefined, false, 2)).toHaveLength(0);
 });
 

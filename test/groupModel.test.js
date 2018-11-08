@@ -57,13 +57,13 @@ test('get groups and group by group id', async() => {
 
 test('update group', async() => {
     expect(await groupModel.updateGroup({
-        groupId: 1,
+        groupId: 39,//1, 
         groupName: '테스트 그룹2',
         isOpenToUsers: true
     })).toEqual(1);
-    expect((await groupModel.getGroup(1))[0].isOpenToUsers).toBeTruthy();
+    expect((await groupModel.getGroup(39))[0].isOpenToUsers).toBeTruthy();//1
     expect(await groupModel.updateGroup({
-        groupId: 1,
+        groupId: 39,//1,
         groupName: '테스트 그룹',
         isOpenToUsers: false
     })).toEqual(1);
@@ -79,11 +79,11 @@ test('delete group', async() => {
 });
 
 test('create user group', async() => {
-    expect(await groupModel.createUserGroup('orange2', 1)).toHaveProperty('code', constants.dbErrorCode.FKVIOLATION);
-    expect(await groupModel.createUserGroup('orange', 1)).toEqual(1);
+    expect(await groupModel.createUserGroup('orange2', 39)).toHaveProperty('code', constants.dbErrorCode.FKVIOLATION);//, 1
+    expect(await groupModel.createUserGroup('orange', 39)).toEqual(1);//, 1
     expect(await groupModel.getUserGroup('orange')).toHaveLength(1);
 });
 
 test('delete user group', async() => {
-    expect(await groupModel.deleteUserGroup('orange', 1)).toEqual(1);
+    expect(await groupModel.deleteUserGroup('orange', 39)).toEqual(1);//, 1
 });
