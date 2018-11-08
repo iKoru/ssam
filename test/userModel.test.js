@@ -4,18 +4,18 @@ const bcrypt = require('bcrypt');
 const util = require('../server/util');
 test('check user Id if already exists', async() => {
     expect(await userModel.checkUserId('test')).toEqual([{ count: 0 }]);
-    expect(await userModel.checkUserId('orange')).toEqual([{count:1}]);
+    expect(await userModel.checkUserId('orange')).toEqual([{ count: 1 }]);
 });
 
 test('check nickname if already exists', async() => {
     expect(await userModel.checkNickName('test', 'test')).toEqual([{ count: 0 }]);
-    expect(await userModel.checkNickName('orange', '41f7')).toEqual([{count:0}]);
-    expect(await userModel.checkNickName('blue', '41f7')).toEqual([{count:1}]);
+    expect(await userModel.checkNickName('orange', '41f7')).toEqual([{ count: 0 }]);
+    expect(await userModel.checkNickName('blue', '41f7')).toEqual([{ count: 1 }]);
 });
 
 test('check email if already exists', async() => {
     expect(await userModel.checkEmail('test@test.com')).toEqual([{ count: 0 }]);
-    expect(await userModel.checkEmail('orange@ssam.com')).toEqual([{count:1}]);
+    expect(await userModel.checkEmail('orange@ssam.com')).toEqual([{ count: 1 }]);
 });
 
 test('insert user test', async() => {

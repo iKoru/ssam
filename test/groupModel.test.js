@@ -56,14 +56,15 @@ test('get groups and group by group id', async() => {
 });
 
 test('update group', async() => {
+    const group = await groupModel.getGroups(true);
     expect(await groupModel.updateGroup({
-        groupId: 39,//1, 
+        groupId: group[0].groupId,
         groupName: '테스트 그룹2',
         isOpenToUsers: true
     })).toEqual(1);
-    expect((await groupModel.getGroup(39))[0].isOpenToUsers).toBeTruthy();//1
+    expect((await groupModel.getGroup(group[0].groupId))[0].isOpenToUsers).toBeTruthy();
     expect(await groupModel.updateGroup({
-        groupId: 39,//1,
+        groupId: group[0].groupId,
         groupName: '테스트 그룹',
         isOpenToUsers: false
     })).toEqual(1);
@@ -79,11 +80,15 @@ test('delete group', async() => {
 });
 
 test('create user group', async() => {
-    expect(await groupModel.createUserGroup('orange2', 39)).toHaveProperty('code', constants.dbErrorCode.FKVIOLATION);//, 1
-    expect(await groupModel.createUserGroup('orange', 39)).toEqual(1);//, 1
+    const group = await groupModel.getGroups(true);
+    expect(await groupModel.createUserGroup('orange2', group[0].groupId)).toHaveProperty('code', constants.dbErrorCode.FKVIOLATION);
+    expect(await groupModel.createUserGroup('orange', group[0].groupId)).toEqual(1);
     expect(await groupModel.getUserGroup('orange')).toHaveLength(1);
 });
 
 test('delete user group', async() => {
-    expect(await groupModel.deleteUserGroup('orange', 39)).toEqual(1);//, 1
+    const group = await groupModel.getUserGroup('orange');
+    expect(await groupModel.deleteUserGroup('orange', group[0].groupId)).toEqual(1);
+    const group2 = await groupModel.getUserGroup('orange');
+    expect(group.length).toBeGreaterThan(group2.length);
 });
