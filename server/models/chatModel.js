@@ -1,5 +1,6 @@
 const pool = require('./db').instance,
     builder = require('./db').builder;
+const {getYYYYMMDDHH24MISS} = require('../util');
 
 const getChat = async(chatId) => {
     return await pool.executeQuery('getChat',
@@ -20,22 +21,27 @@ const getChat = async(chatId) => {
 
 exports.getChat = getChat;
 
-exports.getChats = async(userId, page = 1) => {
-    return await pool.executeQuery('getChats',
-        builder.select()
-        .fields({
-            'CHAT_ID': '"chatId"',
-            'CHAT_TYPE': '"chatType"',
-            'USER1_ID': '"user1Id"',
-            'USER2_ID': '"user2Id"',
-            'USER1_STATUS': '"user1Status"',
-            'USER2_STATUS': '"user2Status"'
-        })
-        .from('SS_MST_CHAT')
-        .where('USER1_ID = ? OR USER2_ID = ?', userId, userId)
-        .limit(10)
-        .offset((page - 1) * 10)
-        .toParam()
+exports.getChats = async(user1Id, user2Id, chatType, page = 1) => {
+    if(!user1Id) return [];
+    let query = builder.select()
+            .fields({
+                'CHAT_ID': '"chatId"',
+                'CHAT_TYPE': '"chatType"',
+                'USER1_ID': '"user1Id"',
+                'USER2_ID': '"user2Id"',
+                'USER1_STATUS': '"user1Status"',
+                'USER2_STATUS': '"user2Status"'
+            })
+            .from('SS_MST_CHAT')
+            .where('USER1_ID = ? OR USER2_ID = ?', user1Id, user1Id);
+    if(user2Id){
+        query.where('USER1_ID = ? OR USER2_ID = ?', user2Id, user2Id);
+    }
+    if(chatType){
+        query.where('CHAT_TYPE = ?', chatType);
+    }
+    return await pool.executeQuery('findChat' + (user2Id?'2':'') + (chatType?'type':''),
+        query.limit(10).offset((page-1)*10).order('CHAT_ID').toParam()
     );
 }
 
@@ -55,7 +61,7 @@ exports.getMessages = async(chatId, timestampBefore, timestampAfter) => {
         query.where('SEND_TIMESTAMP > ?', builder.rstr('TO_TIMESTAMP(?, \'YYYYMMDDHH24MISS\')', timestampAfter))
     }
     return await pool.executeQuery('getMessages' + timestampBefore ? 'Before' : '' + timestampAfter ? 'After' : '',
-        query.toParam()
+        query.order('SEND_TIMESTAMP', false).limit(15).toParam()
     )
 }
 
@@ -66,14 +72,15 @@ exports.createMessage = async(chatId, userId, contents) => {
         .setFields({
             'CHAT_ID': chatId,
             'SENDER_USER_ID': userId,
-            'CONTENTS': contents
+            'CONTENTS': contents,
+            'SEND_TIMESTAMP': builder.rstr('current_timestamp')
         })
         .toParam()
     );
 }
 
 exports.updateChat = async(chatId, userId, status) => {
-    const chat = getChat(chatId);
+    const chat = await getChat(chatId);
     if (chat.length > 0) {
         let query = builder.update().table('SS_MST_CHAT');
         if (chat[0].user1Id === userId) {
@@ -98,7 +105,7 @@ exports.deleteChat = async(chatId) => {
         .where('CHAT_ID = ?', chatId)
         .toParam()
     );
-    if (result > 0) {
+    if (result >= 0) {
         result = await pool.executeQuery('deleteChat',
             builder.delete()
             .from('SS_MST_CHAT')
@@ -107,4 +114,18 @@ exports.deleteChat = async(chatId) => {
         );
     }
     return result;
+}
+
+exports.createChat = async(user1Id, user2Id, chatType) => {
+    return await pool.executeQuery('createChat', 
+        builder.insert()
+            .into('SS_MST_CHAT')
+            .setFields({
+                'CHAT_ID': builder.rstr('CAST(nextval(\'SEQ_SS_MST_CHAT\') AS INTEGER)'),
+                'CHAT_TYPE': chatType,
+                'USER1_ID': user1Id,
+                'USER2_ID': user2Id
+            })
+            .toParam()
+    );
 }
