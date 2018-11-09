@@ -19,7 +19,7 @@ test('create board', async() => {
         boardName: '테스트게시판',
         boardDescription: '테스트 게시판입니다.',
         boardType: 'T',
-        isAnonymousable: false,
+        allowAnonymous: false,
         ownerId: 'blue',
         allGroupAuth: 'READONLY'
     })).toEqual(1);
@@ -36,13 +36,13 @@ test('update board', async() => {
     expect(board).toHaveLength(1);
     board = board[0];
     board.boardType = 'L';
-    board.isAnonymousable = true;
+    board.allowAnonymous = true;
     board.allGroupAuth = 'NONE';
     board.reservedDate = util.getYYYYMMDD();
-    board.reservedContents = JSON.stringify({ boardType: 'T', isAnonymousable: false, allGroupAuth: 'READONLY' });
+    board.reservedContents = JSON.stringify({ boardType: 'T', allowAnonymous: false, allGroupAuth: 'READONLY' });
     expect(await boardModel.updateBoard(board)).toEqual(1);
     let board2 = (await boardModel.getBoard(board.boardId))[0];
-    expect(board.isAnonymousable).toEqual(board2.isAnonymousable);
+    expect(board.allowAnonymous).toEqual(board2.allowAnonymous);
     expect(board.boardType).toEqual(board2.boardType);
     expect(board.allGroupAuth).toEqual(board2.allGroupAuth);
     expect(JSON.parse(board.reservedContents)).toEqual(board2.reservedContents);

@@ -27,7 +27,7 @@ exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boar
             'BOARD_TYPE': '"boardType"',
             'STATUS': '"status"',
             'ALL_GROUP_AUTH': '"allGroupAuth"',
-            'IS_ANONYMOUSABLE': '"isAnonymousable"',
+            'ALLOW_ANONYMOUS': '"allowAnonymous"',
             'RESERVED_DATE': '"reservedDate"',
             'RESERVED_CONTENTS': '"reservedContents"'
         })
@@ -69,7 +69,7 @@ exports.getUserBoards = async(userId) => {
             'BOARD_DESCRIPTION': '"boardDescription"',
             'BOARD_TYPE': '"boardType"',
             'STATUS': '"status"',
-            'IS_ANONYMOUSABLE': '"isAnonymousable"',
+            'ALLOW_ANONYMOUS': '"allowAnonymous"',
             'RESERVED_DATE': '"reservedDate"',
             'RESERVED_CONTENTS': '"reservedContents"'
         })
@@ -89,7 +89,7 @@ const getBoard = async(boardId) => {
             'BOARD_TYPE': '"boardType"',
             'STATUS': '"status"',
             'ALL_GROUP_AUTH': '"allGroupAuth"',
-            'IS_ANONYMOUSABLE': '"isAnonymousable"',
+            'ALLOW_ANONYMOUS': '"allowAnonymous"',
             'RESERVED_DATE': '"reservedDate"',
             'RESERVED_CONTENTS': '"reservedContents"'
         })
@@ -204,7 +204,7 @@ exports.createBoard = async(board) => {
             'OWNER_ID': board.ownerId,
             'BOARD_DESCRIPTION': board.boardDescription,
             'BOARD_TYPE': board.boardType,
-            'IS_ANONYMOUSABLE': board.isAnonymousable,
+            'ALLOW_ANONYMOUS': board.allowAnonymous,
             'ALL_GROUP_AUTH': board.allGroupAuth
         })
         .toParam()
@@ -245,8 +245,8 @@ exports.updateBoard = async(board) => {
     if (board.allGroupAuth) {
         query.set('ALL_GROUP_AUTH', board.allGroupAuth)
     }
-    if (board.isAnonymousable !== undefined) {
-        query.set('IS_ANONYMOUSABLE', board.isAnonymousable)
+    if (board.allowAnonymous !== undefined) {
+        query.set('ALLOW_ANONYMOUS', board.allowAnonymous)
     }
     if (board.reservedDate) {
         query.set('RESERVED_DATE', board.reservedDate)
