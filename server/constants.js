@@ -11,3 +11,5 @@ exports.dbErrorCode = {
     FKVIOLATION: '23503',
     PKDUPLICATION: '23505'
 }
+
+exports.reservedNickName = ['admin', 'ADMIN', 'ADMINISTRATOR', 'administrator', '관리자', '운영자', '운영진', '익명', '필명숨김'];
