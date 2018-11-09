@@ -238,3 +238,13 @@ exports.getProfile = async(nickName) => {
     ))[0];
     return {...user, ...groups };
 }
+
+exports.getUserIdByNickName = async(nickName, boardType) => {
+    return await pool.executeQuery('getUserIdByNickName',
+        builder.select()
+        .field('USER_ID', '"userId"')
+        .from('SS_MST_USER')
+        .where(`${(boardType === 'T'? 'TOPIC_NICKNAME' : 'LOUNGE_NICKNAME')} = ?`, nickName)
+        .toParam()
+    );
+}
