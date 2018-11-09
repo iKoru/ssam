@@ -181,15 +181,21 @@ exports.createUserBoard = async(userId, boardId) => {
     return await pool.executeQuery('createUserBoard',
         builder.insert()
         .into('SS_MST_USER_BOARD')
-        .fromQuery(['USER_ID', 'BOARD_ID', 'JOIN_DATE', 'ORDER_NUMBER'],
-            builder.select()
-            .field(builder.str('?', userId), 'USER_ID')
-            .field(builder.str('?', boardId), 'BOARD_ID')
-            .field(builder.str('?', util.getYYYYMMDD()), 'JOIN_DATE')
-            .field('MAX(ORDER_NUMBER) + 1')
-            .from('SS_MST_USER_BOARD')
-            .where('USER_ID = ?', userId)
-        )
+        .setFields({
+            'USER_ID': userId,
+            'BOARD_ID': boardId,
+            'JOIN_DATE': util.getYYYYMMDD(),
+            'ORDER_NUMBER': builder.str('SELECT MAX(COALESCE(ORDER_NUMBER, 0)) + 1 FROM SS_MST_USER_BOARD WHERE USER_ID = ?', userId)
+        })
+        // .fromQuery(['USER_ID', 'BOARD_ID', 'JOIN_DATE', 'ORDER_NUMBER'],
+        //     builder.select()
+        //     .field(builder.str('?', userId), 'USER_ID')
+        //     .field(builder.str('?', boardId), 'BOARD_ID')
+        //     .field(builder.str('?', util.getYYYYMMDD()), 'JOIN_DATE')
+        //     .field('MAX(COALESCE(ORDER_NUMBER, 0)) + 1', 'ORDER_NUMBER')
+        //     .from('SS_MST_USER_BOARD')
+        //     .where('USER_ID = ?', userId)
+        // )
         .toParam()
     )
 }

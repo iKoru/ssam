@@ -11,13 +11,9 @@ test('get chats', async() => {
     expect(await chatModel.getChats('blue2', 'orange2')).toHaveLength(0);
 });
 
-test('create chat', async() => {
-    expect(await chatModel.createChat('orange', 'blue', 'LOUNGE')).toHaveProperty('rowCount', 1);
-});
-
 test('get chat', async() => {
     const chat = await chatModel.getChats('orange', 'blue');
-    expect(chat.length).toBeGreaterThan(1);
+    expect(chat.length).toEqual(1);
     expect(await chatModel.getChat(chat[0].chatId)).toHaveLength(1);
 });
 
@@ -37,7 +33,7 @@ test('create and get message', async() => {
     expect((await chatModel.getMessages(chat[0].chatId, util.getYYYYMMDDHH24MISS())).length).toBeGreaterThan(1);
 });
 
-test('delete Chat', async() => {
+test('create and delete Chat', async() => {
     const chat = await chatModel.createChat('orange', 'blue', 'TOPIC');
     expect(chat.rowCount).toEqual(1);
     expect(await chatModel.deleteChat(chat.rows[0].chatId)).toEqual(1);
