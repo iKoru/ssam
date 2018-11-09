@@ -3,11 +3,40 @@ const boardModel = require('../server/models/boardModel'),
     groupModel = require('../server/models/groupModel');
 const util = require('../server/util');
 
+test('create board(init)', async() => {
+    // expect(await boardModel.createBoard({
+    //     boardId: 'free',
+    //     boardName: '자유게시판',
+    //     boardDescription: '자유롭게 사용하는 게시판입니다.',
+    //     boardType: 'L',
+    //     allowAnonymous: true,
+    //     ownerId: 'orange',
+    //     allGroupAuth: 'READONLY'
+    // })).toEqual(1);
+    // expect(await boardModel.createBoard({
+    //     boardId: 'seoul',
+    //     boardName: '서울게시판',
+    //     boardDescription: '서울사람들이 자유롭게 사용하는 게시판입니다.',
+    //     boardType: 'L',
+    //     allowAnonymous: true,
+    //     ownerId: 'blue',
+    //     allGroupAuth: 'READONLY'
+    // })).toEqual(1);
+    // expect(await boardModel.createBoard({
+    //     boardId: 'nofree',
+    //     boardName: '비자유게시판',
+    //     boardDescription: '자유롭게 사용하지 않는 게시판입니다.',
+    //     boardType: 'T',
+    //     allowAnonymous: true,
+    //     ownerId: 'orange',
+    //     allGroupAuth: 'NONE'
+    // })).toEqual(1);
+});
 
 test('get boards', async() => {
     expect(await boardModel.getBoards('orange')).toHaveLength(0);
-    expect(await boardModel.getBoards()).toHaveLength(2);
-    expect(await boardModel.getBoards(null, 'L')).toHaveLength(1);
+    expect(await boardModel.getBoards()).toHaveLength(3);
+    expect(await boardModel.getBoards(null, 'L')).toHaveLength(2);
     expect(await boardModel.getBoards(null, 'T')).toHaveLength(1);
     expect(await boardModel.getBoards('비', null)).toHaveLength(1);
     expect(await boardModel.getBoards('자', null)).toHaveLength(2);
