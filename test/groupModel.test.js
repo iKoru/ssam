@@ -83,7 +83,7 @@ test('create user group', async() => {
     const group = await groupModel.getGroups(true);
     expect(await groupModel.createUserGroup('orange2', group[0].groupId)).toHaveProperty('code', constants.dbErrorCode.FKVIOLATION);
     expect(await groupModel.createUserGroup('orange', group[0].groupId)).toEqual(1);
-    expect(await groupModel.getUserGroup('orange')).toHaveLength(1);
+    expect(await groupModel.getUserGroup('orange')).toHaveLength(2);
 });
 
 test('delete user group', async() => {
