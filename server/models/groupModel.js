@@ -80,6 +80,7 @@ exports.createGroup = async(group) => {
             'ORDER_NUMBER': builder.str('SELECT MAX(ORDER_NUMBER) + 1 FROM SS_MST_GROUP'),
             'IS_OPEN_TO_USERS': group.isOpenToUsers
         })
+        .returning('GROUP_ID', '"groupId"')
         .toParam()
     );
 }

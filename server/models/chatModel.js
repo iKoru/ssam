@@ -1,6 +1,6 @@
 const pool = require('./db').instance,
     builder = require('./db').builder;
-const {getYYYYMMDDHH24MISS} = require('../util');
+const { getYYYYMMDDHH24MISS } = require('../util');
 
 const getChat = async(chatId) => {
     return await pool.executeQuery('getChat',
@@ -22,26 +22,26 @@ const getChat = async(chatId) => {
 exports.getChat = getChat;
 
 exports.getChats = async(user1Id, user2Id, chatType, page = 1) => {
-    if(!user1Id) return [];
+    if (!user1Id) return [];
     let query = builder.select()
-            .fields({
-                'CHAT_ID': '"chatId"',
-                'CHAT_TYPE': '"chatType"',
-                'USER1_ID': '"user1Id"',
-                'USER2_ID': '"user2Id"',
-                'USER1_STATUS': '"user1Status"',
-                'USER2_STATUS': '"user2Status"'
-            })
-            .from('SS_MST_CHAT')
-            .where('USER1_ID = ? OR USER2_ID = ?', user1Id, user1Id);
-    if(user2Id){
+        .fields({
+            'CHAT_ID': '"chatId"',
+            'CHAT_TYPE': '"chatType"',
+            'USER1_ID': '"user1Id"',
+            'USER2_ID': '"user2Id"',
+            'USER1_STATUS': '"user1Status"',
+            'USER2_STATUS': '"user2Status"'
+        })
+        .from('SS_MST_CHAT')
+        .where('USER1_ID = ? OR USER2_ID = ?', user1Id, user1Id);
+    if (user2Id) {
         query.where('USER1_ID = ? OR USER2_ID = ?', user2Id, user2Id);
     }
-    if(chatType){
+    if (chatType) {
         query.where('CHAT_TYPE = ?', chatType);
     }
-    return await pool.executeQuery('findChat' + (user2Id?'2':'') + (chatType?'type':''),
-        query.limit(10).offset((page-1)*10).order('CHAT_ID').toParam()
+    return await pool.executeQuery('findChat' + (user2Id ? '2' : '') + (chatType ? 'type' : ''),
+        query.limit(10).offset((page - 1) * 10).order('CHAT_ID').toParam()
     );
 }
 
@@ -117,15 +117,16 @@ exports.deleteChat = async(chatId) => {
 }
 
 exports.createChat = async(user1Id, user2Id, chatType) => {
-    return await pool.executeQuery('createChat', 
+    return await pool.executeQuery('createChat',
         builder.insert()
-            .into('SS_MST_CHAT')
-            .setFields({
-                'CHAT_ID': builder.rstr('CAST(nextval(\'SEQ_SS_MST_CHAT\') AS INTEGER)'),
-                'CHAT_TYPE': chatType,
-                'USER1_ID': user1Id,
-                'USER2_ID': user2Id
-            })
-            .toParam()
+        .into('SS_MST_CHAT')
+        .setFields({
+            'CHAT_ID': builder.rstr('CAST(nextval(\'SEQ_SS_MST_CHAT\') AS INTEGER)'),
+            'CHAT_TYPE': chatType,
+            'USER1_ID': user1Id,
+            'USER2_ID': user2Id
+        })
+        .returning('CHAT_ID', '"chatId"')
+        .toParam()
     );
 }

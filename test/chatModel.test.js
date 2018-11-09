@@ -12,7 +12,7 @@ test('get chats', async() => {
 });
 
 test('create chat', async() => {
-    expect(await chatModel.createChat('orange', 'blue', 'LOUNGE')).toEqual(1);
+    expect(await chatModel.createChat('orange', 'blue', 'LOUNGE')).toHaveProperty('rowCount', 1);
 });
 
 test('get chat', async() => {
@@ -38,12 +38,7 @@ test('create and get message', async() => {
 });
 
 test('delete Chat', async() => {
-    expect(await chatModel.createChat('orange', 'blue', 'TOPIC')).toEqual(1);
-    const chat = await chatModel.getChats('orange', 'blue');
-    expect(chat.length).toBeGreaterThan(1);
-    chat.forEach(async(c) => {
-        if (c.chatId > 1) {
-            expect(await chatModel.deleteChat(c.chatId)).toBeGreaterThan(0);
-        }
-    })
+    const chat = await chatModel.createChat('orange', 'blue', 'TOPIC');
+    expect(chat.rowCount).toEqual(1);
+    expect(await chatModel.deleteChat(chat.rows[0].chatId)).toEqual(1);
 });

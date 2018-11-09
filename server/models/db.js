@@ -34,6 +34,8 @@ if (Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1) {
             logger.log("QUERY RESULT : ", JSON.stringify(res));
             if (res.command === 'SELECT') {
                 return res.rows;
+            } else if (res.rows.length > 0) { //returning statement
+                return { rowCount: res.rowCount, rows: res.rows };
             } else {
                 return res.rowCount;
             }

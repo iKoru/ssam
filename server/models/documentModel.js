@@ -287,7 +287,7 @@ exports.createDocument = async(document) => {
             'RESERVED3': document.reserved3,
             'RESERVED4': document.reserved4
         })
-        .returning('DOCUMENT_ID')
+        .returning('DOCUMENT_ID', '"documentId"')
         .toParam()
     )
 }

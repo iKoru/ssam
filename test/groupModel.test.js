@@ -9,7 +9,7 @@ test('insert group', async() => {
         orderNumber: 1,
         isOpenToUsers: false,
         expirePeriod: -1
-    })).toEqual(1);
+    })).toHaveProperty('rowCount', 1);
     expect(await groupModel.createGroup({
         groupName: '테스트 전공',
         groupDescription: '테스트 전공입니다.',
@@ -17,7 +17,7 @@ test('insert group', async() => {
         orderNumber: 2,
         isOpenToUsers: false,
         expirePeriod: -1
-    })).toEqual(1);
+    })).toHaveProperty('rowCount', 1);
     expect(await groupModel.createGroup({
         groupName: '테스트 학년',
         groupDescription: '테스트 학년입니다.',
@@ -25,7 +25,7 @@ test('insert group', async() => {
         orderNumber: 3,
         isOpenToUsers: false,
         expirePeriod: -1
-    })).toEqual(1);
+    })).toHaveProperty('rowCount', 1);
     expect(await groupModel.createGroup({
         groupName: '테스트 지역',
         groupDescription: '테스트 지역입니다.',
@@ -33,7 +33,7 @@ test('insert group', async() => {
         orderNumber: 4,
         isOpenToUsers: false,
         expirePeriod: -1
-    })).toEqual(1);
+    })).toHaveProperty('rowCount', 1);
 });
 
 test('get groups and group by group id', async() => {

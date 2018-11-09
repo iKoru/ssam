@@ -11,7 +11,7 @@ const util = require('../server/util');
 //         title: '쌤쌤',
 //         contents: '코코코하하하 테스트',
 //         allowAnonymous: false
-//     })).toEqual(1);
+//     })).toHaveProperty('rowCount', 1);
 //     expect(await documentModel.createDocument({
 //         boardId: 'free',
 //         userId: 'blue',
@@ -19,7 +19,7 @@ const util = require('../server/util');
 //         title: '테스트 글 제목!',
 //         contents: '하하하 테스트',
 //         allowAnonymous: false
-//     })).toEqual(1);
+//     })).toHaveProperty('rowCount', 1);
 //     expect(await documentModel.createDocument({
 //         boardId: 'free',
 //         userId: 'orange',
@@ -27,7 +27,7 @@ const util = require('../server/util');
 //         title: '재미있는 개발놀이!',
 //         contents: '쿄쿄쿄',
 //         allowAnonymous: false
-//     })).toEqual(1);
+//     })).toHaveProperty('rowCount', 1);
 //     expect(await documentModel.createDocument({
 //         boardId: 'nofree',
 //         userId: 'orange',
@@ -35,7 +35,7 @@ const util = require('../server/util');
 //         title: '가나다라마바사',
 //         contents: '하햐허혀',
 //         allowAnonymous: false
-//     })).toEqual(1);
+//     })).toHaveProperty('rowCount', 1);
 //     expect(await documentModel.createDocument({
 //         boardId: 'nofree',
 //         userId: 'blue',
@@ -43,7 +43,7 @@ const util = require('../server/util');
 //         title: '여긴 다른 게시판이지롱',
 //         contents: '하하하 테스트ㅋㅋㅋㅋ',
 //         allowAnonymous: false
-//     })).toEqual(1);
+//     })).toHaveProperty('rowCount', 1);
 // });
 
 
@@ -72,7 +72,7 @@ test('create document', async() => {
         title: '신나는 개발놀이!',
         contents: '쿄ㅋ쿄쿄',
         allowAnonymous: false
-    })).toEqual(1);
+    })).toHaveProperty('rowCount', 1);
 });
 
 test('get document', async() => {
