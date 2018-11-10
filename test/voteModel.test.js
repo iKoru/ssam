@@ -2,8 +2,7 @@
 const voteModel = require('../server/models/voteModel'),
     documentModel = require('../server/models/documentModel'),
     commentModel = require('../server/models/commentModel');
-const util = require('../server/util'),
-    constants = require('../server/constants');
+const constants = require('../server/constants');
 
 test('document and comment vote test', async() => {
     const document = (await documentModel.createDocument({
