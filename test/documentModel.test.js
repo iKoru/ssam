@@ -58,7 +58,7 @@ test('get documents', async() => {
     expect(await documentModel.getDocuments('free', null, '쌤', 'title')).toHaveLength(1); //serarch for title
     expect(await documentModel.getDocuments('free', null, '테스트', 'titleContents')).toHaveLength(2); //search for titleContents
     expect(await documentModel.getDocuments('free', null, '쿄쿄쿄', 'contents')).toHaveLength(1); //search for titleContents
-    const reverse = (await documentModel.getDocuments('free', null, null, null, null, true));
+    const reverse = (await documentModel.getDocuments('free', null, null, null, null, true)).reverse();
     expect(reverse).toEqual(document); //sort reverse
     expect(await documentModel.getDocuments('free', null, null, null, null, false, 2)).toHaveLength(0); //2page : nothing
     expect(await documentModel.getDocuments('free', document[0].documentId, null, null, null, false, 2)); //1 page even if page number specified because there is document Id
