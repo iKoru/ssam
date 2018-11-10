@@ -215,10 +215,10 @@ exports.updateDocument = async(document) => {
         return 0;
     }
     let query = builder.update().table('SS_MST_DOCUMENT');
-    if (document.title) {
+    if (document.title !== undefined && document.title !== '') {
         query.set('TITLE', document.title)
     }
-    if (document.contents) {
+    if (document.contents !== undefined) {
         query.set('CONTENTS', document.contents)
     }
     if (document.boardId) {
@@ -231,22 +231,22 @@ exports.updateDocument = async(document) => {
     if (document.isDeleted !== undefined) {
         query.set('IS_DELETED', document.isDeleted)
     }
-    if (document.bestDateTime) {
+    if (document.bestDateTime !== undefined) {
         query.set('BEST_DATETIME', document.bestDateTime)
     }
-    if (document.restriction) {
+    if (document.restriction !== undefined) {
         query.set('RESTRICTION', document.restriction)
     }
-    if (document.reserved1) {
+    if (document.reserved1 !== undefined) {
         query.set('RESERVED1', document.reserved1)
     }
-    if (document.reserved2) {
+    if (document.reserved2 !== undefined) {
         query.set('RESERVED1', document.reserved2)
     }
-    if (document.reserved3) {
+    if (document.reserved3 !== undefined) {
         query.set('RESERVED1', document.reserved3)
     }
-    if (document.reserved4) {
+    if (document.reserved4 !== undefined) {
         query.set('RESERVED1', document.reserved4)
     }
     return await pool.executeQuery(null,
@@ -255,13 +255,26 @@ exports.updateDocument = async(document) => {
     );
 }
 
-exports.deleteDocument = async(documentId, userId) => {
-    return await pool.executeQuery('deleteDocument',
+exports.deleteDocument = async(documentId) => {
+    const document = (await getDocument(documentId))[0];
+    if (!document) {
+        return 0;
+    }
+    const result = await pool.executeQuery('deleteDocument',
         builder.delete()
         .from('SS_MST_DOCUMENT')
         .where('DOCUMENT_ID = ?', documentId)
         .toParam()
     )
+    if (result > 0 && document.commentCount > 0) {
+        await pool.executeQuery('deleteDocumentComment',
+            builder.delete()
+            .from('SS_MST_COMMENT')
+            .where('DOCUMENT_ID = ?', documentId)
+            .toParam()
+        )
+    }
+    return result;
 }
 
 exports.createDocument = async(document) => {
@@ -398,17 +411,18 @@ exports.getNickNameDocument = async(nickName, boardType, page = 1) => {
 exports.updateDocumentCommentCount = async(documentId) => {
     return await pool.executeQuery('updateDocumentCommentCount',
         builder.update()
-        .table('SS_MST_DOCUMNET')
+        .table('SS_MST_DOCUMENT')
         .set('COMMENT_COUNT', builder.str('COMMENT_COUNT + 1'))
         .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
     )
 }
 
-exports.updateDocumentVote = async(documentId, isUp) => {
-    return await pool.executeQuery('updateDocumentVote' + (isUp ? 'up' : 'down'),
+exports.updateDocumentVote = async(documentId, isUp, isCancel) => {
+    return await pool.executeQuery('updateDocumentVote' + (isUp ? 'up' : 'down') + (isCancel ? '1' : '0'),
         builder.update()
         .table('SS_MST_DOCUMENT')
-        .set(isUp ? 'VOTE_UP_COUNT' : 'VOTE_DOWN_COUNT', builder.str(isUp ? 'VOTE_UP_COUNT + 1' : 'VOTE_DOWN_COUNT + 1'))
+        .set(isUp ? 'VOTE_UP_COUNT' : 'VOTE_DOWN_COUNT', builder.str(isUp ? `VOTE_UP_COUNT ${isCancel?'-':'+'} 1` : `VOTE_DOWN_COUNT ${isCancel?'-':'+'} 1`))
         .where('DOCUMENT_ID = ?', documentId)
         .toParam()
     )
