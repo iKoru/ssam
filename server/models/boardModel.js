@@ -185,7 +185,7 @@ exports.createUserBoard = async(userId, boardId) => {
             'USER_ID': userId,
             'BOARD_ID': boardId,
             'JOIN_DATE': util.getYYYYMMDD(),
-            'ORDER_NUMBER': builder.str('SELECT MAX(COALESCE(ORDER_NUMBER, 0)) + 1 FROM SS_MST_USER_BOARD WHERE USER_ID = ?', userId)
+            'ORDER_NUMBER': builder.str('SELECT COALESCE(MAX(ORDER_NUMBER), 0) + 1 FROM SS_MST_USER_BOARD WHERE USER_ID = ?', userId)
         })
         // .fromQuery(['USER_ID', 'BOARD_ID', 'JOIN_DATE', 'ORDER_NUMBER'],
         //     builder.select()
