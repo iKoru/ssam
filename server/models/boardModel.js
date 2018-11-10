@@ -31,7 +31,8 @@ exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boar
             'RESERVED_DATE': '"reservedDate"',
             'RESERVED_CONTENTS': '"reservedContents"'
         })
-        .from('SS_MST_BOARD');
+        .from('SS_MST_BOARD')
+        .where('STATUS <> \'DELETED\'');
     if (searchQuery) {
         if (searchTarget === 'boardName') {
             query.where('BOARD_NAME LIKE \'%\'||?||\'%\'', searchQuery)
@@ -233,10 +234,10 @@ exports.updateBoard = async(board) => {
     }
     let query = builder.update()
         .table('SS_MST_BOARD');
-    if (board.boardName) {
+    if (board.boardName !== undefined && board.boardName !== '') {
         query.set('BOARD_NAME', board.boardName)
     }
-    if (board.boardDescription) {
+    if (board.boardDescription !== undefined) {
         query.set('BOARD_DESCRIPTION', board.boardDescription)
     }
     if (board.ownerId) {
@@ -254,10 +255,10 @@ exports.updateBoard = async(board) => {
     if (board.allowAnonymous !== undefined) {
         query.set('ALLOW_ANONYMOUS', board.allowAnonymous)
     }
-    if (board.reservedDate) {
+    if (board.reservedDate !== undefined) {
         query.set('RESERVED_DATE', board.reservedDate)
     }
-    if (board.reservedContents) {
+    if (board.reservedContents !== undefined) {
         query.set('RESERVED_CONTENTS', board.reservedContents)
     }
     return await pool.executeQuery(null,

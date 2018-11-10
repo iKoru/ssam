@@ -1,6 +1,5 @@
 const pool = require('./db').instance,
     builder = require('./db').builder;
-const { getYYYYMMDDHH24MISS } = require('../util');
 
 const getChat = async(chatId) => {
     return await pool.executeQuery('getChat',

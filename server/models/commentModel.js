@@ -70,28 +70,28 @@ const updateComment = async(comment) => {
         return 0;
     }
     let query = builder.update().table('SS_MST_COMMENT');
-    if (comment.contents) {
+    if (comment.contents !== undefined) {
         query.set('CONTENTS', comment.contents)
     }
-    if (comment.child) {
+    if (comment.child !== undefined) {
         query.set('CHILD_COUNT', builder.str('CHILD_COUNT + 1'))
     }
-    if (comment.restrictionStatus) {
+    if (comment.restrictionStatus !== undefined) {
         query.set('RESTRICTION_STATUS', comment.restrictionStatus)
     }
     if (comment.isDeleted !== undefined) {
         query.set('IS_DELETED', comment.isDeleted)
     }
-    if (comment.reserved1) {
+    if (comment.reserved1 !== undefined) {
         query.set('RESERVED1', comment.reserved1)
     }
-    if (comment.reserved2) {
+    if (comment.reserved2 !== undefined) {
         query.set('RESERVED2', comment.reserved2)
     }
-    if (comment.reserved3) {
+    if (comment.reserved3 !== undefined) {
         query.set('RESERVED3', comment.reserved3)
     }
-    if (comment.reserved4) {
+    if (comment.reserved4 !== undefined) {
         query.set('RESERVED4', comment.reserved4)
     }
     return await pool.executeQuery('updateComment' + (comment.contents ? 'contents' : '') + (comment.child ? 'child' : '') + (comment.restrictionStatus ? 'rest' : '') + (comment.isDeleted !== undefined ? 'delete' : '') + (comment.reserved1 ? '1' : '') + (comment.reserved2 ? '2' : '') + (comment.reserved3 ? '3' : '') + (comment.reserved4 ? '4' : ''),
@@ -102,13 +102,31 @@ const updateComment = async(comment) => {
 
 exports.updateComment = updateComment;
 
+const deleteChildComment = async(parentCommentId, documentId) => {
+    return await pool.executeQuery('deleteChildComment',
+        builder.delete()
+        .from('SS_MST_COMMENT')
+        .where('DOCUMENT_ID = ?', documentId)
+        .where('PARENT_COMMENT_ID = ?', parentCommentId)
+        .toParam()
+    )
+}
+
 exports.deleteComment = async(commentId) => {
-    return await pool.executeQuery('deleteComment',
+    const comment = (await getComment(commentId))[0];
+    if (!comment) {
+        return 0;
+    }
+    const result = await pool.executeQuery('deleteComment',
         builder.delete()
         .from('SS_MST_COMMENT')
         .where('COMMENT_ID = ?', commentId)
         .toParam()
-    )
+    );
+    if (result > 0 && comment.childCount > 0) {
+        await deleteChildComment(commentId, comment.documentId);
+    }
+    return result;
 }
 
 exports.createComment = async(comment) => {
@@ -154,7 +172,7 @@ exports.createComment = async(comment) => {
     return result;
 }
 
-exports.getComment = async(commentId) => {
+const getComment = async(commentId) => {
     return await pool.executeQuery('getComment',
         builder.select()
         .fields({
@@ -178,6 +196,8 @@ exports.getComment = async(commentId) => {
         .toParam()
     )
 }
+
+exports.getComment = getComment;
 
 exports.getUserComment = async(userId, page = 1) => {
     return await pool.executeQuery('getUserComment',
@@ -208,11 +228,11 @@ exports.getUserComment = async(userId, page = 1) => {
     )
 }
 
-exports.updateCommentVote = async(commentId, isUp) => {
+exports.updateCommentVote = async(commentId, isUp, isCancel) => {
     return await pool.executeQuery('updateCommentVote' + (isUp ? 'up' : 'down'),
         builder.update()
         .table('SS_MST_COMMENT')
-        .set(isUp ? 'VOTE_UP_COUNT' : 'VOTE_DOWN_COUNT', builder.str(isUp ? 'VOTE_UP_COUNT + 1' : 'VOTE_DOWN_COUNT + 1'))
+        .set(isUp ? 'VOTE_UP_COUNT' : 'VOTE_DOWN_COUNT', builder.str(isUp ? `VOTE_UP_COUNT ${isCancel?'-':'+'} 1` : `VOTE_DOWN_COUNT ${isCancel?'-':'+'} 1`))
         .where('COMMENT_ID = ?', commentId)
         .toParam()
     )
