@@ -433,7 +433,7 @@ exports.updateDocumentReport = async(documentId) => {
         builder.update()
         .table('SS_MST_DOCUMENT')
         .set('REPORT_COUNT', builder.str('REPORT_COUNT + 1'))
-        .where('DOCUMENT_ID = ?', commentId)
+        .where('DOCUMENT_ID = ?', documentId)
         .toParam()
     )
 }
