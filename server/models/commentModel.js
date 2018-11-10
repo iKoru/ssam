@@ -5,12 +5,12 @@ const documentModel = require('./documentModel'),
     boardModel = require('./boardModel'),
     util = require('../util');
 
-const getChildComments = async(parentCommentId) => {
-    return await pool.executeQuery('getChildComments',
+const getChildComments = async(parentCommentId, documentId) => {
+    return await pool.executeQuery('getChildComments' + (documentId ? 'docu' : ''),
         builder.select()
         .fields({
             'COMMENT_ID': '"commentId"',
-            'CONTENTS': '"contents"',
+            'DOCUMENT_ID': '"documentId"',
             'VOTE_UP_COUNT': '"voteUpCount"',
             'VOTE_DOWN_COUNT': '"voteDownCount"',
             'RESTRICTION_STATUS': '"restrictionStatus"',
@@ -22,7 +22,9 @@ const getChildComments = async(parentCommentId) => {
             'RESERVED4': '"reserved4"'
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+        .field(builder.case().when('IS_DELETED = true').then('삭제된 댓글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
         .from('SS_MST_COMMENT')
+        .where('DOCUMENT_ID = ?', documentId || builder.rstr('DOCUMENT_ID'))
         .where('PARENT_COMMENT_ID = ?', parentCommentId)
         .order('COMMENT_ID')
         .toParam()
@@ -32,13 +34,17 @@ const getChildComments = async(parentCommentId) => {
 exports.getChildComments = getChildComments;
 
 exports.getComments = async(documentId, page = 1) => {
+    if (!documentId) {
+        return [];
+    }
     return await pool.executeQuery('getComments',
         builder.select()
         .fields({
             'COMMENT_ID': '"commentId"',
-            'CONTENTS': '"contents"',
+            'DOCUMENT_ID': '"documentId"',
             'VOTE_UP_COUNT': '"voteUpCount"',
             'VOTE_DOWN_COUNT': '"voteDownCount"',
+            'REPORT_COUNT': '"reportCount"',
             'RESTRICTION_STATUS': '"restrictionStatus"',
             'CHILD_COUNT': '"childCount"',
             'WRITE_DATETIME': '"writeDateTime"',
@@ -48,6 +54,7 @@ exports.getComments = async(documentId, page = 1) => {
             'RESERVED4': '"reserved4"'
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+        .field(builder.case().when('IS_DELETED = true').then('삭제된 댓글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
         .from('SS_MST_COMMENT')
         .where('DOCUMENT_ID = ?', documentId)
         .where('DEPTH = 0')
@@ -59,7 +66,7 @@ exports.getComments = async(documentId, page = 1) => {
 }
 
 const updateComment = async(comment) => {
-    if (!comment.comment_id) {
+    if (!comment.commentId) {
         return 0;
     }
     let query = builder.update().table('SS_MST_COMMENT');
@@ -71,6 +78,9 @@ const updateComment = async(comment) => {
     }
     if (comment.restrictionStatus) {
         query.set('RESTRICTION_STATUS', comment.restrictionStatus)
+    }
+    if (comment.isDeleted !== undefined) {
+        query.set('IS_DELETED', comment.isDeleted)
     }
     if (comment.reserved1) {
         query.set('RESERVED1', comment.reserved1)
@@ -84,7 +94,7 @@ const updateComment = async(comment) => {
     if (comment.reserved4) {
         query.set('RESERVED4', comment.reserved4)
     }
-    return await pool.executeQuery('updateComment' + (comment.contents ? 'contents' : '') + (comment.child ? 'child' : '') + (comment.restrictionStatus ? 'rest' : '') + (comment.reserved1 ? '1' : '') + (comment.reserved2 ? '2' : '') + (comment.reserved3 ? '3' : '') + (comment.reserved4 ? '4' : ''),
+    return await pool.executeQuery('updateComment' + (comment.contents ? 'contents' : '') + (comment.child ? 'child' : '') + (comment.restrictionStatus ? 'rest' : '') + (comment.isDeleted !== undefined ? 'delete' : '') + (comment.reserved1 ? '1' : '') + (comment.reserved2 ? '2' : '') + (comment.reserved3 ? '3' : '') + (comment.reserved4 ? '4' : ''),
         query.where('COMMENT_ID = ?', comment.commentId)
         .toParam()
     )
@@ -129,15 +139,16 @@ exports.createComment = async(comment) => {
             'RESERVED3': comment.reserved3,
             'RESERVED4': comment.reserved4
         })
+        .returning('COMMENT_ID', '"commentId"')
         .toParam()
     )
-    if (result > 0 && comment.parentCommentId) {
+    if (result.rowCount > 0 && comment.parentCommentId) {
         await updateComment({
             commentId: comment.parentCommentId,
             child: true
         });
     }
-    if (result > 0) {
+    if (result.rowCount > 0) {
         await documentModel.updateDocumentCommentCount(document[0].documentId);
     }
     return result;
@@ -148,9 +159,10 @@ exports.getComment = async(commentId) => {
         builder.select()
         .fields({
             'COMMENT_ID': '"commentId"',
-            'CONTENTS': '"contents"',
+            'DOCUMENT_ID': '"documentId"',
             'VOTE_UP_COUNT': '"voteUpCount"',
             'VOTE_DOWN_COUNT': '"voteDownCount"',
+            'REPORT_COUNT': '"reportCount"',
             'RESTRICTION_STATUS': '"restrictionStatus"',
             'CHILD_COUNT': '"childCount"',
             'WRITE_DATETIME': '"writeDateTime"',
@@ -160,6 +172,7 @@ exports.getComment = async(commentId) => {
             'RESERVED4': '"reserved4"'
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+        .field(builder.case().when('IS_DELETED = true').then('삭제된 댓글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
         .from('SS_MST_COMMENT')
         .where('COMMENT_ID = ?', commentId)
         .toParam()
@@ -175,6 +188,7 @@ exports.getUserComment = async(userId, page = 1) => {
             'CONTENTS': '"contents"',
             'VOTE_UP_COUNT': '"voteUpCount"',
             'VOTE_DOWN_COUNT': '"voteDownCount"',
+            'REPORT_COUNT': '"reportCount"',
             'RESTRICTION_STATUS': '"restrictionStatus"',
             'CHILD_COUNT': '"childCount"',
             'WRITE_DATETIME': '"writeDateTime"',
@@ -186,6 +200,7 @@ exports.getUserComment = async(userId, page = 1) => {
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_COMMENT')
         .where('USER_ID = ?', userId)
+        .where('IS_DELETED = false')
         .order('COMMENT_ID', false)
         .limit(10)
         .offset((page - 1) * 10)
