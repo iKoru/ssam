@@ -1,7 +1,6 @@
 /* global expect */
 const scrapModel = require('../server/models/scrapModel'),
     documentModel = require('../server/models/documentModel');
-const util = require('../server/util');
 
 // test('create scrap - init', async() => {
 //     const documents = await documentModel.getDocuments(['free', 'nofree']);
