@@ -301,13 +301,13 @@ const getDocument = async(documentId) => {
             'USER_ID': '"userId"',
             'IS_DELETED': '"isDeleted"',
             'COMMENT_COUNT': '"commentCount"',
+            'REPORT_COUNT': '"reportCount"',
             'VOTE_UP_COUNT': '"voteUpCount"',
             'VOTE_DOWN_COUNT': '"voteDownCount"',
             'VIEW_COUNT': '"viewCount"',
             'WRITE_DATETIME': '"writeDateTime"',
             'BEST_DATETIME': '"bestDateTime"',
             'TITLE': '"title"',
-            'CONTENTS': '"contents"',
             'SURVEY_CONTENTS': '"surveyContents"',
             'RESTRICTION': '"restriction"',
             'RESERVED1': '"reserved1"',
@@ -316,6 +316,7 @@ const getDocument = async(documentId) => {
             'RESERVED4': '"reserved4"'
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+        .field(builder.case().when('IS_DELETED = true').then('삭제된 글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
         .from('SS_MST_DOCUMENT')
         .where('DOCUMENT_ID = ?', documentId)
         .toParam()
