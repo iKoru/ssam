@@ -52,13 +52,23 @@ exports.deleteScrap = async(userId, scrapGroupId, documentId) => {
     )
 }
 
+const deleteScrapByGroup = async(userId, scrapGroupId) => {
+    return await pool.executeQuery('deleteScrapByGroup',
+        builder.delete()
+        .from('SS_HST_USER_SCRAP')
+        .where('USER_ID = ?', userId)
+        .where('SCRAP_GROUP_ID = ?', scrapGroupId)
+        .toParam()
+    )
+}
+
 exports.createScrapGroup = async(userId, scrapGroupName) => {
     return await pool.executeQuery('createScrapGroup',
         builder.insert()
         .into('SS_MST_USER_SCRAP_GROUP')
         .setFields({
             'USER_ID': userId,
-            'SCRAP_GROUP_ID': builder.str('SELECT MAX(COALESCE(SCRAP_GROUP_ID, 0)) + 1 FROM SS_MST_USER_SCRAP_GROUP WHERE USER_ID = ?', userId),
+            'SCRAP_GROUP_ID': builder.str('SELECT COALESCE(MAX(SCRAP_GROUP_ID), 0) + 1 FROM SS_MST_USER_SCRAP_GROUP WHERE USER_ID = ?', userId),
             'SCRAP_GROUP_NAME': scrapGroupName
         })
         .returning('SCRAP_GROUP_ID', '"scrapGroupId"')
@@ -77,8 +87,36 @@ exports.updateScrapGroup = async(userId, scrapGroupId, scrapGroupName) => {
 }
 
 exports.deleteScrapGroup = async(userId, scrapGroupId) => {
+    await deleteScrapByGroup(userId, scrapGroupId);
     return await pool.executeQuery('deleteScrapGroup',
         builder.delete()
+        .from('SS_MST_USER_SCRAP_GROUP')
+        .where('USER_ID = ?', userId)
+        .where('SCRAP_GROUP_ID = ?', scrapGroupId)
+        .toParam()
+    )
+}
+
+exports.getScrapGroupByUserId = async(userId) => {
+    return await pool.executeQuery('getScrapGroupByUserId',
+        builder.select()
+        .fields({
+            'SCRAP_GROUP_ID': '"scrapGroupId"',
+            'SCRAP_GROUP_NAME': '"scrapGroupName"'
+        })
+        .from('SS_MST_USER_SCRAP_GROUP')
+        .where('USER_ID = ?', userId)
+        .toParam()
+    )
+}
+
+exports.getScrapGroup = async(userId, scrapGroupId) => {
+    return await pool.executeQuery('getScrapGroups',
+        builder.select()
+        .fields({
+            'SCRAP_GROUP_ID': '"scrapGroupId"',
+            'SCRAP_GROUP_NAME': '"scrapGroupName"'
+        })
         .from('SS_MST_USER_SCRAP_GROUP')
         .where('USER_ID = ?', userId)
         .where('SCRAP_GROUP_ID = ?', scrapGroupId)
