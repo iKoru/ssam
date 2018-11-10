@@ -310,3 +310,16 @@ exports.checkUserBoardWritable = async(userId, boardId) => {
         );
     }
 }
+
+exports.getBoardByDocument = async(documentId) => {
+    return await pool.executeQuery('getBoardByDocument',
+        builder.select()
+        .fields({
+            'BOARD.BOARD_ID': '"boardId"',
+            'BOARD_TYPE': '"boardType"',
+        })
+        .from(builder.select().field('BOARD_ID').from('SS_MST_DOCUMENT').where('DOCUMENT_ID = ?', documentId), 'DOCUMENT')
+        .join('SS_MST_BOARD', 'BOARD', 'BOARD.BOARD_ID = DOCUMENT.BOARD_ID')
+        .toParam()
+    )
+}
