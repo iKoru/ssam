@@ -210,6 +210,15 @@ exports.getBestDocuments = async(boardId, documentId, boardType, searchQuery, se
     )
 }
 
+exports.updateDocumentCommentCount = async(documentId) => {
+    return await pool.executeQuery('updateDocumentCommentCount',
+        builder.update()
+        .table('SS_MST_DOCUMNET')
+        .set('COMMENT_COUNT', builder.str('COMMENT_COUNT + 1'))
+        .where('DOCUMENT_ID = ?', documentId)
+    )
+}
+
 exports.updateDocument = async(document) => {
     if (!document.documentId) {
         return 0;
@@ -390,6 +399,26 @@ exports.getNickNameDocument = async(nickName, boardType, page = 1) => {
         .order('WRITE_DATETIME', false)
         .limit(10)
         .offset((page - 1) * 10)
+        .toParam()
+    )
+}
+
+exports.updateDocumentVote = async(documentId, isUp) => {
+    return await pool.executeQuery('updateDocumentVote' + (isUp ? 'up' : 'down'),
+        builder.update()
+        .table('SS_MST_DOCUMENT')
+        .set(isUp ? 'VOTE_UP_COUNT' : 'VOTE_DOWN_COUNT', builder.str(isUp ? 'VOTE_UP_COUNT + 1' : 'VOTE_DOWN_COUNT + 1'))
+        .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
+    )
+}
+
+exports.updateDocumentReport = async(documentId) => {
+    return await pool.executeQuery('updateDocumentReport',
+        builder.update()
+        .table('SS_MST_DOCUMENT')
+        .set('REPORT_COUNT', builder.str('REPORT_COUNT + 1'))
+        .where('DOCUMENT_ID = ?', commentId)
         .toParam()
     )
 }
