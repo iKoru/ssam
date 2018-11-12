@@ -76,7 +76,8 @@ exports.updateUserInfo = async(user) => {
                 'TOPIC_NICKNAME': user.topicNickName || builder.rstr('TOPIC_NICKNAME'),
                 'PICTURE_PATH': user.picturePath || builder.rstr('PICTURE_PATH'),
                 'IS_OPEN_INFO': user.isOpenInfo === undefined ? builder.rstr('IS_OPEN_INFO') : user.isOpenInfo,
-                'INFO_MODIFIED_DATE': (user.loungeNickName || user.topicNickName || user.picturePath || (user.isOpenInfo !== undefined)) ? util.getYYYYMMDD() : builder.rstr('INFO_MODIFIED_DATE')
+                'INFO_MODIFIED_DATE': (user.loungeNickName || user.topicNickName || user.picturePath || (user.isOpenInfo !== undefined)) ? util.getYYYYMMDD() : builder.rstr('INFO_MODIFIED_DATE'),
+                'MEMO': (user.memo !== undefined ? user.memo : builder.rstr('MEMO'))
             })
             .where('USER_ID = ?', user.userId)
             .toParam()
@@ -169,7 +170,8 @@ exports.getUser = async(userId) => {
             'INVITED_COUNT': '"invitedCount"',
             'INVITE_CODE': '"inviteCode"',
             'PASSWORD': '"password"',
-            'PASSWORD_CHANGE_DATE': '"passwordChangeDate"'
+            'PASSWORD_CHANGE_DATE': '"passwordChangeDate"',
+            'MEMO': '"memo"'
         })
         .from('SS_MST_USER')
         .where('USER_ID = ?', userId)
