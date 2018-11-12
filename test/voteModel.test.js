@@ -31,5 +31,5 @@ test('document and comment vote test', async() => {
     const comment2 = (await commentModel.getComment(comment.rows[0].commentId))[0];
     expect(comment2.voteUpCount).toBeGreaterThan(0);
     expect(await documentModel.deleteDocument(document.rows[0].documentId)).toEqual(1);
-    expect(await commentModel.getComment(comment.rows[0].commentId)).toHaveLength(0);
+    expect(await commentModel.deleteComment(comment.rows[0].commentId)).toEqual(1);
 });
