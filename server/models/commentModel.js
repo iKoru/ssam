@@ -9,6 +9,7 @@ const getChildComments = async(parentCommentId, documentId) => {
     return await pool.executeQuery('getChildComments' + (documentId ? 'docu' : ''),
         builder.select()
         .fields({
+            'USER_ID': '"userId"',
             'COMMENT_ID': '"commentId"',
             'DOCUMENT_ID': '"documentId"',
             'VOTE_UP_COUNT': '"voteUpCount"',
@@ -16,6 +17,7 @@ const getChildComments = async(parentCommentId, documentId) => {
             'RESTRICTION_STATUS': '"restrictionStatus"',
             'CHILD_COUNT': '"childCount"',
             'WRITE_DATETIME': '"writeDateTime"',
+            'ANIMAL_NAME': '"animalName"',
             'RESERVED1': '"reserved1"',
             'RESERVED2': '"reserved2"',
             'RESERVED3': '"reserved3"',
@@ -31,6 +33,55 @@ const getChildComments = async(parentCommentId, documentId) => {
     );
 }
 
+
+const getCommentAnimalName = async(documentId, userId) => {
+    let document = await documentModel.getDocument(documentId);
+    if (document && document.length > 0) {
+        document = document[0];
+        if (document.userId === userId) {
+            return { animalName: '글쓴이', needInsert: false };
+        } else {
+            let names;
+            names = await pool.executeQuery('getCommentAnimalName',
+                builder.select()
+                .fields({
+                    'ANIMAL_NAME': '"animalName"',
+                    'GENERATION': '"generation"'
+                })
+                .from('SS_HST_DOCUMENT_ANIMAL')
+                .where('DOCUMENT_ID = ?', documentId)
+                .where('USER_ID = ?', userId)
+                .toParam()
+            )
+            if (!names.code && names.length > 0) {
+                return { animalName: names[0].animalName, generation: names[0].generation, needInsert: false };
+            } else {
+                let generation = 0;
+                while (1) {
+                    names = await pool.executeQuery('getNewCommentAnimalName',
+                        builder.select()
+                        .field('ANIMAL.ANIMAL_NAME', '"animalName"')
+                        .from('SS_MST_ANIMAL_NAME', 'ANIMAL')
+                        .where('ANIMAL_NAME NOT IN (SELECT ANIMAL_NAME FROM SS_HST_DOCUMENT_ANIMAL WHERE DOCUMENT_ID = ? AND GENERATION = ?)', documentId, generation)
+                        .toParam()
+                    )
+                    if (names.code) {
+                        return { animalName: null, needInsert: false };
+                    } else if (names.length > 0) {
+                        return { animalName: names[Math.floor(Math.random() * names.length)].animalName, generation: generation, needInsert: true };
+                    } else {
+                        generation += 1;
+                    }
+                }
+            }
+        }
+    } else {
+        return { animalName: null, needInsert: false };
+    }
+
+}
+
+
 exports.getChildComments = getChildComments;
 
 exports.getComments = async(documentId, page = 1) => {
@@ -40,6 +91,7 @@ exports.getComments = async(documentId, page = 1) => {
     return await pool.executeQuery('getComments',
         builder.select()
         .fields({
+            'USER_ID': '"userId"',
             'COMMENT_ID': '"commentId"',
             'DOCUMENT_ID': '"documentId"',
             'VOTE_UP_COUNT': '"voteUpCount"',
@@ -48,6 +100,7 @@ exports.getComments = async(documentId, page = 1) => {
             'RESTRICTION_STATUS': '"restrictionStatus"',
             'CHILD_COUNT': '"childCount"',
             'WRITE_DATETIME': '"writeDateTime"',
+            'ANIMAL_NAME': '"animalName"',
             'RESERVED1': '"reserved1"',
             'RESERVED2': '"reserved2"',
             'RESERVED3': '"reserved3"',
@@ -139,7 +192,8 @@ exports.createComment = async(comment) => {
         const user = await userModel.getUser(comment.userId);
         comment.userNickName = board[0].boardType === 'T' ? user[0].topicNickName : user[0].loungeNickName;
     }
-    const result = await pool.executeQuery('createComment',
+    const animalName = await getCommentAnimalName(comment.documentId, comment.userId);
+    const result = await pool.executeQuery('createComments',
         builder.insert()
         .into('SS_MST_COMMENT')
         .setFields({
@@ -152,6 +206,7 @@ exports.createComment = async(comment) => {
             'DEPTH': comment.parentCommentId ? 1 : 0,
             'WRITE_DATETIME': util.getYYYYMMDDHH24MISS(),
             'IS_ANONYMOUS': document[0].allowAnonymous ? comment.isAnonymous : false,
+            'ANIMAL_NAME': animalName.animalName + (animalName.generation > 0 ? ` ${animalName.generation}세` : ''),
             'RESERVED1': comment.reserved1,
             'RESERVED2': comment.reserved2,
             'RESERVED3': comment.reserved3,
@@ -167,7 +222,10 @@ exports.createComment = async(comment) => {
         });
     }
     if (result.rowCount > 0) {
-        await documentModel.updateDocumentCommentCount(document[0].documentId);
+        if (animalName.needInsert) {
+            await createCommentAnimalName(comment.documentId, comment.userId, animalName);
+        }
+        await documentModel.updateDocumentCommentCount(comment.documentId);
     }
     return result;
 }
@@ -176,6 +234,7 @@ const getComment = async(commentId) => {
     return await pool.executeQuery('getComment',
         builder.select()
         .fields({
+            'USER_ID': '"userId"',
             'COMMENT_ID': '"commentId"',
             'DOCUMENT_ID': '"documentId"',
             'VOTE_UP_COUNT': '"voteUpCount"',
@@ -184,6 +243,7 @@ const getComment = async(commentId) => {
             'RESTRICTION_STATUS': '"restrictionStatus"',
             'CHILD_COUNT': '"childCount"',
             'WRITE_DATETIME': '"writeDateTime"',
+            'ANIMAL_NAME': '"animalName"',
             'RESERVED1': '"reserved1"',
             'RESERVED2': '"reserved2"',
             'RESERVED3': '"reserved3"',
@@ -244,6 +304,49 @@ exports.updateCommentReport = async(commentId) => {
         .table('SS_MST_COMMENT')
         .set('REPORT_COUNT', builder.str('REPORT_COUNT + 1'))
         .where('COMMENT_ID = ?', commentId)
+        .toParam()
+    )
+}
+
+exports.getAnimalNames = async() => {
+    return await pool.executeQuery('getAnimalName',
+        builder.select()
+        .from('SS_MST_ANIMAL_NAME')
+        .toParam()
+    );
+}
+
+exports.deleteAnimalNames = async(animalNames) => {
+    return await pool.executeQuery('deleteAnimalName' + animalNames.length,
+        builder.delete()
+        .from('SS_MST_ANIMAL_NAME')
+        .where('ANIMAL_NAME IN ?', (typeof animalNames === 'object' ? animalNames : [animalNames]))
+        .toParam()
+    )
+}
+
+exports.createAnimalNames = async(animalNames) => {
+    if (typeof animalNames === "string") {
+        animalNames = [animalNames];
+    }
+    return await pool.executeQuery('createAnimalName' + animalNames.length,
+        builder.insert()
+        .into('SS_MST_ANIMAL_NAME')
+        .setFieldsRows(animalNames.map(x => ({ 'ANIMAL_NAME': x })))
+        .toParam()
+    )
+}
+
+const createCommentAnimalName = async(documentId, userId, animalName) => {
+    return await pool.executeQuery('createCommentAnimalName',
+        builder.insert()
+        .into('SS_HST_DOCUMENT_ANIMAL')
+        .setFields({
+            'DOCUMENT_ID': documentId,
+            'USER_ID': userId,
+            'ANIMAL_NAME': animalName.animalName,
+            'GENERATION': animalName.generation
+        })
         .toParam()
     )
 }

@@ -3,44 +3,47 @@ const commentModel = require('../server/models/commentModel'),
     documentModel = require('../server/models/documentModel');
 
 
-// test('create comment - init', async() => {
-//     const document = (await documentModel.getDocuments('nofree'))[0];
-//     let commentId;
-//     const comment = await commentModel.createComment({
-//         documentId: document.documentId,
-//         userId: 'orange',
-//         isAnonymous: false,
-//         contents: '빵빵빵 터지는 댓글'
-//     });
-//     commentId = comment.rows[0].commentId
-//     expect(comment).toHaveProperty('rowCount', 1);
-//     expect(await commentModel.createComment({
-//         documentId: document.documentId,
-//         userId: 'blue',
-//         isAnonymous: true,
-//         contents: '빵빵 댓글2'
-//     })).toHaveProperty('rowCount', 1);
-//     expect(await commentModel.createComment({
-//         documentId: document.documentId,
-//         userId: 'orange',
-//         isAnonymous: true,
-//         contents: '빵빵 댓글3'
-//     })).toHaveProperty('rowCount', 1);
-//     expect(await commentModel.createComment({
-//         documentId: document.documentId,
-//         parentCommentId: commentId,
-//         userId: 'blue',
-//         isAnonymous: false,
-//         contents: '빵빵 대댓글4'
-//     })).toHaveProperty('rowCount', 1);
-//     expect(await commentModel.createComment({
-//         documentId: document.documentId,
-//         parentCommentId: commentId,
-//         userId: 'orange',
-//         isAnonymous: true,
-//         contents: '빵빵 대댓글5'
-//     })).toHaveProperty('rowCount', 1);
-// });
+test('create comment - init', async() => {
+    //expect(await commentModel.createAnimalNames(['강아지', '멍멍이'])).toEqual(2);
+    //expect(await commentModel.createAnimalNames('고양이')).toEqual(1);
+    // const document = (await documentModel.getDocuments('nofree'))[0];
+    // let commentId;
+    // const comment = await commentModel.createComment({
+    //     documentId: document.documentId,
+    //     userId: 'orange',
+    //     isAnonymous: false,
+    //     contents: '빵빵빵 터지는 댓글'
+    // });
+    // commentId = comment.rows[0].commentId
+    // expect(comment).toHaveProperty('rowCount', 1);
+    // expect(await commentModel.createComment({
+    //     documentId: document.documentId,
+    //     userId: 'blue',
+    //     isAnonymous: true,
+    //     contents: '빵빵 댓글2'
+    // })).toHaveProperty('rowCount', 1);
+    // expect(await commentModel.createComment({
+    //     documentId: document.documentId,
+    //     userId: 'orange',
+    //     isAnonymous: true,
+    //     contents: '빵빵 댓글3'
+    // })).toHaveProperty('rowCount', 1);
+    // expect(await commentModel.createComment({
+    //     documentId: document.documentId,
+    //     parentCommentId: commentId,
+    //     userId: 'blue',
+    //     isAnonymous: false,
+    //     contents: '빵빵 대댓글4'
+    // })).toHaveProperty('rowCount', 1);
+    // expect(await commentModel.createComment({
+    //     documentId: document.documentId,
+    //     parentCommentId: commentId,
+    //     userId: 'orange',
+    //     isAnonymous: true,
+    //     contents: '빵빵 대댓글5'
+    // })).toHaveProperty('rowCount', 1);
+
+});
 
 
 test('get comments', async() => {
@@ -68,7 +71,7 @@ test('create child comment', async() => {
 
     expect(await commentModel.createComment({
         documentId: document.documentId,
-        userId: 'orange',
+        userId: 'blue',
         isAnonymous: false,
         contents: '새롭게 추가한 빵빵 대댓글!!',
         parentCommentId: commentId
@@ -76,10 +79,19 @@ test('create child comment', async() => {
 });
 
 test('get comment', async() => {
-    const document = (await documentModel.getDocuments('nofree'))[0];
+    const documents = (await documentModel.getDocuments('nofree'))[0];
+    const document = (await documentModel.getDocument(documents.documentId))[0];
     const comment = await commentModel.getComments(document.documentId);
     expect(comment.length).toBeGreaterThan(2);
     expect((await commentModel.getComment(comment[0].commentId))[0].commentId).toEqual(comment[0].commentId);
+    let i = 0;
+    for (; i < comment.length; i++) {
+        if (comment[i].userId === document.userId) {
+            expect(comment[i].animalName).toEqual('글쓴이');
+        } else {
+            expect(comment[i].animalName).not.toEqual('글쓴이');
+        }
+    }
 });
 
 test('get child comment', async() => {
@@ -127,3 +139,8 @@ test('get user comment', async() => {
     expect(await commentModel.getUserComment('blue', 2)).toHaveLength(0);
     expect((await commentModel.getUserComment('blue')).length).toBeGreaterThan(0);
 })
+
+test('create and delete animal name', async() => {
+    expect(await commentModel.createAnimalNames(['교교교', '기기기'])).toEqual(2);
+    expect(await commentModel.deleteAnimalNames(['교교교', '기기기'])).toEqual(2);
+});
