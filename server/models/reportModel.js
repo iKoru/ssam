@@ -168,7 +168,7 @@ exports.createCommentReport = async(userId, commentId, reportType) => {
 }
 
 exports.updateDocumentReport = async(report) => {
-    return await pool.executeQuery('updateDocumentReport',
+    return await pool.executeQuery('updateDocumentReportStatus',
         builder.update()
         .table('SS_HST_DOCUMENT_REPORT')
         .set('STATUS', report.status)
@@ -179,7 +179,7 @@ exports.updateDocumentReport = async(report) => {
 }
 
 exports.updateCommentReport = async(report) => {
-    return await pool.executeQuery('updateCommentReport',
+    return await pool.executeQuery('updateCommentReportStatus',
         builder.update()
         .table('SS_HST_COMMENT_REPORT')
         .set('STATUS', report.status)

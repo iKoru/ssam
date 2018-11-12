@@ -63,10 +63,15 @@ test('document and comment report test', async() => {
     expect(document2.reportCount).toBeGreaterThan(0);
 
     expect(await reportModel.getDocumentReports(document.rows[0].documentId)).toHaveLength(1);
-    expect(await reportModel.getDocumentReports()).toHaveLength(1);
+    expect((await reportModel.getDocumentReports()).length).toBeGreaterThan(0);
     expect(await reportModel.getDocumentReports(null, 'NORMAL')).toHaveLength(1);
-    expect(await reportModel.getDocumentReports(null, 'DELETED')).toHaveLength(0);
-    expect(await reportModel.getDocumentReportsByNickName('41f7', 'L')).toHaveLength(1);
+    expect(await reportModel.updateDocumentReport({
+        documentId: document.rows[0].documentId,
+        userId: 'orange',
+        status: 'DELETED'
+    })).toEqual(1);
+    expect((await reportModel.getDocumentReports(null, 'DELETED')).length).toBeGreaterThan(0);
+    expect((await reportModel.getDocumentReportsByNickName('41f7', 'L')).length).toBeGreaterThan(0);
 
     const comment = (await commentModel.createComment({
         documentId: document.rows[0].documentId,

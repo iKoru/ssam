@@ -10,14 +10,6 @@ test('get notifications', async() => {
 
 test('create notification', async() => {
     expect(await notificationModel.createNotification({
-        userId: 'orange2',
-        type: 'AA',
-        createdDatetime: util.getYYYYMMDDHH24MISS(),
-        template: '하하하 템플릿',
-        variable1: '중에 끼워넣기',
-        href: '/aa'
-    })).toHaveProperty('code', constants.dbErrorCode.FKVIOLATION);
-    expect(await notificationModel.createNotification({
         userId: 'orange',
         type: 'AA',
         createdDatetime: util.getYYYYMMDDHH24MISS(),
