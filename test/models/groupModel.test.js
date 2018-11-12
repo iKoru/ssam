@@ -1,5 +1,5 @@
 /* global expect */
-const groupModel = require('../server/models/groupModel');
+const groupModel = require('../../server/models/groupModel');
 
 test('insert group', async() => {
     expect(await groupModel.createGroup({

@@ -1,6 +1,6 @@
 /* global expect */
-const chatModel = require('../server/models/chatModel');
-const util = require('../server/util');
+const chatModel = require('../../server/models/chatModel');
+const util = require('../../server/util');
 
 test('get chats', async() => {
     expect(await chatModel.getChats('orange')).toHaveLength(1);

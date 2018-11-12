@@ -1,6 +1,6 @@
 /* global expect */
-const commentModel = require('../server/models/commentModel'),
-    documentModel = require('../server/models/documentModel');
+const commentModel = require('../../server/models/commentModel'),
+    documentModel = require('../../server/models/documentModel');
 
 
 test('create comment - init', async() => {

@@ -1,7 +1,7 @@
 /* global expect */
-const notificationModel = require('../server/models/notificationModel');
-const util = require('../server/util'),
-    constants = require('../server/constants');
+const notificationModel = require('../../server/models/notificationModel');
+const util = require('../../server/util'),
+    constants = require('../../server/constants');
 
 test('get notifications', async() => {
     expect(await notificationModel.getNotifications('orange')).toHaveLength(0);

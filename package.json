@@ -6,7 +6,9 @@
     "repository": "",
     "author": "iKoru <glassonyou@gmail.com>",
     "scripts": {
-        "test": "jest --detectOpenHandles --runInBand --silent"
+        "test": "jest --detectOpenHandles --runInBand --silent",
+        "test:model": "jest --detectOpenHandles --runInBand --silent --testPathPattern=^test.*Model\\.test\\.js$",
+        "test:router": "jest --detectOpenHandles --runInBand --silent --testPathPattern=^test.*Router\\.test\\.js$"
     },
     "dependencies": {
         "bcrypt": "^3.0.2",

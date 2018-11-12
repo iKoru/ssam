@@ -1,7 +1,7 @@
 /* global expect */
-const boardModel = require('../server/models/boardModel'),
-    groupModel = require('../server/models/groupModel');
-const util = require('../server/util');
+const boardModel = require('../../server/models/boardModel'),
+    groupModel = require('../../server/models/groupModel');
+const util = require('../../server/util');
 
 test('create board(init)', async() => {
     // expect(await boardModel.createBoard({

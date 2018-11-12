@@ -1,6 +1,6 @@
 /* global expect */
-const documentModel = require('../server/models/documentModel'),
-    groupModel = require('../server/models/groupModel');
+const documentModel = require('../../server/models/documentModel'),
+    groupModel = require('../../server/models/groupModel');
 
 // test('create document - init', async() => {
 //     expect(await documentModel.createDocument({

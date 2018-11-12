@@ -1,7 +1,7 @@
 /* global expect */
-const userModel = require('../server/models/userModel');
+const userModel = require('../../server/models/userModel');
 const bcrypt = require('bcrypt');
-const util = require('../server/util');
+const util = require('../../server/util');
 test('check user Id if already exists', async() => {
     expect(await userModel.checkUserId('test')).toEqual([{ count: 0 }]);
     expect(await userModel.checkUserId('orange')).toEqual([{ count: 1 }]);

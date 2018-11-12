@@ -1,8 +1,8 @@
 /* global expect */
-const reportModel = require('../server/models/reportModel'),
-    documentModel = require('../server/models/documentModel'),
-    commentModel = require('../server/models/commentModel');
-const constants = require('../server/constants');
+const reportModel = require('../../server/models/reportModel'),
+    documentModel = require('../../server/models/documentModel'),
+    commentModel = require('../../server/models/commentModel');
+const constants = require('../../server/constants');
 
 // test('create report type - init', async() => {
 //     expect(await reportModel.createReportType({

@@ -1,8 +1,8 @@
 /* global expect */
-const voteModel = require('../server/models/voteModel'),
-    documentModel = require('../server/models/documentModel'),
-    commentModel = require('../server/models/commentModel');
-const constants = require('../server/constants');
+const voteModel = require('../../server/models/voteModel'),
+    documentModel = require('../../server/models/documentModel'),
+    commentModel = require('../../server/models/commentModel');
+const constants = require('../../server/constants');
 
 test('document and comment vote test', async() => {
     const document = (await documentModel.createDocument({
