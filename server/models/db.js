@@ -27,7 +27,7 @@ if (Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1) {
             try {
                 res = name ? await pool.query({ name: name, text: input.text, values: input.values }, callback) :
                     await pool.query(input.text, input.values, callback);
-                logger.log(`EXECUTING QUERY : ${input.text}, ${input.values}`);
+                logger.log(`EXECUTING QUERY[${name}] : ${input.text}, ${input.values}`);
             } finally {
                 await client.release();
             }
