@@ -261,19 +261,19 @@ exports.deleteDocument = async(documentId) => {
         return 0;
     }
     const result = await pool.executeQuery('deleteDocument',
-        builder.delete()
-        .from('SS_MST_DOCUMENT')
-        .where('DOCUMENT_ID = ?', documentId)
-        .toParam()
-    )
-    if (result > 0 && document.commentCount > 0) {
-        await pool.executeQuery('deleteDocumentComment',
             builder.delete()
-            .from('SS_MST_COMMENT')
+            .from('SS_MST_DOCUMENT')
             .where('DOCUMENT_ID = ?', documentId)
             .toParam()
         )
-    }
+        // if (result > 0 && document.commentCount > 0) {
+        //     await pool.executeQuery('deleteDocumentComment',
+        //         builder.delete()
+        //         .from('SS_MST_COMMENT')
+        //         .where('DOCUMENT_ID = ?', documentId)
+        //         .toParam()
+        //     )
+        // }
     return result;
 }
 

@@ -86,11 +86,16 @@ test('document and comment report test', async() => {
     expect(comment2.reportCount).toBeGreaterThan(0);
 
     expect(await reportModel.getCommentReports(comment.rows[0].commentId)).toHaveLength(1);
-    expect(await reportModel.getCommentReports()).toHaveLength(1);
+    expect((await reportModel.getCommentReports()).length).toBeGreaterThan(0);
     expect(await reportModel.getCommentReports(null, 'NORMAL')).toHaveLength(1);
-    expect(await reportModel.getCommentReports(null, 'DELETED')).toHaveLength(0);
+    expect(await reportModel.updateCommentReport({
+        commentId: comment.rows[0].commentId,
+        userId: 'orange',
+        status: 'DELETED'
+    })).toEqual(1);
+    expect((await reportModel.getCommentReports(null, 'DELETED')).length).toBeGreaterThan(0);
     expect(await reportModel.getCommentReportsByNickName('41f7', 'L')).toHaveLength(1);
 
     expect(await documentModel.deleteDocument(document.rows[0].documentId)).toEqual(1);
-    expect(await commentModel.getComment(comment.rows[0].commentId)).toHaveLength(0);
+    expect(await commentModel.deleteComment(comment.rows[0].commentId)).toEqual(1);
 });
