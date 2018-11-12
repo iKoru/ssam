@@ -2,6 +2,24 @@
 const userModel = require('../../server/models/userModel');
 const bcrypt = require('bcrypt');
 const util = require('../../server/util');
+
+// test('create user - init', async() => {
+//     let hash = await bcrypt.hash('xptmxm1!', 10);
+//     expect(await userModel.createUser({
+//         userId: 'orange',
+//         email: 'orange@ssam.com',
+//         password: hash,
+//         inviter: '41f7'
+//     })).toEqual(1);
+//     hash = await bcrypt.hash('xptmxm1!', 10);
+//     expect(await userModel.createUser({
+//         userId: 'blue',
+//         email: 'blue@ssam.com',
+//         password: hash,
+//         inviter: '41f7'
+//     })).toEqual(1);
+// });
+
 test('check user Id if already exists', async() => {
     expect(await userModel.checkUserId('test')).toEqual([{ count: 0 }]);
     expect(await userModel.checkUserId('orange')).toEqual([{ count: 1 }]);

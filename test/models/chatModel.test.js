@@ -2,6 +2,10 @@
 const chatModel = require('../../server/models/chatModel');
 const util = require('../../server/util');
 
+// test('create chats - init', async() => {
+//     expect(await chatModel.createChat('orange', 'blue', 'L')).toEqual(1);
+// });
+
 test('get chats', async() => {
     expect(await chatModel.getChats('orange')).toHaveLength(1);
     expect(await chatModel.getChats()).toHaveLength(0);
@@ -34,7 +38,7 @@ test('create and get message', async() => {
 });
 
 test('create and delete Chat', async() => {
-    const chat = await chatModel.createChat('orange', 'blue', 'TOPIC');
+    const chat = await chatModel.createChat('orange', 'blue', 'T');
     expect(chat.rowCount).toEqual(1);
     expect(await chatModel.deleteChat(chat.rows[0].chatId)).toEqual(1);
 });
