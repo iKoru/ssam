@@ -1,7 +1,7 @@
 /* global expect */
 const groupModel = require('../../server/models/groupModel');
 
-// test('insert group - init', async() => {
+// test('insert group - init', async(done) => {
 //     expect(await groupModel.createGroup({
 //         groupName: '테스트 그룹',
 //         groupDescription: '테스트 그룹입니다.',
@@ -34,9 +34,10 @@ const groupModel = require('../../server/models/groupModel');
 //         isOpenToUsers: false,
 //         expirePeriod: -1
 //     })).toHaveProperty('rowCount', 1);
+//done();
 // });
 
-test('insert group', async() => {
+test('insert group', async(done) => {
     expect(await groupModel.createGroup({
         groupName: '테스트 그룹',
         groupDescription: '테스트 그룹입니다.',
@@ -69,9 +70,10 @@ test('insert group', async() => {
         isOpenToUsers: false,
         expirePeriod: -1
     })).toHaveProperty('rowCount', 1);
+    done();
 });
 
-test('get groups and group by group id', async() => {
+test('get groups and group by group id', async(done) => {
     expect(await groupModel.getGroups(false, ['N', 'M', 'G', 'R'], 1)).toHaveLength(0);
     expect(await groupModel.getGroups(true, ['N', 'M', 'G', 'R'], 2)).toHaveLength(0);
     expect(await groupModel.getGroups(true, ['N'], 1)).toHaveLength(2);
@@ -88,9 +90,10 @@ test('get groups and group by group id', async() => {
             expect(dbGroup).toEqual(group);
         }
     });
+    done();
 });
 
-test('update group', async() => {
+test('update group', async(done) => {
     const group = await groupModel.getGroups(true);
     expect(await groupModel.updateGroup({
         groupId: group[0].groupId,
@@ -103,26 +106,30 @@ test('update group', async() => {
         groupName: '테스트 그룹',
         isOpenToUsers: false
     })).toEqual(1);
+    done();
 });
 
-test('delete group', async() => {
+test('delete group', async(done) => {
     let groups = await groupModel.getGroups(true, ['N', 'M', 'G', 'R'], 1);
     groups.forEach(async(group) => {
         if (group.groupId > 42) {
             expect(await groupModel.deleteGroup(group.groupId)).toEqual(1);
         }
     });
+    done();
 });
 
-test('create user group', async() => {
+test('create user group', async(done) => {
     const group = await groupModel.getGroups(true);
     expect(await groupModel.createUserGroup('orange', group[0].groupId)).toEqual(1);
     expect(await groupModel.getUserGroup('orange')).toHaveLength(1);
+    done();
 });
 
-test('delete user group', async() => {
+test('delete user group', async(done) => {
     const group = await groupModel.getUserGroup('orange');
     expect(await groupModel.deleteUserGroup('orange', group[0].groupId)).toEqual(1);
     const group2 = await groupModel.getUserGroup('orange');
     expect(group.length).toBeGreaterThan(group2.length);
+    done();
 });

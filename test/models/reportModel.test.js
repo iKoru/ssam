@@ -4,7 +4,7 @@ const reportModel = require('../../server/models/reportModel'),
     commentModel = require('../../server/models/commentModel');
 const constants = require('../../server/constants');
 
-// test('create report type - init', async() => {
+// test('create report type - init', async(done) => {
 //     expect(await reportModel.createReportType({
 //         reportTypeName: '욕설',
 //         reportTypeDescription: '욕을 했을 때!'
@@ -17,9 +17,10 @@ const constants = require('../../server/constants');
 //         reportTypeName: '광고',
 //         reportTypeDescription: '광고글을 올렸을 때!'
 //     })).toHaveProperty('rowCount', 1);
+//done();
 // })
 
-test('create, update, delete report type', async() => {
+test('create, update, delete report type', async(done) => {
     const type = await reportModel.createReportType({
         reportTypeName: '음란물',
         reportTypeDescription: '음란물을 올렸을때'
@@ -35,15 +36,17 @@ test('create, update, delete report type', async() => {
     expect(after).toHaveLength(1);
     expect(after[0].reportTypeDescription).toEqual('음란물을 올리지 않았을때');
     expect(await reportModel.deleteReportType(type.rows[0].reportTypeId)).toEqual(1);
+    done();
 })
 
-test('get report type', async() => {
+test('get report type', async(done) => {
     const types = await reportModel.getReportType();
     expect(types).toHaveLength(3);
     expect(await reportModel.getReportType(types[0].reportTypeId)).toHaveLength(1);
+    done();
 })
 
-test('document and comment report test', async() => {
+test('document and comment report test', async(done) => {
     const document = (await documentModel.createDocument({
         boardId: 'seoul',
         userId: 'blue',
@@ -98,4 +101,5 @@ test('document and comment report test', async() => {
 
     expect(await documentModel.deleteDocument(document.rows[0].documentId)).toEqual(1);
     expect(await commentModel.deleteComment(comment.rows[0].commentId)).toEqual(1);
+    done();
 });

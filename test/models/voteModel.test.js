@@ -4,7 +4,7 @@ const voteModel = require('../../server/models/voteModel'),
     commentModel = require('../../server/models/commentModel');
 const constants = require('../../server/constants');
 
-test('document and comment vote test', async() => {
+test('document and comment vote test', async(done) => {
     const document = (await documentModel.createDocument({
         boardId: 'seoul',
         userId: 'blue',
@@ -32,4 +32,5 @@ test('document and comment vote test', async() => {
     expect(comment2.voteUpCount).toBeGreaterThan(0);
     expect(await documentModel.deleteDocument(document.rows[0].documentId)).toEqual(1);
     expect(await commentModel.deleteComment(comment.rows[0].commentId)).toEqual(1);
+    done();
 });

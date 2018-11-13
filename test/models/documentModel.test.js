@@ -2,7 +2,7 @@
 const documentModel = require('../../server/models/documentModel'),
     groupModel = require('../../server/models/groupModel');
 
-// test('create document - init', async() => {
+// test('create document - init', async(done) => {
 //     expect(await documentModel.createDocument({
 //         boardId: 'free',
 //         userId: 'orange',
@@ -43,10 +43,11 @@ const documentModel = require('../../server/models/documentModel'),
 //         contents: '하하하 테스트ㅋㅋㅋㅋ',
 //         allowAnonymous: false
 //     })).toHaveProperty('rowCount', 1);
+//done();
 // });
 
 
-test('get documents', async() => {
+test('get documents', async(done) => {
     let document = await documentModel.getDocuments('free');
 
     expect(document).toHaveLength(3);
@@ -61,9 +62,10 @@ test('get documents', async() => {
     expect(reverse).toEqual(document); //sort reverse
     expect(await documentModel.getDocuments('free', null, null, null, null, false, 2)).toHaveLength(0); //2page : nothing
     expect(await documentModel.getDocuments('free', document[0].documentId, null, null, null, false, 2)); //1 page even if page number specified because there is document Id
+    done();
 });
 
-test('create document', async() => {
+test('create document', async(done) => {
     expect(await documentModel.createDocument({
         boardId: 'free',
         userId: 'blue',
@@ -72,15 +74,17 @@ test('create document', async() => {
         contents: '쿄ㅋ쿄쿄',
         allowAnonymous: false
     })).toHaveProperty('rowCount', 1);
+    done();
 });
 
-test('get document', async() => {
+test('get document', async(done) => {
     const document = await documentModel.getDocuments('free');
     expect(document.length).toBeGreaterThan(2);
     expect((await documentModel.getDocument(document[0].documentId))[0].documentId).toEqual(document[0].documentId);
+    done();
 });
 
-test('update document', async() => {
+test('update document', async(done) => {
     let document = await documentModel.getDocuments('nofree');
     //document = document[0];
     let first = {...document[0] };
@@ -94,9 +98,10 @@ test('update document', async() => {
 
     expect((await documentModel.getDocuments('nofree')).length).toBeLessThan(document.length); //deleted -> not selected
     expect(await documentModel.updateDocument({ isDeleted: false, ...document[0] })).toEqual(1); //restore original statue
+    done();
 });
 
-test('get best document and delete document', async() => {
+test('get best document and delete document', async(done) => {
     let document = await documentModel.getDocuments('free');
     for (let i = 0; i < document.length; i++) {
         document[i].bestDateTime = document[i].writeDateTime;
@@ -119,13 +124,16 @@ test('get best document and delete document', async() => {
     const doa = await documentModel.getDocuments('free', null, '신나', 'title');
     expect(doa).toHaveLength(1);
     expect(await documentModel.deleteDocument(doa[0].documentId)).toEqual(1);
+    done();
 });
 
-test('get user document', async() => {
+test('get user document', async(done) => {
     expect(await documentModel.getUserDocument('blue', 2)).toHaveLength(0);
     expect((await documentModel.getUserDocument('blue', 1)).length).toBeGreaterThan(0);
+    done();
 })
 
-test('get nickname document', async() => {
+test('get nickname document', async(done) => {
     expect(await documentModel.getNickNameDocument('41f7', 'T')).toHaveLength(1);
+    done();
 });
