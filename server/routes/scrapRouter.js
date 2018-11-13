@@ -5,6 +5,9 @@ const requiredSignin = require('../middlewares/requiredSignin');
 router.get('/', requiredSignin, (req, res) => {
     res.status(501).end();
 });
+router.get('/:scrapGroupId(^[\\d+]+$)', requiredSignin, (req, res) => {
+    res.status(501).end();
+});
 
 router.post('/', requiredSignin, (req, res) => {
     res.status(501).end();

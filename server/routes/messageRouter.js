@@ -13,4 +13,7 @@ router.post('/', requiredSignin, (req, res) => {
     res.status(501).end();
 });
 
+router.delete('/:chatId', requiredSignin, (req, res) => {
+    res.status(501).end();
+})
 module.exports = router;
