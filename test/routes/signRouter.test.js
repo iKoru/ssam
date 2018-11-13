@@ -1,5 +1,13 @@
-const signRouter = require('../../server/routes/signRouter');
+/* global expect */
+const request = require('supertest')
+const app = require('../../app')
 
-test('test run test', async() => {
-    expect(1).toEqual(1);
+describe('Test the root path', () => {
+    test('signin test', async(done) => {
+        const response = await request(app).get('/');
+        expect(response.statusCode).toBe(307);
+        
+        done();
+    })
 })
+
