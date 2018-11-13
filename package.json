@@ -7,8 +7,8 @@
     "author": "iKoru <glassonyou@gmail.com>",
     "scripts": {
         "test": "jest --detectOpenHandles --runInBand --silent",
-        "test:model": "jest --detectOpenHandles --runInBand --silent --testPathPattern=^test.*Model\\.test\\.js$",
-        "test:router": "jest --detectOpenHandles --runInBand --silent --testPathPattern=^test.*Router\\.test\\.js$"
+        "test:model": "jest --detectOpenHandles --runInBand --silent --testPathPattern=^test/.*Model\\.test\\.js$",
+        "test:router": "jest --detectOpenHandles --runInBand --silent --testPathPattern=^.*Router.test.js$"
     },
     "dependencies": {
         "bcrypt": "^3.0.2",
@@ -28,7 +28,8 @@
     },
     "devDependencies": {
         "babel-preset-env": "^1.7.0",
-        "jest-cli": "^23.6.0"
+        "jest-cli": "^23.6.0",
+        "supertest": "^3.3.0"
     },
     "jest": {
         "testEnvironment": "node",
