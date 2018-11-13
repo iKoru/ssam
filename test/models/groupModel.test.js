@@ -1,6 +1,41 @@
 /* global expect */
 const groupModel = require('../../server/models/groupModel');
 
+// test('insert group - init', async() => {
+//     expect(await groupModel.createGroup({
+//         groupName: '테스트 그룹',
+//         groupDescription: '테스트 그룹입니다.',
+//         groupType: 'N',
+//         orderNumber: 1,
+//         isOpenToUsers: false,
+//         expirePeriod: -1
+//     })).toHaveProperty('rowCount', 1);
+//     expect(await groupModel.createGroup({
+//         groupName: '테스트 전공',
+//         groupDescription: '테스트 전공입니다.',
+//         groupType: 'M',
+//         orderNumber: 2,
+//         isOpenToUsers: false,
+//         expirePeriod: -1
+//     })).toHaveProperty('rowCount', 1);
+//     expect(await groupModel.createGroup({
+//         groupName: '테스트 학년',
+//         groupDescription: '테스트 학년입니다.',
+//         groupType: 'G',
+//         orderNumber: 3,
+//         isOpenToUsers: false,
+//         expirePeriod: -1
+//     })).toHaveProperty('rowCount', 1);
+//     expect(await groupModel.createGroup({
+//         groupName: '테스트 지역',
+//         groupDescription: '테스트 지역입니다.',
+//         groupType: 'R',
+//         orderNumber: 4,
+//         isOpenToUsers: false,
+//         expirePeriod: -1
+//     })).toHaveProperty('rowCount', 1);
+// });
+
 test('insert group', async() => {
     expect(await groupModel.createGroup({
         groupName: '테스트 그룹',
