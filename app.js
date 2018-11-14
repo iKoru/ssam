@@ -1,4 +1,3 @@
-
 const path = require('path');
 const express = require('express');
 
@@ -6,7 +5,9 @@ const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const logger = require('morgan');
 const compression = require('compression');
+const nodeCache = require('node-cache');
 
+global.cache = new nodeCache();
 const app = express()
 
 const router = require('./server/router');
