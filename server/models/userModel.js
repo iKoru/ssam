@@ -143,6 +143,15 @@ exports.updateUserAdmin = async(user) => {
     );
 }
 
+exports.updateUserAuth = async(userId) => {
+    return await pool.executeQuery('updateUserAuth',
+        builder.update()
+        .table('SS_MST_USER')
+        .set('EMAIL_VERIFIED_DATE', util.getYYYYMMDD())
+        .where('USER_ID = ?', userId)
+        .toParam()
+    )
+}
 exports.deleteUser = async(userId) => {
     return await pool.executeQuery('deleteUser',
         builder.delete()
