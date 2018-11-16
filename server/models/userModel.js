@@ -39,15 +39,14 @@ exports.checkEmail = async(email) => {
 }
 
 exports.createUser = async(user) => {
-    const nickName = util.partialUUID() + util.partialUUID();
     let result = await pool.executeQuery('createUser',
         builder.insert()
         .into('SS_MST_USER')
         .setFields({
             USER_ID: user.userId,
             EMAIL: user.email,
-            LOUNGE_NICKNAME: nickName,
-            TOPIC_NICKNAME: nickName,
+            LOUNGE_NICKNAME: user.nickName,
+            TOPIC_NICKNAME: user.nickName,
             PASSWORD: user.password,
             INVITE_CODE: util.partialUUID(),
             INVITER: user.inviter
@@ -68,17 +67,38 @@ exports.createUser = async(user) => {
 
 exports.updateUserInfo = async(user) => {
     try {
+        if(!user.userId){
+            return 0;
+        }
+        let query = builder.update().table('SS_MST_USER')
+        if(user.loungeNickName){
+            query.set('LOUNGE_NICKNAME', user.loungeNickName)
+            .set('LOUNGE_NICKNAME_MODIFIED_DATE', util.getYYYYMMDD())
+        }
+        if(user.topicNickName){
+            query.set('TOPIC_NICKNAME', user.topicNickName)
+            .set('TOPIC_NICKNAME_MODIFIED_DATE', util.getYYYYMMDD())
+        }
+        if(user.picturePath){
+            query.set('PICTURE_PATH', user.picturePath)
+        }
+        if(typeof user.isOpenInfo === 'boolean'){
+            query.set('IS_OPEN_INFO', user.isOpenInfo)
+        }
+        if(user.grade || user.major || user.region){
+            query.set('INFO_MODIFIED_DATE', util.getYYYYMMDD())   
+        }
+        if(user.memo){
+            query.set('MEMO', user.memo)
+        }
+        if(user.email){
+            query.set('EMAIL', user.email)
+        }
+        if(typeof user.isDeleted === 'boolean'){
+            query.set('IS_DELETED', user.isDeleted)
+        }
         let result = await pool.executeQuery(null,
-            builder.update()
-            .table('SS_MST_USER')
-            .setFields({
-                'LOUNGE_NICKNAME': user.loungeNickName || builder.rstr('LOUNGE_NICKNAME'),
-                'TOPIC_NICKNAME': user.topicNickName || builder.rstr('TOPIC_NICKNAME'),
-                'PICTURE_PATH': user.picturePath || builder.rstr('PICTURE_PATH'),
-                'IS_OPEN_INFO': user.isOpenInfo === undefined ? builder.rstr('IS_OPEN_INFO') : user.isOpenInfo,
-                'INFO_MODIFIED_DATE': (user.loungeNickName || user.topicNickName || user.picturePath || (user.isOpenInfo !== undefined)) ? util.getYYYYMMDD() : builder.rstr('INFO_MODIFIED_DATE'),
-                'MEMO': (user.memo !== undefined ? user.memo : builder.rstr('MEMO'))
-            })
+            query
             .where('USER_ID = ?', user.userId)
             .toParam()
         );
@@ -153,12 +173,21 @@ exports.updateUserAuth = async(userId) => {
     )
 }
 exports.deleteUser = async(userId) => {
-    return await pool.executeQuery('deleteUser',
+    let result = await pool.executeQuery('deleteUser',
         builder.delete()
         .from('SS_MST_USER')
         .where('USER_ID = ?', userId)
         .toParam()
     );
+    if(result > 0){
+        pool.executeQuery('deleteUserGroupByUserId',
+         builder.delete()
+         .from('SS_MST_USER_GROUP')
+         .where('USER_ID = ?', userId)
+         .toParam()
+         )
+         return result;
+    }
 }
 
 exports.getUser = async(userId) => {

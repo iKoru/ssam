@@ -2,9 +2,8 @@ const pool = require('./db').instance,
     builder = require('./db').builder;
 const util = require('../util');
 
-const getGroup = async(groupId) => {
-    return await pool.executeQuery('getGroup',
-        builder.select()
+const getGroup = async(groupId, groupType) => {
+    let query = builder.select()
         .fields({
             'GROUP_ID': '"groupId"',
             'GROUP_NAME': '"groupName"',
@@ -17,6 +16,11 @@ const getGroup = async(groupId) => {
         })
         .from('SS_MST_GROUP')
         .where('GROUP_ID = ?', groupId)
+    if(groupType){
+        query.where('GROUP_TYPE IN ?', groupType)
+    }
+    return await pool.executeQuery('getGroup' + (groupType?groupType.length:''),
+        query
         .limit(1)
         .toParam()
     );
@@ -25,10 +29,9 @@ const getGroup = async(groupId) => {
 exports.getGroup = getGroup;
 
 exports.getGroups = async(isAdmin, groupType = ['N', 'M', 'G', 'R'], page = 1) => {
-    return isAdmin ?
-        await pool.executeQuery('getGroupsForAdmin' + groupType.length,
-            builder.select()
-            .fields({
+    let query = builder.select()
+    if(isAdmin){
+        query.fields({
                 'GROUP_ID': '"groupId"',
                 'GROUP_NAME': '"groupName"',
                 'GROUP_DESCRIPTION': '"groupDescription"',
@@ -40,14 +43,8 @@ exports.getGroups = async(isAdmin, groupType = ['N', 'M', 'G', 'R'], page = 1) =
             })
             .from('SS_MST_GROUP')
             .where('GROUP_TYPE IN ?', groupType)
-            .limit(30)
-            .offset((page - 1) * 30)
-            .order('ORDER_NUMBER')
-            .toParam()
-        ) :
-        await pool.executeQuery('getGroups' + groupType.length,
-            builder.select()
-            .fields({
+    }else{
+        query.fields({
                 'GROUP_ID': '"groupId"',
                 'GROUP_NAME': '"groupName"',
                 'GROUP_DESCRIPTION': '"groupDescription"',
@@ -58,9 +55,20 @@ exports.getGroups = async(isAdmin, groupType = ['N', 'M', 'G', 'R'], page = 1) =
             .from('SS_MST_GROUP')
             .where('GROUP_TYPE IN ?', groupType)
             .where('IS_OPEN_TO_USERS = true')
-            .limit(30)
-            .offset((page - 1) * 30)
-            .order('ORDER_NUMBER')
+    }
+    
+    if(page !== null){
+        query.limit(30)
+        .offset((page - 1) * 30)
+    }
+    query.order('ORDER_NUMBER')
+    return isAdmin ?
+        await pool.executeQuery('getGroupsForAdmin' + groupType.length + (page===null?'all':''),
+            query
+            .toParam()
+        ) :
+        await pool.executeQuery('getGroups' + groupType.length + (page===null?'all':''),
+            query
             .toParam()
         );
 };
@@ -164,4 +172,24 @@ exports.getUserGroup = async(userId) => {
         .order('MGROUP.ORDER_NUMBER')
         .toParam()
     );
+}
+
+exports.getGroupByRegion = async(region) => {
+    return await pool.executeQuery('getGroupByRegion',
+    builder.select()
+    .fields({
+            'GROUP_ID': '"groupId"',
+            'GROUP_NAME': '"groupName"',
+            'GROUP_DESCRIPTION': '"groupDescription"',
+            'GROUP_ICON_PATH': '"groupIconPath"',
+            'GROUP_TYPE': '"groupType"',
+            'PARENT_GROUP_ID': '"parentGroupId"',
+            'IS_OPEN_TO_USERS': '"isOpenToUsers"',
+            'EXPIRE_PERIOD': '"expirePeriod"'
+        })
+    .from('SS_MST_GROUP')
+    .where('GROUP_NAME = ?', region)
+    .where('GROUP_TYPE = \'R\'')
+    .toParam()
+    )
 }
