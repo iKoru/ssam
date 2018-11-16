@@ -259,13 +259,13 @@ const getComment = async(commentId) => {
 
 exports.getComment = getComment;
 
-exports.getUserComment = async(userId, page = 1) => {
-    return await pool.executeQuery('getUserComment',
-        builder.select()
+exports.getUserComment = async(userId, isAdmin, page = 1) => {
+    let query = builder.select()
         .fields({
             'COMMENT_ID': '"commentId"',
             'DOCUMENT_ID': '"documentId"',
             'CONTENTS': '"contents"',
+            'IS_DELETED':'"isDeleted"',
             'VOTE_UP_COUNT': '"voteUpCount"',
             'VOTE_DOWN_COUNT': '"voteDownCount"',
             'REPORT_COUNT': '"reportCount"',
@@ -279,8 +279,12 @@ exports.getUserComment = async(userId, page = 1) => {
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_COMMENT')
-        .where('USER_ID = ?', userId)
-        .where('IS_DELETED = false')
+        .where('USER_ID = ?', userId);
+    if(!isAdmin){
+        query.where('IS_DELETED = false')
+    }
+    return await pool.executeQuery('getUserComment',
+        query        
         .order('COMMENT_ID', false)
         .limit(10)
         .offset((page - 1) * 10)

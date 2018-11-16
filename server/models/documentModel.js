@@ -337,9 +337,8 @@ const getDocument = async(documentId) => {
 }
 
 exports.getDocument = getDocument;
-exports.getUserDocument = async(userId, page = 1) => {
-    return await pool.executeQuery('getUserDocument',
-        builder.select()
+exports.getUserDocument = async(userId, isAdmin, page = 1) => {
+    let query = builder.select()
         .fields({
             'DOCUMENT_ID': '"documentId"',
             'BOARD_ID': '"boardId"',
@@ -362,7 +361,12 @@ exports.getUserDocument = async(userId, page = 1) => {
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_DOCUMENT')
-        .where('USER_ID = ?', userId)
+        .where('USER_ID = ?', userId);
+    if(!isAdmin){
+        query.where('IS_DELETED = false')
+    }
+    return await pool.executeQuery('getUserDocument' + (isAdmin?'admin':''),
+        query
         .order('DOCUMENT_ID', false)
         .offset((page - 1) * 15)
         .limit(15)

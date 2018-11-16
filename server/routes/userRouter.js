@@ -7,7 +7,10 @@ logger = require('../logger');
 const adminOnly = require('../middlewares/adminOnly'),
     requiredSignin = require('../middlewares/requiredSignin');
 const userModel = require('../models/userModel'),
-groupModel = require('../models/groupModel');
+groupModel = require('../models/groupModel'),
+documentModel = require('../models/documentModel'),
+commentModel = require('../models/commentModel'),
+boardModel = require('../models/boardModel');
 let moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Seoul');
 //based on /user
@@ -296,23 +299,160 @@ router.delete('/:userId', adminOnly, async (req, res) => {
     }
 });
 
-router.get('/document', requiredSignin, (req, res) => {
-    res.status(501).end();
+router.get('/document', requiredSignin, async (req, res) => {
+    let result = await documentModel.getUserDocument(req.userObject.userId, req.userObject.isAdmin, req.query.page);
+    if(Array.isArray(result)){
+        if(!req.userObject.isAdmin){
+            let i=0;
+            while(i<result.length){
+                delete result[i].userId;
+                delete result[i].isDeleted;
+                i++;
+            }
+        }
+        res.status(200).json(result);
+    }else{
+        res.status(500).json({message:'정보를 읽어오던 중 오류가 발생했습니다.' + result.code? `(${result.code})`:''})
+    }
 });
 
-router.get('/comment', requiredSignin, (req, res) => {
-    res.status(501).end();
+router.get('/comment', requiredSignin, async (req, res) => {
+    let result = await commentModel.getUserComment(req.userObject.userId, req.userObject.isAdmin, req.query.page);
+    if(Array.isArray(result)){
+        if(!req.userObject.isAdmin){
+            let i=0;
+            while(i<result.length){
+                delete result[i].isDeleted;
+                i++;
+            }
+        }
+        res.status(200).json(result);
+    }else{
+        res.status(500).json({message:'정보를 읽어오던 중 오류가 발생했습니다.' + result.code? `(${result.code})`:''})
+    }
 });
 
-router.get('/board', requiredSignin, (req, res) => {
-    res.status(501).end();
+router.get('/board', requiredSignin, async (req, res) => {
+    let result = await boardModel.getUserBoard(req.userObject.userId, req.userObject.isAdmin);
+    if(Array.isArray(result)){
+        res.status(200).json(result);
+    }else{
+        res.status(500).json({message:'정보를 읽어오던 중 오류가 발생했습니다.' + result.code? `(${result.code})`:''})
+    }
 });
 
-router.put('/board', requiredSignin, (req, res) => {
-    res.status(501).end();
+router.put('/board', requiredSignin, async (req, res) => {
+    let boards = req.body.boards;
+    if(!boards){
+        res.status(400).json({message:'boards', message:'잘못된 접근입니다.'});
+    }else if(typeof boards === 'string'){
+        boards = [boards];
+    }
+    let currentBoard = await boardModel.getUserBoard(req.userObject.userId, req.userObject.isAdmin);
+    let result;
+    let failedBoard = [];
+    if(Array.isArray(currentBoard)){
+        let i=0;
+        while(i<boards.length){
+            if((currentBoard.filter(x=>x.boardId === boards[i])).length < 1){//new board
+                result = await boardModel.getBoard(boards[i]);
+                if(result && result[0] && result[0].allGroupAuth !== 'NONE'){
+                    result = await boardModel.createUserBoard(req.userObject.userId, boards[i])
+                    if(typeof result === 'object'){
+                        failedBoard.push(boards[i]);
+                    }
+                }else{
+                    result = await boardModel.getUserBoardAuth(req.userObject.userId, boards[i]);
+                    if(result && result.length > 0){
+                        result = await boardModel.createUserBoard(req.userObject.userId, boards[i]);
+                        if(typeof result === 'object'){
+                            failedBoard.push(boards[i]);
+                        }
+                    }else{
+                        failedBoard.push(boards[i]);
+                    }
+                }
+            }
+            i++;
+        }
+        i=0;
+        while(i<currentBoard.length){
+            if((boards.filter(x=>x===currentBoard[i].boardId)).length < 1){//deleted board
+                result = await boardModel.deleteUserBoard(req.userObject.userId, currentBoard[i].boardId);
+                if(typeof result === 'object'){
+                    failedBoard.push(currentBoard[i].boardId);
+                }
+            }
+            i++;
+        }
+    }else{
+        res.status(500).json({message:'기존 정보를 불러오던 중 오류가 발생했습니다.' + result.code? `(${result.code})`:''})
+        return;
+    }
+    if(failedBoard.length > 0){
+        res.status(400).json({message:`게시판을 구독할 권한이 없거나, 구독(취소) 시 오류가 ${failedBoard.length}건 발생하였습니다.`, boardId:failedBoard})
+    }else{
+        res.status(200).json({message:'구독하는 게시판을 변경하였습니다.'});
+    }
 });
 
-router.put('/group', adminOnly, (req, res) => {
-    res.status(501).end();
+router.get('/group', adminOnly, async (req, res) => {
+    let result = await groupModel.getUserGroup(req.body.userId);
+    if(Array.isArray(result)){
+        res.status(200).json(result);
+    }else{
+        res.status(500).json({message:'정보를 불러오던 중 오류가 발생했습니다.' + result.code? `(${result.code})`:''})
+    }
+});
+router.put('/group', adminOnly, async (req, res) => {
+    let groups = req.body.groups;
+    if(!groups){
+        res.status(400).json({message:'groups', message:'잘못된 접근입니다.'});
+    }else if(typeof groups === 'string'){
+        groups = [groups];
+    }
+    let currentGroup = await groupModel.getUserGroup(req.userObject.userId);
+    let result;
+    let failedGroup = [];
+    if(Array.isArray(currentGroup)){
+        let i=0;
+        while(i<groups.length){
+            if((currentGroup.filter(x=>x.groupId === groups[i])).length < 1){//new group
+                result = await boardModel.getBoard(groups[i]);
+                if(result && result[0]){
+                    if(result[0].boardType !== 'N'){
+                        let currentType = currentGroup.filter(x=>x.groupType === result[0].groupType);
+                        let j=0;
+                        while(j<currentType.length){
+                            groupModel.deleteUserGroup(req.userObject.userId, currentType[i].groupId);//delete current group with same group type
+                        }
+                    }
+                    result = await groupModel.createUserGroup(req.userObject.userId, groups[i]);
+                    if(typeof result === 'object'){
+                        failedGroup.push(groups[i]);
+                    }
+                }
+            }
+            i++;
+        }
+        i=0;
+        while(i<currentGroup.length){
+            if((groups.filter(x=>x===currentGroup[i].boardId)).length < 1){//deleted group
+                result = await groupModel.deleteUserGroup(req.userObject.userId, currentGroup[i].groupId);
+                if(typeof result === 'object'){
+                    failedGroup.push(currentGroup[i].groupId);
+                }
+            }
+            i++;
+        }
+    }else{
+        res.status(500).json({message:'기존 정보를 불러오던 중 오류가 발생했습니다.' + result.code? `(${result.code})`:''})
+        return;
+    }
+    if(failedGroup.length > 0){
+        res.status(400).json({message:`회원 그룹을 등록(제거)시 오류가 ${failedGroup.length}건 발생하였습니다.`, groupId:failedGroup})
+    }else{
+        res.status(200).json({message:'회원 그룹을 변경하였습니다.'});
+    }
 });
 module.exports = router;

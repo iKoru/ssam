@@ -59,14 +59,12 @@ exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boar
     )
 }
 
-exports.getUserBoards = async(userId) => {
-    return await pool.executeQuery('getUserBoards',
-        builder.select()
+exports.getUserBoard = async(userId, isAdmin) => {
+    let query = builder.select()
         .fields({
             'USERBOARD.BOARD_ID': '"boardId"',
             'USERBOARD.JOIN_DATE': '"joinDate"',
             'BOARD_NAME': '"boardName"',
-            'OWNER_ID': '"ownerId"',
             'BOARD_DESCRIPTION': '"boardDescription"',
             'BOARD_TYPE': '"boardType"',
             'STATUS': '"status"',
@@ -76,7 +74,14 @@ exports.getUserBoards = async(userId) => {
         })
         .from('SS_MST_USER_BOARD', 'USERBOARD')
         .join('SS_MST_BOARD', 'BOARD', 'BOARD.BOARD_ID = USERBOARD.BOARD_ID')
-        .where('USERBOARD.USER_ID = ?', userId))
+        .where('USERBOARD.USER_ID = ?', userId);
+    if(!isAdmin){
+        query.where('STATUS <> \'DELETED\'')
+    }
+    return await pool.executeQuery('getUserBoard' + (isAdmin?'admin':''),
+        query
+        .toParam())
+        
 }
 
 const getBoard = async(boardId) => {
