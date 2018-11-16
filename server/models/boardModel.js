@@ -68,6 +68,7 @@ exports.getUserBoard = async(userId, isAdmin) => {
             'BOARD_DESCRIPTION': '"boardDescription"',
             'BOARD_TYPE': '"boardType"',
             'STATUS': '"status"',
+            'ALL_GROUP_AUTH': '"allGroupAuth"',
             'ALLOW_ANONYMOUS': '"allowAnonymous"',
             'RESERVED_DATE': '"reservedDate"',
             'RESERVED_CONTENTS': '"reservedContents"'
