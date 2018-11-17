@@ -7,7 +7,7 @@ router.get('/', requiredSignin, (req, res) => {
     res.status(501).end();
 });
 
-router.post('/', requiredSignin, async(req, res) => {
+router.post('/', requiredSignin, (req, res) => {
     let userId = req.userObject.userId;
     let email = req.userObject.email;
     let authKey;
