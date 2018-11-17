@@ -25,15 +25,16 @@ router.post('/signin', async(req, res) => {
         } else if (user.length > 1) {
             res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
         } else {
+            console.log("USER : ", user[0]);
+            console.log("compare : ", await bcrypt.compare(password, user[0].password));
             if (user[0].status !== 'NORMAL') {
                 res.json(403).json({ message: '이용이 불가능한 아이디입니다.' });
             } else if (await bcrypt.compare(password, user[0].password)) {
                 res.json(jwt.sign({ userId: userId }, config.jwtKey, { expiresIn: (req.body.rememberMe ? "7d" : "3h"), ...config.jwtOptions }));
             } else {
-                res.status(404).json({ message: '비밀번호가 일치하지 않습니다.' });
+                res.status(400).json({ message: '비밀번호가 일치하지 않습니다.' });
             }
         }
-        res.status(400).json({ message: '잘못된 접근입니다.' });
     }
 });
 
