@@ -7,8 +7,8 @@
     "author": "iKoru <glassonyou@gmail.com>",
     "scripts": {
         "test": "jest --detectOpenHandles --runInBand --silent",
-        "test:model": "jest --detectOpenHandles --runInBand --silent --testPathPattern=^test/.*Model\\.test\\.js$",
-        "test:router": "jest --detectOpenHandles --runInBand --silent --testPathPattern=^.*Router.test.js$"
+        "test:model": "jest --detectOpenHandles --runInBand --silent --testPathPattern=^.*Model\\.test\\.js$",
+        "test:router": "jest --detectOpenHandles --runInBand --silent --testPathPattern=^.*Router\\.test\\.js$"
     },
     "dependencies": {
         "bcrypt": "^3.0.2",
