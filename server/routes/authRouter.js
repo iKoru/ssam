@@ -7,7 +7,7 @@ router.get('/', requiredSignin, (req, res) => {
     res.status(501).end();
 });
 
-router.post('/', requiredSignin, (req, res) => {
+router.post('/', requiredSignin, async (req, res) => {
     let userId = req.userObject.userId;
     let email = req.userObject.email;
     let authKey;
@@ -28,7 +28,7 @@ router.post('/', requiredSignin, (req, res) => {
     res.status(501).end();
 });
 
-router.get('/submit', async(req, res) => { // get /auth/submit 
+router.get('/submit', async (req, res) => { // get /auth/submit 
     if (!req.query.userId || !req.query.authKey) {
         res.status(404).json({ message: '잘못된 접근입니다.' }); //TODO : show failed page
     } else {

@@ -13,27 +13,35 @@ router.get('/signin', visitorOnly('/'), (req, res) => {
     res.status(501).end();
 });
 
-router.post('/signin', async(req, res) => {
+router.post('/signin', async (req, res) => {
     let userId = req.body.userId;
     let password = req.body.password;
     if (!userId || !password) {
         res.status(400).json({ message: '아이디와 비밀번호를 모두 입력해주세요.' });
+        return;
     } else {
         const user = await userModel.getUser(userId);
         if (!user || user.length < 1) {
-            res.status(404).json({ message: '존재하지 않는 아이디입니다.' });
+            res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
+            return;
         } else if (user.length > 1) {
             res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
+            return;
         } else {
-            if (user[0].status !== 'NORMAL') {
-                res.json(403).json({ message: '이용이 불가능한 아이디입니다.' });
+            if (user[0].status === 'DELETED') {
+                res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
+                return;
+            } else if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
+                res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
+                return;
             } else if (await bcrypt.compare(password, user[0].password)) {
                 res.json(jwt.sign({ userId: userId }, config.jwtKey, { expiresIn: (req.body.rememberMe ? "7d" : "3h"), ...config.jwtOptions }));
+                return;
             } else {
-                res.status(404).json({ message: '비밀번호가 일치하지 않습니다.' });
+                res.status(400).json({ target: 'password', message: '비밀번호가 일치하지 않습니다.' });
+                return;
             }
         }
-        res.status(400).json({ message: '잘못된 접근입니다.' });
     }
 });
 
@@ -45,7 +53,7 @@ router.get('/resetPassword', visitorOnly('/'), (req, res) => {
     res.status(501).end();
 });
 
-router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
+router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
     let userId = req.body.userId;
     let email = req.body.userId;
     if (!userId || !email) {
@@ -70,7 +78,7 @@ router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
                 res.status(200).json({ message: '새로운 패스워드를 이메일로 발송하였습니다. 메일을 확인해주세요!' });
             }
         } else {
-            res.status(404).json({ message: '이메일이 일치하지 않습니다.' });
+            res.status(400).json({ message: '이메일이 일치하지 않습니다.' });
         }
     }
 });
@@ -79,7 +87,7 @@ router.post('/refresh', (req, res) => {
     const token = req.headers['x-auth'];
     jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
         if (!err) { //아직 유효한 토큰이면 그대로 보낸다.
-            res.json(token);
+            res.status(200).json(token);
         } else if (err.name === 'TokenExpiredError') { //token is valid except it's expired
             if ((new Date(err.expiredAt).getTime() + 3600000) >= (new Date().getTime())) { //기한 만료 및 만료시간부터 1시간이 지나지 않았다면 토큰 리프레시
                 const decoded = jwt_decode(token);
