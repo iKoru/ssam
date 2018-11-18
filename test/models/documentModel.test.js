@@ -1,7 +1,8 @@
 /* global expect */
-const documentModel = require('../../server/models/documentModel');
+const documentModel = require('../../server/models/documentModel'),
+    userModel = require('../../server/models/userModel');
 
-// test('create document - init', async(done) => {
+// test('create document - init', async (done) => {
 //     expect(await documentModel.createDocument({
 //         boardId: 'free',
 //         userId: 'orange',
@@ -42,11 +43,11 @@ const documentModel = require('../../server/models/documentModel');
 //         contents: '하하하 테스트ㅋㅋㅋㅋ',
 //         allowAnonymous: false
 //     })).toHaveProperty('rowCount', 1);
-//done();
+//     done();
 // });
 
 
-test('get documents', async(done) => {
+test('get documents', async (done) => {
     let document = await documentModel.getDocuments('free');
 
     expect(document).toHaveLength(3);
@@ -64,7 +65,7 @@ test('get documents', async(done) => {
     done();
 });
 
-test('create document', async(done) => {
+test('create document', async (done) => {
     expect(await documentModel.createDocument({
         boardId: 'free',
         userId: 'blue',
@@ -76,17 +77,17 @@ test('create document', async(done) => {
     done();
 });
 
-test('get document', async(done) => {
+test('get document', async (done) => {
     const document = await documentModel.getDocuments('free');
     expect(document.length).toBeGreaterThan(2);
     expect((await documentModel.getDocument(document[0].documentId))[0].documentId).toEqual(document[0].documentId);
     done();
 });
 
-test('update document', async(done) => {
+test('update document', async (done) => {
     let document = await documentModel.getDocuments('nofree');
     //document = document[0];
-    let first = {...document[0] };
+    let first = { ...document[0] };
     first.title = '바뀐 제목입니다.';
     first.restriction = JSON.stringify({ 'test': 'aaa' });
     first.isDeleted = true;
@@ -100,7 +101,7 @@ test('update document', async(done) => {
     done();
 });
 
-test('get best document and delete document', async(done) => {
+test('get best document and delete document', async (done) => {
     let document = await documentModel.getDocuments('free');
     for (let i = 0; i < document.length; i++) {
         document[i].bestDateTime = document[i].writeDateTime;
@@ -126,13 +127,14 @@ test('get best document and delete document', async(done) => {
     done();
 });
 
-test('get user document', async(done) => {
-    expect(await documentModel.getUserDocument('blue', 2)).toHaveLength(0);
-    expect((await documentModel.getUserDocument('blue', 1)).length).toBeGreaterThan(0);
+test('get user document', async (done) => {
+    expect(await documentModel.getUserDocument('blue', true, 99)).toHaveLength(0);
+    expect((await documentModel.getUserDocument('blue', true, 1)).length).toBeGreaterThan(0);
     done();
 })
 
-test('get nickname document', async(done) => {
-    expect(await documentModel.getNickNameDocument('41f7', 'T')).toHaveLength(1);
+test('get nickname document', async (done) => {
+    const user = await userModel.getUser('orange');
+    expect(await documentModel.getNickNameDocument(user[0].topicNickName, 'T')).toHaveLength(1);
     done();
 });

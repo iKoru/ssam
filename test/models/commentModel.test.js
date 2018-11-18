@@ -3,50 +3,50 @@ const commentModel = require('../../server/models/commentModel'),
     documentModel = require('../../server/models/documentModel');
 
 
-//test('create comment - init', async(done) => {
-//expect(await commentModel.createAnimalNames(['강아지', '멍멍이'])).toEqual(2);
-//expect(await commentModel.createAnimalNames('고양이')).toEqual(1);
-// const document = (await documentModel.getDocuments('nofree'))[0];
-// let commentId;
-// const comment = await commentModel.createComment({
-//     documentId: document.documentId,
-//     userId: 'orange',
-//     isAnonymous: false,
-//     contents: '빵빵빵 터지는 댓글'
+//test('create comment - init', async (done) => {
+// expect(await commentModel.createAnimalNames(['강아지', '멍멍이'])).toEqual(2);
+// expect(await commentModel.createAnimalNames('고양이')).toEqual(1);
+//     const document = (await documentModel.getDocuments('nofree'))[0];
+//     let commentId;
+//     const comment = await commentModel.createComment({
+//         documentId: document.documentId,
+//         userId: 'orange',
+//         isAnonymous: false,
+//         contents: '빵빵빵 터지는 댓글'
+//     });
+//     commentId = comment.rows[0].commentId
+//     expect(comment).toHaveProperty('rowCount', 1);
+//     expect(await commentModel.createComment({
+//         documentId: document.documentId,
+//         userId: 'blue',
+//         isAnonymous: true,
+//         contents: '빵빵 댓글2'
+//     })).toHaveProperty('rowCount', 1);
+//     expect(await commentModel.createComment({
+//         documentId: document.documentId,
+//         userId: 'orange',
+//         isAnonymous: true,
+//         contents: '빵빵 댓글3'
+//     })).toHaveProperty('rowCount', 1);
+//     expect(await commentModel.createComment({
+//         documentId: document.documentId,
+//         parentCommentId: commentId,
+//         userId: 'blue',
+//         isAnonymous: false,
+//         contents: '빵빵 대댓글4'
+//     })).toHaveProperty('rowCount', 1);
+//     expect(await commentModel.createComment({
+//         documentId: document.documentId,
+//         parentCommentId: commentId,
+//         userId: 'orange',
+//         isAnonymous: true,
+//         contents: '빵빵 대댓글5'
+//     })).toHaveProperty('rowCount', 1);
+//     done();
 // });
-// commentId = comment.rows[0].commentId
-// expect(comment).toHaveProperty('rowCount', 1);
-// expect(await commentModel.createComment({
-//     documentId: document.documentId,
-//     userId: 'blue',
-//     isAnonymous: true,
-//     contents: '빵빵 댓글2'
-// })).toHaveProperty('rowCount', 1);
-// expect(await commentModel.createComment({
-//     documentId: document.documentId,
-//     userId: 'orange',
-//     isAnonymous: true,
-//     contents: '빵빵 댓글3'
-// })).toHaveProperty('rowCount', 1);
-// expect(await commentModel.createComment({
-//     documentId: document.documentId,
-//     parentCommentId: commentId,
-//     userId: 'blue',
-//     isAnonymous: false,
-//     contents: '빵빵 대댓글4'
-// })).toHaveProperty('rowCount', 1);
-// expect(await commentModel.createComment({
-//     documentId: document.documentId,
-//     parentCommentId: commentId,
-//     userId: 'orange',
-//     isAnonymous: true,
-//     contents: '빵빵 대댓글5'
-// })).toHaveProperty('rowCount', 1);
-//done();
-//});
 
 
-test('get comments', async(done) => {
+test('get comments', async (done) => {
     const document = (await documentModel.getDocuments('nofree'))[0];
     let comment = await commentModel.getComments(document.documentId);
 
@@ -56,7 +56,7 @@ test('get comments', async(done) => {
     done();
 });
 
-test('create comment', async(done) => {
+test('create comment', async (done) => {
     const document = (await documentModel.getDocuments('nofree'))[0];
     expect(await commentModel.createComment({
         documentId: document.documentId,
@@ -67,7 +67,7 @@ test('create comment', async(done) => {
     done();
 });
 
-test('create child comment', async(done) => {
+test('create child comment', async (done) => {
     const document = (await documentModel.getDocuments('nofree'))[0];
     const commentId = (await commentModel.getComments(document.documentId))[0].commentId;
 
@@ -81,7 +81,7 @@ test('create child comment', async(done) => {
     done();
 });
 
-test('get comment', async(done) => {
+test('get comment', async (done) => {
     const documents = (await documentModel.getDocuments('nofree'))[0];
     const document = (await documentModel.getDocument(documents.documentId))[0];
     const comment = await commentModel.getComments(document.documentId);
@@ -98,22 +98,22 @@ test('get comment', async(done) => {
     done();
 });
 
-test('get child comment', async(done) => {
+test('get child comment', async (done) => {
     const document = (await documentModel.getDocuments('nofree'))[0];
     const commentId = (await commentModel.getComments(document.documentId))[0].commentId;
 
     const comments = await commentModel.getChildComments(commentId, document.documentId);
     expect(await commentModel.getChildComments(commentId)).toEqual(comments); //no documentId case is acceptable
-    expect(comments.length).toBeGreaterThan(1);
+    expect(comments.length).toBeGreaterThan(0);
     done();
 });
 
-test('update comment', async(done) => {
+test('update comment', async (done) => {
     const document = (await documentModel.getDocuments('nofree'))[0];
     let comment = await commentModel.getComments(document.documentId);
     comment = comment[comment.length - 1]; //가장 마지막에 추가한 녀석 선택
 
-    let target = {...comment };
+    let target = { ...comment };
     target.contents = '바뀐 내용입니다.';
     target.restrictionStatus = 'REQUEST';
     target.isDeleted = true;
@@ -129,7 +129,7 @@ test('update comment', async(done) => {
     done();
 });
 
-test('delete comment', async(done) => {
+test('delete comment', async (done) => {
     const document = (await documentModel.getDocuments('nofree'))[0];
     const commentId = (await commentModel.getComments(document.documentId))[0].commentId;
 
@@ -142,13 +142,13 @@ test('delete comment', async(done) => {
     done();
 });
 
-test('get user comment', async(done) => {
-    expect(await commentModel.getUserComment('blue', 2)).toHaveLength(0);
+test('get user comment', async (done) => {
+    expect(await commentModel.getUserComment('blue', true, 2)).toHaveLength(0);
     expect((await commentModel.getUserComment('blue')).length).toBeGreaterThan(0);
     done();
 })
 
-test('create and delete animal name', async(done) => {
+test('create and delete animal name', async (done) => {
     expect(await commentModel.createAnimalNames(['교교교', '기기기'])).toEqual(2);
     expect(await commentModel.deleteAnimalNames(['교교교', '기기기'])).toEqual(2);
     done();
