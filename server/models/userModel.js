@@ -4,68 +4,68 @@ const util = require('../util'),
     logger = require('../logger');
 const groupModel = require('./groupModel');
 
-exports.checkUserId = async (userId) => {
+exports.checkUserId = async(userId) => {
     return await pool.executeQuery('checkUserId',
         builder.select()
-            .field('COUNT(*)', 'count')
-            .from('SS_MST_USER')
-            .where('USER_ID = ?', userId)
-            .limit(1)
-            .toParam()
+        .field('COUNT(*)', 'count')
+        .from('SS_MST_USER')
+        .where('USER_ID = ?', userId)
+        .limit(1)
+        .toParam()
     );
 }
 
-exports.checkNickName = async (userId, nickName) => {
+exports.checkNickName = async(userId, nickName) => {
     return await pool.executeQuery('checkNickName',
         builder.select()
-            .field('COUNT(*)', 'count')
-            .from('SS_MST_USER')
-            .where('LOUNGE_NICKNAME = ? OR TOPIC_NICKNAME = ?', nickName, nickName)
-            .where('USER_ID <> ?', userId)
-            .limit(1)
-            .toParam()
+        .field('COUNT(*)', 'count')
+        .from('SS_MST_USER')
+        .where('LOUNGE_NICKNAME = ? OR TOPIC_NICKNAME = ?', nickName, nickName)
+        .where('USER_ID <> ?', userId)
+        .limit(1)
+        .toParam()
     );
 }
 
-exports.checkEmail = async (email) => {
+exports.checkEmail = async(email) => {
     return await pool.executeQuery('checkEmail',
         builder.select()
-            .field('COUNT(*)', 'count')
-            .from('SS_MST_USER')
-            .where('EMAIL = ?', email)
-            .limit(1)
-            .toParam()
+        .field('COUNT(*)', 'count')
+        .from('SS_MST_USER')
+        .where('EMAIL = ?', email)
+        .limit(1)
+        .toParam()
     );
 }
 
-exports.createUser = async (user) => {
+exports.createUser = async(user) => {
     let result = await pool.executeQuery('createUser',
         builder.insert()
-            .into('SS_MST_USER')
-            .setFields({
-                USER_ID: user.userId,
-                EMAIL: user.email,
-                LOUNGE_NICKNAME: user.nickName,
-                TOPIC_NICKNAME: user.nickName,
-                PASSWORD: user.password,
-                INVITE_CODE: util.partialUUID(),
-                INVITER: user.inviter
-            })
-            .toParam()
+        .into('SS_MST_USER')
+        .setFields({
+            USER_ID: user.userId,
+            EMAIL: user.email,
+            LOUNGE_NICKNAME: user.nickName,
+            TOPIC_NICKNAME: user.nickName,
+            PASSWORD: user.password,
+            INVITE_CODE: util.partialUUID(),
+            INVITER: user.inviter
+        })
+        .toParam()
     );
     if (result === 1 && user.inviter) {
         await pool.executeQuery('updateInviter',
             builder.update()
-                .table('SS_MST_USER')
-                .set('INVITED_COUNT', builder.str('INVITED_COUNT + 1'))
-                .where('INVITE_CODE = ?', user.inviter)
-                .toParam()
+            .table('SS_MST_USER')
+            .set('INVITED_COUNT', builder.str('INVITED_COUNT + 1'))
+            .where('INVITE_CODE = ?', user.inviter)
+            .toParam()
         )
     }
     return result;
 }
 
-exports.updateUserInfo = async (user) => {
+exports.updateUserInfo = async(user) => {
     try {
         if (!user.userId) {
             return 0;
@@ -102,37 +102,37 @@ exports.updateUserInfo = async (user) => {
         }
         let result = await pool.executeQuery(null,
             query
-                .where('USER_ID = ?', user.userId)
-                .toParam()
+            .where('USER_ID = ?', user.userId)
+            .toParam()
         );
         if (result > 0) {
             if (user.grade) {
                 await pool.executeQuery('deleteUserGrade',
                     builder.delete()
-                        .from('SS_MST_USER_GROUP')
-                        .where('USER_ID = ?', user.userId)
-                        .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'G\''))
-                        .toParam()
+                    .from('SS_MST_USER_GROUP')
+                    .where('USER_ID = ?', user.userId)
+                    .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'G\''))
+                    .toParam()
                 );
                 result += await groupModel.createUserGroup(user.userId, user.grade);
             }
             if (user.major) {
                 await pool.executeQuery('deleteUserMajor',
                     builder.delete()
-                        .from('SS_MST_USER_GROUP')
-                        .where('USER_ID = ?', user.userId)
-                        .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'M\''))
-                        .toParam()
+                    .from('SS_MST_USER_GROUP')
+                    .where('USER_ID = ?', user.userId)
+                    .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'M\''))
+                    .toParam()
                 );
                 result += await groupModel.createUserGroup(user.userId, user.major);
             }
             if (user.region) {
                 await pool.executeQuery('deleteUserRegion',
                     builder.delete()
-                        .from('SS_MST_USER_GROUP')
-                        .where('USER_ID = ?', user.userId)
-                        .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'R\''))
-                        .toParam()
+                    .from('SS_MST_USER_GROUP')
+                    .where('USER_ID = ?', user.userId)
+                    .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'R\''))
+                    .toParam()
                 );
                 result += await groupModel.createUserGroup(user.userId, user.region);
             }
@@ -143,151 +143,152 @@ exports.updateUserInfo = async (user) => {
     }
 }
 
-exports.updateUserPassword = async (user) => {
+exports.updateUserPassword = async(user) => {
     return await pool.executeQuery(null,
         builder.update()
-            .table('SS_MST_USER')
-            .setFields({
-                'PASSWORD': user.password || builder.rstr('PASSWORD'),
-                'PASSWORD_CHANGE_DATE': user.password ? util.getYYYYMMDD() : builder.rstr('PASSWORD_CHANGE_DATE')
-            })
-            .where('USER_ID = ?', user.userId)
-            .toParam()
+        .table('SS_MST_USER')
+        .setFields({
+            'PASSWORD': user.password || builder.rstr('PASSWORD'),
+            'PASSWORD_CHANGE_DATE': user.password ? util.getYYYYMMDD() : builder.rstr('PASSWORD_CHANGE_DATE')
+        })
+        .where('USER_ID = ?', user.userId)
+        .toParam()
     );
 }
 
-exports.updateUserAdmin = async (user) => {
+exports.updateUserAdmin = async(user) => {
     return await pool.executeQuery(null,
         builder.update()
-            .table('SS_MST_USER')
-            .set('IS_ADMIN', user.isAdmin === undefined ? builder.rstr('IS_ADMIN') : user.isAdmin)
-            .where('USER_ID = ?', user.userId)
-            .toParam()
+        .table('SS_MST_USER')
+        .set('IS_ADMIN', user.isAdmin === undefined ? builder.rstr('IS_ADMIN') : user.isAdmin)
+        .where('USER_ID = ?', user.userId)
+        .toParam()
     );
 }
 
-exports.updateUserAuth = async (userId) => {
+exports.updateUserAuth = async(userId) => {
     return await pool.executeQuery('updateUserAuth',
         builder.update()
-            .table('SS_MST_USER')
-            .set('EMAIL_VERIFIED_DATE', util.getYYYYMMDD())
-            .where('USER_ID = ?', userId)
-            .toParam()
+        .table('SS_MST_USER')
+        .set('EMAIL_VERIFIED_DATE', util.getYYYYMMDD())
+        .where('USER_ID = ?', userId)
+        .toParam()
     )
 }
-exports.deleteUser = async (userId) => {
+exports.deleteUser = async(userId) => {
     let result = await pool.executeQuery('deleteUser',
         builder.delete()
-            .from('SS_MST_USER')
-            .where('USER_ID = ?', userId)
-            .toParam()
+        .from('SS_MST_USER')
+        .where('USER_ID = ?', userId)
+        .toParam()
     );
     if (result > 0) {
-        pool.executeQuery('deleteUserGroupByUserId',
+        await pool.executeQuery('deleteUserGroupByUserId',
             builder.delete()
-                .from('SS_MST_USER_GROUP')
-                .where('USER_ID = ?', userId)
-                .toParam()
+            .from('SS_MST_USER_GROUP')
+            .where('USER_ID = ?', userId)
+            .toParam()
         )
         return result;
     }
 }
 
-exports.getUser = async (userId) => {
-    return await pool.executeQuery('getUser',
+exports.getUser = async(userId) => {
+    return await pool.executeQuery('getUser2',
         builder.select()
-            .fields({
-                'USER_ID': '"userId"',
-                'LOUNGE_NICKNAME': '"loungeNickName"',
-                'TOPIC_NICKNAME': '"topicNickName"',
-                'IS_ADMIN': '"isAdmin"',
-                'EMAIL_VERIFIED_DATE': '"emailVerifiedDate"',
-                'PICTURE_PATH': '"picturePath"',
-                'IS_OPEN_INFO': '"isOpenInfo"',
-                'STATUS': '"status"',
-                'SIGNUP_DATE': '"signupDate"',
-                'LAST_SIGNIN_DATE': '"lastSigninDate"',
-                'INVITER': '"inviter"',
-                'INVITED_COUNT': '"invitedCount"',
-                'INVITE_CODE': '"inviteCode"',
-                'PASSWORD': '"password"',
-                'PASSWORD_CHANGE_DATE': '"passwordChangeDate"',
-                'MEMO': '"memo"'
-            })
-            .from('SS_MST_USER')
-            .where('USER_ID = ?', userId)
-            .toParam()
+        .fields({
+            'USER_ID': '"userId"',
+            'LOUNGE_NICKNAME': '"loungeNickName"',
+            'TOPIC_NICKNAME': '"topicNickName"',
+            'EMAIL': '"email"',
+            'IS_ADMIN': '"isAdmin"',
+            'EMAIL_VERIFIED_DATE': '"emailVerifiedDate"',
+            'PICTURE_PATH': '"picturePath"',
+            'IS_OPEN_INFO': '"isOpenInfo"',
+            'STATUS': '"status"',
+            'SIGNUP_DATE': '"signupDate"',
+            'LAST_SIGNIN_DATE': '"lastSigninDate"',
+            'INVITER': '"inviter"',
+            'INVITED_COUNT': '"invitedCount"',
+            'INVITE_CODE': '"inviteCode"',
+            'PASSWORD': '"password"',
+            'PASSWORD_CHANGE_DATE': '"passwordChangeDate"',
+            'MEMO': '"memo"'
+        })
+        .from('SS_MST_USER')
+        .where('USER_ID = ?', userId)
+        .toParam()
     );
 }
 
-exports.getUsers = async (userId, nickName, email, groupId, status, sortTarget = "USER_ID", isAscending = true, page = 1) => {
+exports.getUsers = async(userId, nickName, email, groupId, status, sortTarget = "USER_ID", isAscending = true, page = 1) => {
     return await pool.executeQuery(null,
         builder.select()
-            .fields({
-                'USER_ID': '"userId"',
-                'LOUNGE_NICKNAME': '"loungeNickName"',
-                'TOPIC_NICKNAME': '"topicNickName"',
-                'IS_ADMIN': '"isAdmin"',
-                'EMAIL_VERIFIED_DATE': '"emailVerifiedDate"',
-                'PICTURE_PATH': '"picturePath"',
-                'IS_OPEN_INFO': '"isOpenInfo"',
-                'STATUS': '"status"',
-                'SIGNUP_DATE': '"signupDate"',
-                'LAST_SIGNIN_DATE': '"lastSigninDate"',
-                'INVITER': '"inviter"',
-                'INVITED_COUNT': '"invitedCount"',
-                'INVITE_CODE': '"inviteCode"'
-            })
-            .from('SS_MST_USER')
-            .where(userId ? builder.str('USER_ID = ?', userId) : '')
-            .where(nickName ? builder.str('LOUNGE_NICKNAME = ? OR TOPIC_NICKNAME = ?', nickName, nickName) : '')
-            .where(email ? builder.str('EMAIL = ?', email) : '')
-            .where(groupId ? builder.str('USER_ID IN ?',
-                builder.select()
-                    .field('USER_ID')
-                    .distinct()
-                    .from('SS_MST_USER_GROUP')
-                    .where('GROUP_ID = ?', groupId)
-                    .where(`EXPIRE_DATE > '${util.getYYYYMMDD()}'`)
-            ) : '')
-            .where(status ? builder.str('STATUS = ?', status) : '')
-            .order(sortTarget, isAscending)
-            .limit(15)
-            .offset((page - 1) * 15)
-            .toParam()
+        .fields({
+            'USER_ID': '"userId"',
+            'LOUNGE_NICKNAME': '"loungeNickName"',
+            'TOPIC_NICKNAME': '"topicNickName"',
+            'IS_ADMIN': '"isAdmin"',
+            'EMAIL_VERIFIED_DATE': '"emailVerifiedDate"',
+            'PICTURE_PATH': '"picturePath"',
+            'IS_OPEN_INFO': '"isOpenInfo"',
+            'STATUS': '"status"',
+            'SIGNUP_DATE': '"signupDate"',
+            'LAST_SIGNIN_DATE': '"lastSigninDate"',
+            'INVITER': '"inviter"',
+            'INVITED_COUNT': '"invitedCount"',
+            'INVITE_CODE': '"inviteCode"'
+        })
+        .from('SS_MST_USER')
+        .where(userId ? builder.str('USER_ID = ?', userId) : '')
+        .where(nickName ? builder.str('LOUNGE_NICKNAME = ? OR TOPIC_NICKNAME = ?', nickName, nickName) : '')
+        .where(email ? builder.str('EMAIL = ?', email) : '')
+        .where(groupId ? builder.str('USER_ID IN ?',
+            builder.select()
+            .field('USER_ID')
+            .distinct()
+            .from('SS_MST_USER_GROUP')
+            .where('GROUP_ID = ?', groupId)
+            .where(`EXPIRE_DATE > '${util.getYYYYMMDD()}'`)
+        ) : '')
+        .where(status ? builder.str('STATUS = ?', status) : '')
+        .order(sortTarget, isAscending)
+        .limit(15)
+        .offset((page - 1) * 15)
+        .toParam()
     );
 }
 
-exports.getProfile = async (nickName) => {
+exports.getProfile = async(nickName) => {
     if (!nickName || nickName.length < 1) {
         return {};
     }
     const user = (await pool.executeQuery('getProfile',
         builder.select()
-            .fields({ 'USER_ID': '"userId"', 'LOUNGE_NICKNAME': '"nickName"', 'PICTURE_PATH': '"picturePath"', 'IS_OPEN_INFO': '"isOpenInfo"' })
-            .from('SS_MST_USER')
-            .where('LOUNGE_NICKNAME = ?', nickName)
-            .limit(1)
-            .toParam()
+        .fields({ 'USER_ID': '"userId"', 'LOUNGE_NICKNAME': '"nickName"', 'PICTURE_PATH': '"picturePath"', 'IS_OPEN_INFO': '"isOpenInfo"' })
+        .from('SS_MST_USER')
+        .where('LOUNGE_NICKNAME = ?', nickName)
+        .limit(1)
+        .toParam()
     ))[0];
     const groups = (await pool.executeQuery('getProfileGroup',
         builder.select()
-            .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'M\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'major')
-            .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'G\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'grade')
-            .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'R\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'region')
-            .from(builder.select().from('SS_MST_USER_GROUP').where('USER_ID = ?', user.userId), 'USERGROUP')
-            .left_join(builder.select().fields(['GROUP_ID', 'GROUP_TYPE', 'GROUP_NAME']).from('SS_MST_GROUP').where('GROUP_TYPE IN (\'M\', \'G\', \'R\')'), 'MGROUP', 'USERGROUP.GROUP_ID = MGROUP.GROUP_ID') //major, grade, region
-            .toParam()
+        .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'M\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'major')
+        .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'G\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'grade')
+        .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'R\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'region')
+        .from(builder.select().from('SS_MST_USER_GROUP').where('USER_ID = ?', user.userId), 'USERGROUP')
+        .left_join(builder.select().fields(['GROUP_ID', 'GROUP_TYPE', 'GROUP_NAME']).from('SS_MST_GROUP').where('GROUP_TYPE IN (\'M\', \'G\', \'R\')'), 'MGROUP', 'USERGROUP.GROUP_ID = MGROUP.GROUP_ID') //major, grade, region
+        .toParam()
     ))[0];
-    return { ...user, ...groups };
+    return {...user, ...groups };
 }
 
-exports.getUserIdByNickName = async (nickName, boardType) => {
+exports.getUserIdByNickName = async(nickName, boardType) => {
     return await pool.executeQuery('getUserIdByNickName',
         builder.select()
-            .field('USER_ID', '"userId"')
-            .from('SS_MST_USER')
-            .where(`${(boardType === 'T' ? 'TOPIC_NICKNAME' : 'LOUNGE_NICKNAME')} = ?`, nickName)
-            .toParam()
+        .field('USER_ID', '"userId"')
+        .from('SS_MST_USER')
+        .where(`${(boardType === 'T' ? 'TOPIC_NICKNAME' : 'LOUNGE_NICKNAME')} = ?`, nickName)
+        .toParam()
     );
 }

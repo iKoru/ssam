@@ -1,9 +1,11 @@
 const router = require('express').Router();
-const multer = require('multer')({ dest: 'profiles/', limits: { fileSize: 1024 * 200 } }),//max 200kB
-    fs = require('fs');
+const multer = require('multer')({ dest: 'profiles/', limits: { fileSize: 1024 * 200 } }), //max 200kB
+    fs = require('fs'),
+    bcrypt = require('bcrypt');
 const constants = require('../constants'),
     util = require('../util'),
-    logger = require('../logger');
+    logger = require('../logger'),
+    config = require('../../config');
 const adminOnly = require('../middlewares/adminOnly'),
     requiredSignin = require('../middlewares/requiredSignin');
 const userModel = require('../models/userModel'),
@@ -14,8 +16,8 @@ const userModel = require('../models/userModel'),
 let moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Seoul');
 //based on /user
-router.put('/', requiredSignin, async (req, res) => {
-    let user = { ...req.body };
+router.put('/', requiredSignin, async(req, res) => {
+    let user = {...req.body };
     let parameters = { userId: user.userId };
     if (!req.userObject.isAdmin && (!user.userId || req.userObject.userId !== user.userId)) {
         res.status(400).json({ messagae: '잘못된 접근입니다.' });
@@ -80,7 +82,7 @@ router.put('/', requiredSignin, async (req, res) => {
             }
             if (user.email && user.email !== req.userObject.email) {
                 const email = constants.emailRegex.exec(user.email);
-                if (email) {//matched email
+                if (email) { //matched email
                     result = await userModel.checkEmail(user.email);
                     if (result && result[0] && result[0].count > 0) {
                         res.status(409).json({ target: 'email', message: '이미 사용중인 이메일입니다.' });
@@ -107,27 +109,27 @@ router.put('/', requiredSignin, async (req, res) => {
             parameters.status = user.status;
         }
         if (typeof user.isOpenInfo === 'boolean') {
-            parameters.isOpenInfo = !!user.isOpenInfo;//make it as boolean
+            parameters.isOpenInfo = !!user.isOpenInfo; //make it as boolean
         }
         if (typeof user.isDeleted === 'boolean') {
-            parameters.isDeleted = !!user.isDeleted;//make it as boolean
+            parameters.isDeleted = !!user.isDeleted; //make it as boolean
         }
         if (req.userObject.isAdmin && user.memo) {
             parameters.memo = user.memo;
         }
         if (req.userObject.isAdmin && typeof user.isAdmin === 'boolean') {
-            parameters.isAdmin = !!user.isAdmin;//make it as boolean
+            parameters.isAdmin = !!user.isAdmin; //make it as boolean
         }
         if (typeof parameters.isAdmin === 'boolean') {
             result = await userModel.updateUserAdmin(parameters);
-            if (result > 0 && Object.keys(parameters).length > 2) {//userId, isAdmin
+            if (result > 0 && Object.keys(parameters).length > 2) { //userId, isAdmin
                 result = await userModel.updateUserInfo(parameters);
             }
             if (result < 1) {
                 res.status(500).json({ message: '입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.(2)' });
             }
         } else {
-            if (Object.keys(parameters).length > 1) {//userId
+            if (Object.keys(parameters).length > 1) { //userId
                 result = await userModel.updateUserInfo(parameters);
                 if (result < 1) {
                     res.status(500).json({ message: '입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.' });
@@ -139,8 +141,8 @@ router.put('/', requiredSignin, async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => { //회원가입
-    let user = { ...req.body };
+router.post('/', async(req, res) => { //회원가입
+    let user = {...req.body };
     if (!user.userId) {
         res.status(400).json({ target: 'userId', message: '아이디를 입력해주세요.' });
         return;
@@ -159,8 +161,6 @@ router.post('/', async (req, res) => { //회원가입
         }
         trial++;
     }
-    if (constants.reserved.includes(user.userId)) {
-    }
     let result = await userModel.checkUserId(user.userId);
     if (result && result[0] && result[0].count > 0) {
         res.status(409).json({ target: 'userId', message: '이미 등록된 아이디입니다.' });
@@ -171,7 +171,7 @@ router.post('/', async (req, res) => { //회원가입
         return;
     }
     const email = constants.emailRegex.exec(user.email);
-    if (email) {//matched email
+    if (email) { //matched email
         result = await userModel.checkEmail(user.email);
         if (result && result[0] && result[0].count > 0) {
             res.status(409).json({ target: 'email', message: '이미 사용중인 이메일입니다.' });
@@ -211,7 +211,7 @@ router.post('/', async (req, res) => { //회원가입
             }
             user.userGroup.push(user.major);
         } else {
-            res.status(400).json({ target: 'grade', message: '입력된 학년 값이 정확하지 않습니다.' });
+            res.status(400).json({ target: 'major', message: '입력된 전공과목 값이 정확하지 않습니다.' });
             return;
         }
     }
@@ -224,12 +224,13 @@ router.post('/', async (req, res) => { //회원가입
             return;
         } else if (result[0] && result[0].count === 0) {
             break;
-        } else if (trial > 10) {//max 10 times trial
+        } else if (trial > 10) { //max 10 times trial
             res.status(500).json({ message: '닉네임 생성에 실패하였습니다. 관리자에게 문의해주세요.' });
             return;
         }
         trial += 1;
     }
+    user.password = await bcrypt.hash(user.password, config.bcryptSalt);
     result = await userModel.createUser(user);
     if (result > 0) {
         //TODO : send email
@@ -238,7 +239,9 @@ router.post('/', async (req, res) => { //회원가입
             result = await groupModel.createUserGroup(user.userId, user.userGroup[trial]);
             if (typeof result !== 'number') {
                 userModel.deleteUser(user.userId);
+                console.log(result);
                 res.status(500).json({ message: '회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.' + (result.error ? `(${result.error})` : '') });
+                return;
             }
             trial++;
         }
@@ -248,7 +251,7 @@ router.post('/', async (req, res) => { //회원가입
     }
 });
 
-router.post('/picture', requiredSignin, multer.single('picture'), async (req, res) => {//사진 업로드
+router.post('/picture', requiredSignin, multer.single('picture'), async(req, res) => { //사진 업로드
     let userId = req.userObject.userId;
     if (!userId) {
         fs.unlink(req.file.path, (err) => {
@@ -281,7 +284,7 @@ router.post('/picture', requiredSignin, multer.single('picture'), async (req, re
     }
 });
 
-router.get('/list', adminOnly, async (req, res) => {
+router.get('/list', adminOnly, async(req, res) => {
     let result = await userModel.getUsers(req.body.userId, req.body.nickName, req.body.email, req.body.groupId, req.body.status, req.body.sortTarget, req.body.isAscending, req.body.page);
     if (result && Array.isArray(result)) {
         res.status(200).json(result)
@@ -290,7 +293,7 @@ router.get('/list', adminOnly, async (req, res) => {
     }
 });
 
-router.delete('/:userId', adminOnly, async (req, res) => {
+router.delete('/:userId', adminOnly, async(req, res) => {
     if (req.params.userId === req.userObject.userId) {
         res.status(400).json({ target: 'userId', message: '로그인 한 아이디는 삭제할 수 없습니다.' });
     } else if (req.params.userId) {
@@ -303,7 +306,7 @@ router.delete('/:userId', adminOnly, async (req, res) => {
     }
 });
 
-router.get('/document', requiredSignin, async (req, res) => {
+router.get('/document', requiredSignin, async(req, res) => {
     let result = await documentModel.getUserDocument(req.userObject.userId, req.userObject.isAdmin, req.query.page);
     if (Array.isArray(result)) {
         if (!req.userObject.isAdmin) {
@@ -320,7 +323,7 @@ router.get('/document', requiredSignin, async (req, res) => {
     }
 });
 
-router.get('/comment', requiredSignin, async (req, res) => {
+router.get('/comment', requiredSignin, async(req, res) => {
     let result = await commentModel.getUserComment(req.userObject.userId, req.userObject.isAdmin, req.query.page);
     if (Array.isArray(result)) {
         if (!req.userObject.isAdmin) {
@@ -336,7 +339,7 @@ router.get('/comment', requiredSignin, async (req, res) => {
     }
 });
 
-router.get('/board', requiredSignin, async (req, res) => {
+router.get('/board', requiredSignin, async(req, res) => {
     let result = await boardModel.getUserBoard(req.userObject.userId, req.userObject.isAdmin);
     if (Array.isArray(result)) {
         res.status(200).json(result);
@@ -345,7 +348,7 @@ router.get('/board', requiredSignin, async (req, res) => {
     }
 });
 
-router.put('/board', requiredSignin, async (req, res) => {
+router.put('/board', requiredSignin, async(req, res) => {
     let boards = req.body.boards;
     if (!boards) {
         res.status(400).json({ message: 'boards', message: '잘못된 접근입니다.' });
@@ -358,7 +361,7 @@ router.put('/board', requiredSignin, async (req, res) => {
     if (Array.isArray(currentBoard)) {
         let i = 0;
         while (i < boards.length) {
-            if ((currentBoard.filter(x => x.boardId === boards[i])).length < 1) {//new board
+            if ((currentBoard.filter(x => x.boardId === boards[i])).length < 1) { //new board
                 result = await boardModel.getBoard(boards[i]);
                 if (result && result[0] && result[0].allGroupAuth !== 'NONE') {
                     result = await boardModel.createUserBoard(req.userObject.userId, boards[i])
@@ -381,7 +384,7 @@ router.put('/board', requiredSignin, async (req, res) => {
         }
         i = 0;
         while (i < currentBoard.length) {
-            if ((boards.filter(x => x === currentBoard[i].boardId)).length < 1) {//deleted board
+            if ((boards.filter(x => x === currentBoard[i].boardId)).length < 1) { //deleted board
                 result = await boardModel.deleteUserBoard(req.userObject.userId, currentBoard[i].boardId);
                 if (typeof result === 'object') {
                     failedBoard.push(currentBoard[i].boardId);
@@ -400,7 +403,7 @@ router.put('/board', requiredSignin, async (req, res) => {
     }
 });
 
-router.get('/group', adminOnly, async (req, res) => {
+router.get('/group', adminOnly, async(req, res) => {
     let result = await groupModel.getUserGroup(req.body.userId);
     if (Array.isArray(result)) {
         res.status(200).json(result);
@@ -408,7 +411,7 @@ router.get('/group', adminOnly, async (req, res) => {
         res.status(500).json({ message: '정보를 불러오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
-router.put('/group', adminOnly, async (req, res) => {
+router.put('/group', adminOnly, async(req, res) => {
     let groups = req.body.groups;
     if (!groups) {
         res.status(400).json({ message: 'groups', message: '잘못된 접근입니다.' });
@@ -421,14 +424,14 @@ router.put('/group', adminOnly, async (req, res) => {
     if (Array.isArray(currentGroup)) {
         let i = 0;
         while (i < groups.length) {
-            if ((currentGroup.filter(x => x.groupId === groups[i])).length < 1) {//new group
+            if ((currentGroup.filter(x => x.groupId === groups[i])).length < 1) { //new group
                 result = await boardModel.getBoard(groups[i]);
                 if (result && result[0]) {
                     if (result[0].boardType !== 'N') {
                         let currentType = currentGroup.filter(x => x.groupType === result[0].groupType);
                         let j = 0;
                         while (j < currentType.length) {
-                            groupModel.deleteUserGroup(req.userObject.userId, currentType[i].groupId);//delete current group with same group type
+                            groupModel.deleteUserGroup(req.userObject.userId, currentType[i].groupId); //delete current group with same group type
                         }
                     }
                     result = await groupModel.createUserGroup(req.userObject.userId, groups[i]);
@@ -441,7 +444,7 @@ router.put('/group', adminOnly, async (req, res) => {
         }
         i = 0;
         while (i < currentGroup.length) {
-            if ((groups.filter(x => x === currentGroup[i].boardId)).length < 1) {//deleted group
+            if ((groups.filter(x => x === currentGroup[i].boardId)).length < 1) { //deleted group
                 result = await groupModel.deleteUserGroup(req.userObject.userId, currentGroup[i].groupId);
                 if (typeof result === 'object') {
                     failedGroup.push(currentGroup[i].groupId);

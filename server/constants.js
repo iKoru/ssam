@@ -4,7 +4,8 @@ exports.reserved = ['document', 'documents', 'profile',
     'scrap', 'board', 'boards', 'manage', 'manages', 'chat',
     'chats', 'message', 'messages', 'group', 'groups', 'event',
     'events', 'signup', 'signin', 'signout', 'resetPassword',
-    'notification', 'notifications', 'survey', 'list'
+    'notification', 'notifications', 'survey', 'list', 'admin', 'ADMIN',
+    'ADMINISTRATOR', 'administrator'
 ];
 
 exports.dbErrorCode = {
@@ -17,20 +18,20 @@ exports.reservedNickName = ['admin', 'ADMIN', 'ADMINISTRATOR', 'administrator', 
 exports.emailRegex = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(sen|goe|ice|gwe|cbe|cne|dje|sje|jbe|jne|gen|gbe|gne|use|pen|jje)\.go\.kr\b/
 exports.userIdRegex = /(?=.*[a-zA-Z]+)(?=.*[a-zA-Z0-9_!@#\$\^&\*\$]{4,50}).*/
 exports.regionGroup = {
-    sen:'서울',
-    goe:'경기',
-    ice:'인천',
-    gwe:'강원',
-    cbe:'충북',
-    cne:'충남',
-    dje:'대전',
-    sje:'세종',
-    jbe:'전북',
-    jne:'전남',
-    gen:'광주',
-    gbe:'경북',
-    gne:'경남',
-    use:'울산',
-    pen:'부산',
-    jje:'제주'
+    sen: '서울',
+    goe: '경기',
+    ice: '인천',
+    gwe: '강원',
+    cbe: '충북',
+    cne: '충남',
+    dje: '대전',
+    sje: '세종',
+    jbe: '전북',
+    jne: '전남',
+    gen: '광주',
+    gbe: '경북',
+    gne: '경남',
+    use: '울산',
+    pen: '부산',
+    jje: '제주'
 }
