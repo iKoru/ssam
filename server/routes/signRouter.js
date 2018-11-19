@@ -13,7 +13,7 @@ router.get('/signin', visitorOnly('/'), (req, res) => {
     res.status(501).end();
 });
 
-router.post('/signin', async (req, res) => {
+router.post('/signin', async(req, res) => {
     let userId = req.body.userId;
     let password = req.body.password;
     if (!userId || !password) {
@@ -29,15 +29,27 @@ router.post('/signin', async (req, res) => {
             return;
         } else {
             if (user[0].status === 'DELETED') {
+                signModel.createSigninLog(userId, req.ip, false);
                 res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
                 return;
             } else if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
+                signModel.createSigninLog(userId, req.ip, false);
                 res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
                 return;
             } else if (await bcrypt.compare(password, user[0].password)) {
-                res.json(jwt.sign({ userId: userId }, config.jwtKey, { expiresIn: (req.body.rememberMe ? "7d" : "3h"), ...config.jwtOptions }));
+                jwt.sign({ userId: userId }, config.jwtKey, { expiresIn: (req.body.rememberMe ? "7d" : "3h"), ...config.jwtOptions }, (err, token) => {
+                    if (err) {
+                        console.log(err);
+                        signModel.createSigninLog(userId, req.ip, false);
+                        res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
+                    } else {
+                        signModel.createSigninLog(userId, req.ip, true);
+                        res.status(200).json(token);
+                    }
+                })
                 return;
             } else {
+                signModel.createSigninLog(userId, req.ip, false);
                 res.status(400).json({ target: 'password', message: '비밀번호가 일치하지 않습니다.' });
                 return;
             }
@@ -53,9 +65,9 @@ router.get('/resetPassword', visitorOnly('/'), (req, res) => {
     res.status(501).end();
 });
 
-router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
+router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
     let userId = req.body.userId;
-    let email = req.body.userId;
+    let email = req.body.email;
     if (!userId || !email) {
         res.status(400).json({ message: '잘못된 접근입니다.' });
     } else {
@@ -66,10 +78,9 @@ router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
             res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
         } else if (user[0].email === email) {
             let newPassword = util.partialUUID() + util.partialUUID();
-            const hash = await bcrypt.hash(newPassword, 10);
             const result = await userModel.updateUserPassword({
                 userId: userId,
-                password: hash
+                password: await bcrypt.hash(newPassword, config.bcryptSalt)
             });
             if (result !== 1) {
                 res.status(500).json({ message: '새로운 패스워드를 저장하는 데 실패하였습니다. 관리자에게 문의 부탁드립니다.' });
