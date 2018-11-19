@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
-const config = require('../../config.js');
-const util = require('../util');
+const config = require('../../config.js'),
+    util = require('../util');
+const userModel = require('../models/userModel')
 
 const auth = (req, res, next) => {
     const token = req.headers['x-auth'];
@@ -25,8 +26,18 @@ const auth = (req, res, next) => {
         })
     }
     p.then((result) => {
-        req.userObject = result;
-        next();
+        if (result.userId) {
+            let user = await userModel.getUser(result.userId);
+            if (user && user[0]) {
+                if (user[0].status === 'AUTHORIZED') {
+                    req.userObject = user[0];
+                    next();
+                } else {
+                    onError({ message: '인증이 필요합니다.' });
+                }
+            }
+        }
+        onError({ message: '비정상적인 접근' });
     }).catch(onError)
 }
 
