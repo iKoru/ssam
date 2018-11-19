@@ -35,7 +35,7 @@ describe('Test the root path', async() => {
         response = await request.post('/signin').set('Accept', 'application/json').send({ userId: 'orange', password: 'xptmxm1!' });
         //console.log(response);
         expect(response.statusCode).toBe(200);
-        jwt = response.body;
+        jwt = response.body.token;
         expect(jwt.length).toBeGreaterThan(20); //jwt toke check
         //change user status 
         expect(await userModel.updateUserInfo({ userId: 'orange', status: 'BLOCKED' })).toEqual(1)
@@ -55,7 +55,7 @@ describe('Test the root path', async() => {
         //signin check
         response = await request.post('/signin').set('Accept', 'application/json').send({ userId: 'orange1234', password: 'xptmxm1!' });
         expect(response.statusCode).toBe(200);
-        expect(response.body.length).toBeGreaterThan(20);
+        expect(response.body.token.length).toBeGreaterThan(20);
         //no email parameter check
         response = await request.post('/resetPassword').set('Accept', 'application/json').send({ userId: 'orange' });
         expect(response.statusCode).toBe(400);
@@ -88,7 +88,7 @@ describe('Test the root path', async() => {
         expect(response.statusCode).toBe(307);
         response = await request.post('/signin').set('Accept', 'application/json').send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toBe(200);
-        jwt = response.body;
+        jwt = response.body.token;
         expect(jwt.length).toBeGreaterThan(20); //jwt token check
         response = await request.get('/').set('x-auth', jwt);
         expect(response.statusCode).toBe(501);

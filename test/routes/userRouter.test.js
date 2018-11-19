@@ -43,7 +43,7 @@ describe('Test the user path', async() => {
         //registered id signin check
         response = await request.post('/signin').set('Accept', 'application/json').send({ userId: 'orange1', password: 'xptmxm1!' });
         expect(response.statusCode).toBe(200);
-        expect(response.body.length).toBeGreaterThan(20);
+        expect(response.body.token.length).toBeGreaterThan(20);
         //restore temporary created userId
         expect(await userModel.deleteUser('orange1')).toEqual(1);
         done();

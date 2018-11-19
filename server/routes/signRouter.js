@@ -6,7 +6,8 @@ const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly');
 const signModel = require('../models/signModel'),
     userModel = require('../models/userModel'),
-    util = require('../util');
+    authModel = require('../models/authModel')
+util = require('../util');
 
 //based on /
 router.get('/signin', visitorOnly('/'), (req, res) => {
@@ -44,7 +45,10 @@ router.post('/signin', async(req, res) => {
                         res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
                     } else {
                         signModel.createSigninLog(userId, req.ip, true);
-                        res.status(200).json(token);
+                        if (user[0].status === 'NORMAL' || moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isAfter(moment())) {
+                            res.status(200).json({ token: token, redirectTo: '/auth' });
+                        }
+                        res.status(200).json({ token: token });
                     }
                 })
                 return;
@@ -103,7 +107,13 @@ router.post('/refresh', (req, res) => {
             if ((new Date(err.expiredAt).getTime() + 3600000) >= (new Date().getTime())) { //기한 만료 및 만료시간부터 1시간이 지나지 않았다면 토큰 리프레시
                 const decoded = jwt_decode(token);
                 if (decoded.userId) {
-                    res.json(jwt.sign({ userId: decoded.userId }, config.jwtKey, { expiresIn: (decoded.exp - decoded.iat), ...config.jwtOptions }));
+                    jwt.sign({ userId: decoded.userId }, config.jwtKey, { expiresIn: (decoded.exp - decoded.iat), ...config.jwtOptions }, (err, token) => {
+                        if (err) {
+                            res.status(500).json({ message: '로그인 연장에 실패하였습니다.' });
+                        } else {
+                            res.status(200).json({ token: token });
+                        }
+                    })
                 } else {
                     res.status(400).json({ message: '잘못된 접근입니다.' });
                 }
