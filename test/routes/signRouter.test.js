@@ -92,6 +92,8 @@ describe('Test the root path', async() => {
         expect(jwt.length).toBeGreaterThan(20); //jwt token check
         response = await request.get('/').set('x-auth', jwt);
         expect(response.statusCode).toBe(501);
+        response = await request.post('/refresh').set('Accept', 'application/json').set('x-auth', jwt);
+        expect(response.body).toEqual(jwt);
         done();
     });
 })
