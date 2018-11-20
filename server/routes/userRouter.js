@@ -342,6 +342,11 @@ router.get('/list', adminOnly, async(req, res) => {
 });
 
 router.delete('/:userId', adminOnly, async(req, res) => {
+    console.log(req.params);
+    if(!req.params.userId){
+        res.status(400).json({target:'userId', message:'요청에 필요한 정보가 없습니다.'});
+        return;
+    }
     if (req.params.userId === req.userObject.userId) {
         res.status(400).json({ target: 'userId', message: '로그인 한 아이디는 삭제할 수 없습니다.' });
     } else if (req.params.userId) {

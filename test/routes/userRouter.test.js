@@ -69,7 +69,7 @@ describe('Test the user path', async() => {
         expect(response.statusCode).toEqual(200);
         let headers_local = {...headers, 'x-auth':response.body.token};
         
-        expect(await userModel.updateUserInfoDate('orange', null)).toEqual(1);//reset info modified date
+        expect(await userModel.updateUserInfoDate('orange', null, null, null)).toEqual(1);//reset info modified date
         //not allowed to change other users' information
         response = await request.put('/user').set(headers_local).send({userId:'blue', topicNickName:'aaa'});
         expect(response.statusCode).toEqual(400);
@@ -161,7 +161,35 @@ describe('Test the user path', async() => {
         done();
     })
     test('user delete test', async(done) => {
-        expect(1).toEqual(1);
+        let response = await request.post('/signin').set(headers).send({userId:'blue', password:'xptmxm1!'});
+        expect(response.statusCode).toEqual(200);
+        const headers_local = {...headers, 'x-auth':response.body.token};
+        //no parameters given
+        response = await request.delete('/user/').set(headers_local);
+        expect(response.statusCode).toEqual(404);
+        //try to delete self
+        response = await request.delete('/user/blue').set(headers_local);
+        expect(response.statusCode).toEqual(400);
+        //not existing user id
+        response = await request.delete('/user/blue1234').set(headers_local);
+        expect(response.statusCode).toEqual(404);
+        
+        //create temporary user id
+        response = await request.post('/user').set(headers).send({
+            userId:'blue123',
+            password:'xptmxm1!',
+            email:'blue123@sen.go.kr'
+        })
+        expect(response.statusCode).toEqual(200);
+        response = await request.post('/signin').set(headers).send({userId:'orange', password:'xptmxm1!'});
+        expect(response.statusCode).toEqual(200);
+        //admin only
+        response = await request.delete('/user/blue123').set({...headers, 'x-auth':response.body.token});
+        expect(response.statusCode).toEqual(403);
+        
+        response = await request.delete('/user/blue123').set(headers_local);
+        expect(response.statusCode).toEqual(200);
+        
         done();
     })
     test('user list get test', async(done) => {
