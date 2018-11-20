@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const config = require('../../config.js'),
+util = require('../util'),
     userModel = require('../models/userModel');
 
 const auth = (req, res, next) => {
@@ -25,11 +26,11 @@ const auth = (req, res, next) => {
         })
     }
     p.then(async(result) => {
-        req.userObject = await userModel.getUser(result.userId);
+        req.userObject = (await userModel.getUser(result.userId))[0];
         if (req.userObject && req.userObject.isAdmin) {
             next();
         } else {
-            res.status(403).json({ message: '잘못된 접근입니다.' });
+            return res.status(403).json({ message: '잘못된 접근입니다.' });
         }
     }).catch(onError)
 }
