@@ -240,7 +240,26 @@ describe('Test the user path', async() => {
         done();
     })
     test('user comment get test', async(done) => {
-        expect(1).toEqual(1);
+        let response = await request.get('/user/comment').set(headers);
+        expect(response.statusCode).toEqual(403);
+        response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
+        expect(response.statusCode).toEqual(200);
+        let headers_local = {...headers, 'x-auth': response.body.token };
+        response = await request.get('/user/comment').set(headers_local).query({ userId: 'blue' });
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toBeGreaterThan(1);
+        response = await request.get('/user/comment').set(headers_local).query({ userId: 'orange' });
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toBeGreaterThan(1);
+
+        response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
+        expect(response.statusCode).toEqual(200);
+        headers_local = {...headers, 'x-auth': response.body.token };
+        response = await request.get('/user/comment').set(headers_local).query({ userId: 'blue' });
+        expect(response.statusCode).toEqual(400);
+        response = await request.get('/user/comment').set(headers_local).query({ userId: 'orange' });
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toBeGreaterThan(1);
         done();
     })
     test('user board get test', async(done) => {
