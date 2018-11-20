@@ -155,10 +155,8 @@ exports.deleteUserGroup = async(userId, groupId) => {
     );
 }
 
-exports.getUserGroup = async(userId) => {
-    const today = util.getYYYYMMDD();
-    return await pool.executeQuery('getUserGroup',
-        builder.select()
+exports.getUserGroup = async(userId, groupType) => {
+    let query = builder.select()
         .fields({
             'MGROUP.GROUP_ID': '"groupId"',
             'MGROUP.GROUP_NAME': '"groupName"',
@@ -167,8 +165,17 @@ exports.getUserGroup = async(userId) => {
             'MGROUP.GROUP_TYPE': '"groupType"',
             'MGROUP.PARENT_GROUP_ID': '"parentGroupId"'
         })
-        .from(builder.select().fields(['USER_ID', 'GROUP_ID']).from('SS_MST_USER_GROUP').where('USER_ID = ?', userId).where('EXPIRE_DATE > ?', today), 'USERGROUP')
-        .join('SS_MST_GROUP', 'MGROUP', 'MGROUP.GROUP_ID = USERGROUP.GROUP_ID')
+        .from(builder.select().fields(['USER_ID', 'GROUP_ID']).from('SS_MST_USER_GROUP').where('USER_ID = ?', userId).where('EXPIRE_DATE > ?', util.getYYYYMMDD()), 'USERGROUP');
+    if(groupType){
+        if(typeof groupType === 'string'){
+            groupType = [groupType];
+        }
+        query.join(builder.select().from('SS_MST_GROUP').where('GROUP_TYPE IN ?', groupType), 'MGROUP', 'MGROUP.GROUP_ID = USERGROUP.GROUP_ID')
+    }else{
+        query.join('SS_MST_GROUP', 'MGROUP', 'MGROUP.GROUP_ID = USERGROUP.GROUP_ID')
+    }
+    return await pool.executeQuery('getUserGroup' + (groupType?groupType.length : ''),
+        query        
         .order('MGROUP.ORDER_NUMBER')
         .toParam()
     );
