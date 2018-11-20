@@ -424,7 +424,7 @@ router.put('/board', requiredSignin, async(req, res) => {
         while (i < boards.length) {
             if ((currentBoard.filter(x => x.boardId === boards[i])).length < 1) { //new board
                 result = await boardModel.getBoard(boards[i]);
-                if (result && result[0] && result[0].allGroupAuth !== 'NONE') {
+                if (result && result[0] && (result[0].allGroupAuth !== 'NONE' || req.userObject.isAdmin)) {
                     result = await boardModel.createUserBoard(req.userObject.userId, boards[i])
                     if (typeof result === 'object') {
                         failedBoard.push(boards[i]);
@@ -457,15 +457,17 @@ router.put('/board', requiredSignin, async(req, res) => {
         res.status(500).json({ message: '기존 정보를 불러오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
         return;
     }
-    if (failedBoard.length > 0) {
-        res.status(400).json({ message: `게시판을 구독할 권한이 없거나, 구독(취소) 시 오류가 ${failedBoard.length}건 발생하였습니다.`, boardId: failedBoard })
+    if (failedBoard.length > 0 && boards.length === failedBoard.length) {
+        res.status(400).json({ message: '게시판을 선택할 권한이 없거나, 선택(취소) 시 오류가 발생하였습니다.', boardId: failedBoard })
+    } else if (failedBoard.length > 0) {
+        res.status(200).json({ message: `게시판을 선택할 권한이 없거나, 선택(취소) 시 오류가 ${failedBoard.length}건 발생하였습니다.`, boardId: failedBoard })
     } else {
-        res.status(200).json({ message: '구독하는 게시판을 변경하였습니다.' });
+        res.status(200).json({ message: '게시판 선택을 변경하였습니다.' });
     }
 });
 
 router.get('/group', adminOnly, async(req, res) => {
-    let result = await groupModel.getUserGroup(req.body.userId);
+    let result = await groupModel.getUserGroup(req.query.userId);
     if (Array.isArray(result)) {
         res.status(200).json(result);
     } else {
