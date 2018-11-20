@@ -24,8 +24,8 @@ router.put('/', requiredSignin, async(req, res) => {
     } else {
         let result;
         if (typeof user.loungeNickName === 'string' && user.loungeNickName !== '') {
-            if(req.userObject.loungeNickNameModifiedDate && moment(req.userObject.loungeNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment())){
-                res.status(400).json({target:'loungeNickName', message:`마지막으로 라운지 필명을 변경한 날(${moment(req.userObject.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.`})
+            if (req.userObject.loungeNickNameModifiedDate && moment(req.userObject.loungeNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment())) {
+                res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${moment(req.userObject.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
                 return;
             }
             result = await userModel.checkNickName(user.userId, user.loungeNickName);
@@ -45,8 +45,8 @@ router.put('/', requiredSignin, async(req, res) => {
             parameters.loungeNickName = user.loungeNickName;
         }
         if (typeof user.topicNickName === 'string' && user.topicNickName !== '') {
-            if(req.userObject.topicNickNameModifiedDate && moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment())){
-                res.status(400).json({target:'topicNickName', message:`마지막으로 토픽 닉네임을 변경한 날(${moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.`})
+            if (req.userObject.topicNickNameModifiedDate && moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment())) {
+                res.status(400).json({ target: 'topicNickName', message: `마지막으로 토픽 닉네임을 변경한 날(${moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
                 return;
             }
             result = await userModel.checkNickName(user.userId, user.topicNickName);
@@ -73,8 +73,8 @@ router.put('/', requiredSignin, async(req, res) => {
             parameters.status = user.status;
         }
         if ((user.grade && user.grade !== req.userObject.grade) || (user.major && user.major !== req.userObject.major) || (user.email && user.email !== req.userObject.email)) {
-            if(process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && moment().month() !== 2){//month() === 2 is March
-                res.status(400).json({message:'학년, 전공, 이메일은 매년 3월에만 변경이 가능합니다.'})
+            if (process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && moment().month() !== 2) { //month() === 2 is March
+                res.status(400).json({ message: '학년, 전공, 이메일은 매년 3월에만 변경이 가능합니다.' })
                 return;
             }
             if (req.userObject.infoModifiedDate && moment(req.userObject.infoModifiedDate, 'YYYYMMDD').isValid()) {
@@ -84,7 +84,7 @@ router.put('/', requiredSignin, async(req, res) => {
                 }
             }
             if (user.grade && user.grade !== req.userObject.grade) {
-                if(user.grade !== ''){
+                if (user.grade !== '') {
                     const grade = await groupModel.getGroup(user.grade);
                     if (!(grade && grade[0] && grade[0].groupType === 'G' && (req.userObject.isAdmin || grade[0].isOpenToUsers))) {
                         res.status(400).json({ target: 'grade', message: '선택된 학년 값이 올바르지 않습니다.' });
@@ -94,7 +94,7 @@ router.put('/', requiredSignin, async(req, res) => {
                 parameters.grade = user.grade;
             }
             if (user.major && user.major !== req.userObject.major) {
-                if(user.major !== ''){
+                if (user.major !== '') {
                     const major = await groupModel.getGroup(user.major);
                     if (!(major && major[0] && major[0].groupType === 'M' && (req.userObject.isAdmin || major[0].isOpenToUsers))) {
                         res.status(400).json({ target: 'major', message: '선택된 전공과목 값이 올바르지 않습니다.' });
@@ -115,8 +115,8 @@ router.put('/', requiredSignin, async(req, res) => {
                     if (region && region[0]) {
                         parameters.region = region[0].groupId;
                         parameters.email = user.email;
-                        if((parameters.status === 'AUTHORIZED' || req.userObject.status === 'AUTHORIZED') && (parameters.status !== 'DELTED' && parameters.status !== 'BLOCKED')){
-                            parameters.status = 'NORMAL';//not authorized
+                        if ((parameters.status === 'AUTHORIZED' || req.userObject.status === 'AUTHORIZED') && (parameters.status !== 'DELTED' && parameters.status !== 'BLOCKED')) {
+                            parameters.status = 'NORMAL'; //not authorized
                         }
                     } else {
                         res.status(400).json({ target: 'email', message: '해당 이메일 주소에 맞는 지역정보가 없습니다.' });
@@ -137,10 +137,10 @@ router.put('/', requiredSignin, async(req, res) => {
         if (req.userObject.isAdmin && typeof user.isAdmin === 'boolean') {
             parameters.isAdmin = !!user.isAdmin; //make it as boolean
         }
-        if(user.password && user.password !== ''){
-            result = await userModel.updateUserPassword({userId: user.userId, password: await bcrypt.hash(user.password, config.bcryptSalt)});
-            if(!util.isNumeric(result) || result < 1){
-                res.status(500).json({message:'비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.'});
+        if (user.password && user.password !== '') {
+            result = await userModel.updateUserPassword({ userId: user.userId, password: await bcrypt.hash(user.password, config.bcryptSalt) });
+            if (!util.isNumeric(result) || result < 1) {
+                res.status(500).json({ message: '비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.' });
                 return;
             }
         }
@@ -151,16 +151,16 @@ router.put('/', requiredSignin, async(req, res) => {
             }
             if (!util.isNumeric(result) || result < 1) {
                 res.status(500).json({ message: '입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.(2)' });
-            }else{
-                res.status(200).json({message:'정상적으로 저장하였습니다.'});
+            } else {
+                res.status(200).json({ message: '정상적으로 저장하였습니다.' });
             }
         } else {
             if (Object.keys(parameters).length > 1) { //userId
                 result = await userModel.updateUserInfo(parameters);
                 if (!util.isNumeric(result) || result < 1) {
                     res.status(500).json({ message: '입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.' });
-                }else{
-                    res.status(200).json({message:'정상적으로 저장하였습니다.'});
+                } else {
+                    res.status(200).json({ message: '정상적으로 저장하였습니다.' });
                 }
             } else {
                 res.status(400).json({ message: '변경된 내용이 없습니다.' });
@@ -312,28 +312,28 @@ router.post('/picture', requiredSignin, multer.single('picture'), async(req, res
     }
 });
 
-router.get('/', requiredSignin, async (req, res) => {
+router.get('/', requiredSignin, async(req, res) => {
     let userId = req.query.userId;
-    if(!req.userObject.isAdmin && userId !== req.userObject.userId){
-        res.status(403).json({target:'userId', message:'요청에 대한 권한이 없습니다.'});
+    if (!req.userObject.isAdmin && userId !== req.userObject.userId) {
+        res.status(403).json({ target: 'userId', message: '요청에 대한 권한이 없습니다.' });
         return;
     }
     let result = await userModel.getUser(req.query.userId);
-    if(Array.isArray(result)){
+    if (Array.isArray(result)) {
         delete result[0].password;
-        if(!req.userObject.isAdmin){
+        if (!req.userObject.isAdmin) {
             delete result[0].isAdmin;
             delete result[0].inviter;
             delete result[0].memo;
         }
         res.status(200).json(result[0]);
-    }else{
+    } else {
         res.status(500).json({ message: '정보 불러오기에 실패하였습니다.', ...result })
     }
 })
 
 router.get('/list', adminOnly, async(req, res) => {
-    let result = await userModel.getUsers(req.body.userId, req.body.nickName, req.body.email, req.body.groupId, req.body.status, req.body.sortTarget, req.body.isAscending, req.body.page);
+    let result = await userModel.getUsers(req.query.userId, req.query.nickName, req.query.email, req.query.groupId, req.query.status, req.query.sortTarget, req.query.isAscending, req.query.page);
     if (Array.isArray(result)) {
         res.status(200).json(result)
     } else {
@@ -343,8 +343,8 @@ router.get('/list', adminOnly, async(req, res) => {
 
 router.delete('/:userId', adminOnly, async(req, res) => {
     console.log(req.params);
-    if(!req.params.userId){
-        res.status(400).json({target:'userId', message:'요청에 필요한 정보가 없습니다.'});
+    if (!req.params.userId) {
+        res.status(400).json({ target: 'userId', message: '요청에 필요한 정보가 없습니다.' });
         return;
     }
     if (req.params.userId === req.userObject.userId) {

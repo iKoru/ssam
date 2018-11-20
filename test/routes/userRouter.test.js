@@ -193,7 +193,26 @@ describe('Test the user path', async() => {
         done();
     })
     test('user list get test', async(done) => {
-        expect(1).toEqual(1);
+        let response = await request.get('/user/list').set(headers);
+        expect(response.statusCode).toEqual(403);
+        response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
+        expect(response.statusCode).toEqual(200);
+        let headers_local = {...headers, 'x-auth': response.body.token };
+        response = await request.get('/user/list').set(headers_local);
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toBeGreaterThan(1);
+        response = await request.get('/user/list').set(headers_local).query({ userId: 'orange' });
+        expect(response.statusCode).toEqual(200);
+        expect(response.body).toHaveLength(1);
+        response = await request.get('/user/list').set(headers_local).query({ email: 'orange@sen.go.kr' });
+        expect(response.statusCode).toEqual(200);
+        expect(response.body).toHaveLength(1);
+        response = await request.get('/user/list').set(headers_local).query({ sortTarget: 'email' });
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toBeGreaterThan(1);
+        response = await request.get('/user/list').set(headers_local).query({ page: 2 });
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toEqual(0);
         done();
     })
     test('user document get test', async(done) => {
