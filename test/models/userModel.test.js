@@ -7,7 +7,7 @@ const util = require('../../server/util');
 //     let hash = await bcrypt.hash('xptmxm1!', 10);
 //     expect(await userModel.createUser({
 //         userId: 'orange',
-//         email: 'orange@ssam.com',
+//         email: 'orange@sen.go.kr',
 //         password: hash,
 //         nickName: util.partialUUID() + util.partialUUID(),
 //         inviter: '41f7'
@@ -15,7 +15,7 @@ const util = require('../../server/util');
 //     hash = await bcrypt.hash('xptmxm1!', 10);
 //     expect(await userModel.createUser({
 //         userId: 'blue',
-//         email: 'blue@ssam.com',
+//         email: 'blue@sen.go.kr',
 //         password: hash,
 //         nickName: util.partialUUID() + util.partialUUID(),
 //         inviter: '41f7'
@@ -23,13 +23,13 @@ const util = require('../../server/util');
 //     done();
 // });
 
-test('check user Id if already exists', async (done) => {
+test('check user Id if already exists', async(done) => {
     expect(await userModel.checkUserId('test')).toEqual([{ count: 0 }]);
     expect(await userModel.checkUserId('orange')).toEqual([{ count: 1 }]);
     done();
 });
 
-test('check nickname if already exists', async (done) => {
+test('check nickname if already exists', async(done) => {
     expect(await userModel.checkNickName('test', 'test')).toEqual([{ count: 0 }]);
     const user = await userModel.getUser('orange');
     expect(user).toHaveLength(1);
@@ -38,13 +38,13 @@ test('check nickname if already exists', async (done) => {
     done();
 });
 
-test('check email if already exists', async (done) => {
+test('check email if already exists', async(done) => {
     expect(await userModel.checkEmail('test@test.com')).toEqual([{ count: 0 }]);
     expect(await userModel.checkEmail('orange@ssam.com')).toEqual([{ count: 1 }]);
     done();
 });
 
-test('insert user test', async (done) => {
+test('insert user test', async(done) => {
     const hash = await bcrypt.hash('xptmxm1!', 10);
     let user = await userModel.getUser('orange');
     expect(await userModel.createUser({
@@ -61,12 +61,12 @@ test('insert user test', async (done) => {
     done();
 });
 
-test('delete user test', async (done) => {
+test('delete user test', async(done) => {
     expect(await userModel.deleteUser('orange2')).toEqual(1);
     done();
 });
 
-test('update user admin test', async (done) => {
+test('update user admin test', async(done) => {
     expect(await userModel.updateUserAdmin({ userId: 'orange', isAdmin: true })).toEqual(1);
     let user = await userModel.getUser('orange');
     expect(user).toHaveLength(1);
@@ -77,7 +77,7 @@ test('update user admin test', async (done) => {
     done();
 });
 
-test('updateUserPassword', async (done) => {
+test('updateUserPassword', async(done) => {
     const raw = 'xptmxm2@',
         hash = await bcrypt.hash(raw, 10);
     expect(await userModel.updateUserPassword({ userId: 'orange', password: hash })).toEqual(1);
@@ -91,7 +91,7 @@ test('updateUserPassword', async (done) => {
     done();
 });
 
-test('select users', async (done) => {
+test('select users', async(done) => {
     const user = await userModel.getUser('orange');
     expect((await userModel.getUsers()).length).toBeGreaterThan(0);
     expect(await userModel.getUsers('test')).toHaveLength(0);
@@ -110,14 +110,14 @@ test('select users', async (done) => {
     done();
 });
 
-test('get profile', async (done) => {
+test('get profile', async(done) => {
     const user = await userModel.getUser('orange');
     expect(await userModel.getProfile(user[0].loungeNickName)).toHaveProperty('nickName', user[0].loungeNickName);
     expect(await userModel.getProfile()).toEqual({});
     done();
 });
 
-test('update user info (except group)', async (done) => {
+test('update user info (except group)', async(done) => {
     expect(await userModel.updateUserInfo({ userId: 'orange', memo: 'testmemo' })).toBeGreaterThan(0);
     expect(await userModel.updateUserInfo({ userId: 'orange2', memo: 'testMemo' })).toEqual(0);
     done();
