@@ -33,7 +33,7 @@ describe('Test the root path', async() => {
         expect(response.statusCode).toBe(400);
         //successfully logged in
         response = await request.post('/signin').set('Accept', 'application/json').send({ userId: 'orange', password: 'xptmxm1!' });
-        //console.log(response);
+        console.log(response.body);
         expect(response.statusCode).toBe(200);
         jwt = response.body.token;
         expect(jwt.length).toBeGreaterThan(20); //jwt toke check
@@ -54,10 +54,11 @@ describe('Test the root path', async() => {
         expect(response.statusCode).toBe(200);
         //signin check
         response = await request.post('/signin').set('Accept', 'application/json').send({ userId: 'orange1234', password: 'xptmxm1!' });
+        console.log(response.body);
         expect(response.statusCode).toBe(200);
         expect(response.body.token.length).toBeGreaterThan(20);
         //no email parameter check
-        response = await request.post('/resetPassword').set('Accept', 'application/json').send({ userId: 'orange' });
+        response = await request.post('/resetPassword').set('Accept', 'application/json').send({ userId: 'orange1234' });
         expect(response.statusCode).toBe(400);
         //not vaild email parameter check
         response = await request.post('/resetPassword').set('Accept', 'application/json').send({ userId: 'orange1234', email: 'aaa' })
@@ -87,6 +88,7 @@ describe('Test the root path', async() => {
         let response = await request.get('/');
         expect(response.statusCode).toBe(403);
         response = await request.post('/signin').set('Accept', 'application/json').send({ userId: 'orange', password: 'xptmxm1!' });
+        console.log(response.body);
         expect(response.statusCode).toBe(200);
         jwt = response.body.token;
         expect(jwt.length).toBeGreaterThan(20); //jwt token check

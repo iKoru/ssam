@@ -23,7 +23,11 @@ router.put('/', requiredSignin, async(req, res) => {
         res.status(400).json({ messagae: '잘못된 접근입니다.' });
     } else {
         let result;
-        if (user.loungeNickName && typeof user.loungeNickName === 'string') {
+        if (typeof user.loungeNickName === 'string' && user.loungeNickName !== '') {
+            if(req.userObject.loungeNickNameModifiedDate && moment(req.userObject.loungeNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment())){
+                res.status(400).json({target:'loungeNickName', message:`마지막으로 라운지 필명을 변경한 날(${moment(req.userObject.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.`})
+                return;
+            }
             result = await userModel.checkNickName(user.userId, user.loungeNickName);
             if (result[0] && result[0].count > 0) {
                 res.status(409).json({ target: 'loungeNickName', message: '이미 존재하는 라운지 필명입니다.' });
@@ -40,7 +44,11 @@ router.put('/', requiredSignin, async(req, res) => {
             }
             parameters.loungeNickName = user.loungeNickName;
         }
-        if (user.topicNickName) {
+        if (typeof user.topicNickName === 'string' && user.topicNickName !== '') {
+            if(req.userObject.topicNickNameModifiedDate && moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment())){
+                res.status(400).json({target:'topicNickName', message:`마지막으로 토픽 닉네임을 변경한 날(${moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.`})
+                return;
+            }
             result = await userModel.checkNickName(user.userId, user.topicNickName);
             if (result[0] && result[0].count > 0) {
                 res.status(409).json({ target: 'topicNickName', message: '이미 존재하는 토픽 닉네임입니다.' });
@@ -57,7 +65,18 @@ router.put('/', requiredSignin, async(req, res) => {
             }
             parameters.topicNickName = user.topicNickName;
         }
+        if (user.status) {
+            if (user.status !== 'NORMAL' && user.status !== 'AUTHORIZED' && user.status !== 'BLOCKED' && user.status !== 'DELETED') {
+                res.status(400).json({ target: 'status', message: '선택된 상태 값이 올바르지 않습니다.' });
+                return;
+            }
+            parameters.status = user.status;
+        }
         if ((user.grade && user.grade !== req.userObject.grade) || (user.major && user.major !== req.userObject.major) || (user.email && user.email !== req.userObject.email)) {
+            if(process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && moment().month() !== 2){//month() === 2 is March
+                res.status(400).json({message:'학년, 전공, 이메일은 매년 3월에만 변경이 가능합니다.'})
+                return;
+            }
             if (req.userObject.infoModifiedDate && moment(req.userObject.infoModifiedDate, 'YYYYMMDD').isValid()) {
                 if (moment(req.userObject.infoModifiedDate, 'YYYYMMDD').year() >= moment().year()) {
                     res.status(400).json({ message: '올해 이미 내역을 변경하셨습니다.' });
@@ -65,18 +84,22 @@ router.put('/', requiredSignin, async(req, res) => {
                 }
             }
             if (user.grade && user.grade !== req.userObject.grade) {
-                const grade = await groupModel.getGroup(user.grade);
-                if (!(grade && grade[0] && grade[0].groupType === 'G' && (req.userObject.isAdmin || grade[0].isOpenToUsers))) {
-                    res.status(400).json({ target: 'grade', message: '선택된 학년 값이 올바르지 않습니다.' });
-                    return;
+                if(user.grade !== ''){
+                    const grade = await groupModel.getGroup(user.grade);
+                    if (!(grade && grade[0] && grade[0].groupType === 'G' && (req.userObject.isAdmin || grade[0].isOpenToUsers))) {
+                        res.status(400).json({ target: 'grade', message: '선택된 학년 값이 올바르지 않습니다.' });
+                        return;
+                    }
                 }
                 parameters.grade = user.grade;
             }
             if (user.major && user.major !== req.userObject.major) {
-                const major = await groupModel.getGroup(user.major);
-                if (!(major && major[0] && major[0].groupType === 'M' && (req.userObject.isAdmin || major[0].isOpenToUsers))) {
-                    res.status(400).json({ target: 'major', message: '선택된 전공과목 값이 올바르지 않습니다.' });
-                    return;
+                if(user.major !== ''){
+                    const major = await groupModel.getGroup(user.major);
+                    if (!(major && major[0] && major[0].groupType === 'M' && (req.userObject.isAdmin || major[0].isOpenToUsers))) {
+                        res.status(400).json({ target: 'major', message: '선택된 전공과목 값이 올바르지 않습니다.' });
+                        return;
+                    }
                 }
                 parameters.major = user.major;
             }
@@ -91,6 +114,10 @@ router.put('/', requiredSignin, async(req, res) => {
                     const region = await groupModel.getGroupByRegion(constants.regionGroup[email[1]]);
                     if (region && region[0]) {
                         parameters.region = region[0].groupId;
+                        parameters.email = user.email;
+                        if((parameters.status === 'AUTHORIZED' || req.userObject.status === 'AUTHORIZED') && (parameters.status !== 'DELTED' && parameters.status !== 'BLOCKED')){
+                            parameters.status = 'NORMAL';//not authorized
+                        }
                     } else {
                         res.status(400).json({ target: 'email', message: '해당 이메일 주소에 맞는 지역정보가 없습니다.' });
                         return;
@@ -101,18 +128,8 @@ router.put('/', requiredSignin, async(req, res) => {
                 }
             }
         }
-        if (user.status) {
-            if (user.status !== 'NORMAL' && user.status !== 'AUTHORIZED' && user.status !== 'BLOCKED' && user.status !== 'DELETED') {
-                res.status(400).json({ target: 'status', message: '선택된 상태 값이 올바르지 않습니다.' });
-                return;
-            }
-            parameters.status = user.status;
-        }
         if (typeof user.isOpenInfo === 'boolean') {
             parameters.isOpenInfo = !!user.isOpenInfo; //make it as boolean
-        }
-        if (typeof user.isDeleted === 'boolean') {
-            parameters.isDeleted = !!user.isDeleted; //make it as boolean
         }
         if (req.userObject.isAdmin && user.memo) {
             parameters.memo = user.memo;
@@ -120,19 +137,30 @@ router.put('/', requiredSignin, async(req, res) => {
         if (req.userObject.isAdmin && typeof user.isAdmin === 'boolean') {
             parameters.isAdmin = !!user.isAdmin; //make it as boolean
         }
+        if(user.password && user.password !== ''){
+            result = await userModel.updateUserPassword({userId: user.userId, password: await bcrypt.hash(user.password, config.bcryptSalt)});
+            if(!util.isNumeric(result) || result < 1){
+                res.status(500).json({message:'비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.'});
+                return;
+            }
+        }
         if (typeof parameters.isAdmin === 'boolean') {
             result = await userModel.updateUserAdmin(parameters);
             if (result > 0 && Object.keys(parameters).length > 2) { //userId, isAdmin
                 result = await userModel.updateUserInfo(parameters);
             }
-            if (result < 1) {
+            if (!util.isNumeric(result) || result < 1) {
                 res.status(500).json({ message: '입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.(2)' });
+            }else{
+                res.status(200).json({message:'정상적으로 저장하였습니다.'});
             }
         } else {
             if (Object.keys(parameters).length > 1) { //userId
                 result = await userModel.updateUserInfo(parameters);
-                if (result < 1) {
+                if (!util.isNumeric(result) || result < 1) {
                     res.status(500).json({ message: '입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.' });
+                }else{
+                    res.status(200).json({message:'정상적으로 저장하였습니다.'});
                 }
             } else {
                 res.status(400).json({ message: '변경된 내용이 없습니다.' });

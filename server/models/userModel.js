@@ -94,9 +94,6 @@ exports.updateUserInfo = async(user) => {
         if (user.email) {
             query.set('EMAIL', user.email)
         }
-        if (typeof user.isDeleted === 'boolean') {
-            query.set('IS_DELETED', user.isDeleted)
-        }
         if (user.status) {
             query.set('STATUS', user.status)
         }
@@ -114,7 +111,9 @@ exports.updateUserInfo = async(user) => {
                     .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'G\''))
                     .toParam()
                 );
-                result += await groupModel.createUserGroup(user.userId, user.grade);
+                if(user.grade !== ''){
+                    result += await groupModel.createUserGroup(user.userId, user.grade);
+                }
             }
             if (user.major) {
                 await pool.executeQuery('deleteUserMajor',
@@ -124,7 +123,9 @@ exports.updateUserInfo = async(user) => {
                     .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'M\''))
                     .toParam()
                 );
-                result += await groupModel.createUserGroup(user.userId, user.major);
+                if(user.major !== ''){
+                    result += await groupModel.createUserGroup(user.userId, user.major);
+                }
             }
             if (user.region) {
                 await pool.executeQuery('deleteUserRegion',
@@ -134,7 +135,9 @@ exports.updateUserInfo = async(user) => {
                     .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'R\''))
                     .toParam()
                 );
-                result += await groupModel.createUserGroup(user.userId, user.region);
+                if(user.region !== ''){
+                    result += await groupModel.createUserGroup(user.userId, user.region);
+                }
             }
         }
         return result;
@@ -194,12 +197,14 @@ exports.deleteUser = async(userId) => {
 }
 
 exports.getUser = async(userId) => {
-    return await pool.executeQuery('getUser2',
+    return await pool.executeQuery('getUser3',
         builder.select()
         .fields({
             'USER_ID': '"userId"',
             'LOUNGE_NICKNAME': '"loungeNickName"',
             'TOPIC_NICKNAME': '"topicNickName"',
+            'LOUNGE_NICKNAME_MODIFIED_DATE': '"loungeNickNameModifiedDate"',
+            'TOPIC_NICKNAME_MODIFIED_DATE': '"topicNickNameModifiedDate"',
             'EMAIL': '"email"',
             'IS_ADMIN': '"isAdmin"',
             'EMAIL_VERIFIED_DATE': '"emailVerifiedDate"',
@@ -291,4 +296,18 @@ exports.getUserIdByNickName = async(nickName, boardType) => {
         .where(`${(boardType === 'T' ? 'TOPIC_NICKNAME' : 'LOUNGE_NICKNAME')} = ?`, nickName)
         .toParam()
     );
+}
+
+exports.updateUserInfoDate = async(userId, infoModifiedDate, loungeNickNameModifiedDate, topicNickNameModifiedDate) => {
+    return await pool.executeQuery(null,
+        builder.update()
+        .table('SS_MST_USER')
+        .setFields({
+            'INFO_MODIFIED_DATE':infoModifiedDate===undefined?builder.rstr('INFO_MODIFIED_DATE'):infoModifiedDate,
+            'LOUNGE_NICKNAME_MODIFIED_DATE':loungeNickNameModifiedDate===undefined?builder.rstr('LOUNGE_NICKNAME_MODIFIED_DATE'):loungeNickNameModifiedDate,
+            'TOPIC_NICKNAME_MODIFIED_DATE':topicNickNameModifiedDate===undefined?builder.rstr('TOPIC_NICKNAME_MODIFIED_DATE'):topicNickNameModifiedDate
+        })
+        .where('USER_ID = ?', userId)
+        .toParam()
+    )
 }
