@@ -284,9 +284,29 @@ router.post('/picture', requiredSignin, multer.single('picture'), async(req, res
     }
 });
 
+router.get('/', requiredSignin, async (req, res) => {
+    let userId = req.query.userId;
+    if(!req.userObject.isAdmin && userId !== req.userObject.userId){
+        res.status(403).json({target:'userId', message:'요청에 대한 권한이 없습니다.'});
+        return;
+    }
+    let result = await userModel.getUser(req.query.userId);
+    if(Array.isArray(result)){
+        delete result[0].password;
+        if(!req.userObject.isAdmin){
+            delete result[0].isAdmin;
+            delete result[0].inviter;
+            delete result[0].memo;
+        }
+        res.status(200).json(result[0]);
+    }else{
+        res.status(500).json({ message: '정보 불러오기에 실패하였습니다.', ...result })
+    }
+})
+
 router.get('/list', adminOnly, async(req, res) => {
     let result = await userModel.getUsers(req.body.userId, req.body.nickName, req.body.email, req.body.groupId, req.body.status, req.body.sortTarget, req.body.isAscending, req.body.page);
-    if (result && Array.isArray(result)) {
+    if (Array.isArray(result)) {
         res.status(200).json(result)
     } else {
         res.status(500).json({ message: '회원 정보 검색에 실패하였습니다.', ...result })
