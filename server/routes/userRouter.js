@@ -360,7 +360,11 @@ router.delete('/:userId', adminOnly, async(req, res) => {
 });
 
 router.get('/document', requiredSignin, async(req, res) => {
-    let result = await documentModel.getUserDocument(req.userObject.userId, req.userObject.isAdmin, req.query.page);
+    if (req.query.userId !== req.userObject.userId && !req.userObject.isAdmin) {
+        res.status(400).json({ message: '잘못된 접근입니다.' });
+        return;
+    }
+    let result = await documentModel.getUserDocument(req.query.userId, req.userObject.isAdmin, req.query.page);
     if (Array.isArray(result)) {
         if (!req.userObject.isAdmin) {
             let i = 0;
@@ -377,7 +381,11 @@ router.get('/document', requiredSignin, async(req, res) => {
 });
 
 router.get('/comment', requiredSignin, async(req, res) => {
-    let result = await commentModel.getUserComment(req.userObject.userId, req.userObject.isAdmin, req.query.page);
+    if (req.query.userId !== req.userObject.userId && !req.userObject.isAdmin) {
+        res.status(400).json({ message: '잘못된 접근입니다.' });
+        return;
+    }
+    let result = await commentModel.getUserComment(req.query.userId, req.userObject.isAdmin, req.query.page);
     if (Array.isArray(result)) {
         if (!req.userObject.isAdmin) {
             let i = 0;
