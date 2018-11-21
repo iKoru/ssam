@@ -45,3 +45,7 @@ exports.getYYYYMMDDHH24MISS = function (target = moment()) {
 }
 
 exports.moment = moment;
+
+exports.safeStringLength = (string, length) => {
+    return string?(string.length>length?string.substring(0, length):string):string;
+}
