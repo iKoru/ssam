@@ -263,6 +263,65 @@ describe('Test the user path', async() => {
         expect(response.body.length).toBeGreaterThan(1);
         done();
     })
+    test('user board put test', async(done) => {
+        let response = await request.put('/user/board').set(headers);
+        expect(response.statusCode).toEqual(403);
+        response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
+        expect(response.statusCode).toEqual(200);
+        let headers_local = {...headers, 'x-auth': response.body.token };
+        response = await request.put('/user/board').set(headers_local);
+        expect(response.statusCode).toEqual(400);
+        const boards = await boardModel.getBoards();
+        expect(boards.length).toBeGreaterThan(2);
+        //admin
+        response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => x.allGroupAuth !== 'NONE')[0].boardId });
+        console.log(response.body);
+        expect(response.statusCode).toEqual(200);
+        response = await request.get('/user/board').set(headers_local);
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toEqual(1);
+        response = await request.put('/user/board').set(headers_local).send({ boards: boards.map(x => x.boardId) });
+        console.log(response.body);
+        expect(response.statusCode).toEqual(200);
+        response = await request.get('/user/board').set(headers_local);
+        expect(response.statusCode).toEqual(200);
+        console.log(response.body);
+        expect(response.body.length).toEqual(boards.length);
+        response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => (x.boardId !== 'nofree')).map(x=>x.boardId) });
+        console.log(response.body);
+        expect(response.statusCode).toEqual(200);
+        response = await request.get('/user/board').set(headers_local);
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toEqual(boards.filter(x => (x.boardId !== 'nofree')).length);
+
+        //not admin
+        response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
+        expect(response.statusCode).toEqual(200);
+        headers_local = {...headers, 'x-auth': response.body.token };
+        response = await request.put('/user/board').set(headers_local);
+        expect(response.statusCode).toEqual(400);
+
+        response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => (x.allGroupAuth !== 'NONE') && (x.ownerId === 'orange'))[0].boardId });
+        console.log(response.body);
+        expect(response.statusCode).toEqual(200);
+        response = await request.get('/user/board').set(headers_local);
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toBeGreaterThan(0);
+        response = await request.put('/user/board').set(headers_local).send({ boards: boards.map(x => x.boardId) });
+        console.log(response.body);
+        expect(response.statusCode).toEqual(200);
+        response = await request.get('/user/board').set(headers_local);
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).not.toEqual(boards.length);
+        response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => (x.boardId !== 'nofree')).map(x=>x.boardId) });
+        console.log(response.body);
+        expect(response.statusCode).toEqual(200);
+        response = await request.get('/user/board').set(headers_local);
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toEqual(boards.filter(x => (x.boardId !== 'nofree')).length);
+
+        done();
+    })
     test('user board get test', async(done) => {
         let response = await request.get('/user/board').set(headers);
         expect(response.statusCode).toEqual(403);
@@ -281,84 +340,7 @@ describe('Test the user path', async() => {
         expect(response.body.length).toBeGreaterThan(0);
         done();
     })
-    test('user board put test', async(done) => {
-        let response = await request.put('/user/board').set(headers);
-        expect(response.statusCode).toEqual(403);
-        response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
-        expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
-        response = await request.put('/user/board').set(headers_local);
-        expect(response.statusCode).toEqual(400);
-        const boards = await boardModel.getBoards();
-        expect(boards.length).toBeGreaterThan(2);
-        //admin
-        response = await request.put('/user/board').set(headers_local).send({ boards: boards.find(x => x.allGroupAuth !== 'NONE')[0].boardId });
-        console.log(response.body);
-        expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/board').set(headers_local);
-        expect(response.statusCode).toEqual(200);
-        expect(response.body.length).toEqual(1);
-        response = await request.put('/user/board').set(headers_local).send({ boards: boards.map(x => x.boardId) });
-        console.log(response.body);
-        expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/board').set(headers_local);
-        expect(response.statusCode).toEqual(200);
-        expect(response.body.length).toEqual(boards.length);
-        response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => (x.boardId !== 'nofree')) });
-        console.log(response.body);
-        expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/board').set(headers_local);
-        expect(response.statusCode).toEqual(200);
-        expect(response.body.length).toEqual(boards.filter(x => (x.boardId !== 'nofree')).length);
-
-        //not admin
-        response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
-        expect(response.statusCode).toEqual(200);
-        headers_local = {...headers, 'x-auth': response.body.token };
-        response = await request.put('/user/board').set(headers_local);
-        expect(response.statusCode).toEqual(400);
-
-        response = await request.put('/user/board').set(headers_local).send({ boards: boards.find(x => x.allGroupAuth !== 'NONE')[0].boardId });
-        console.log(response.body);
-        expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/board').set(headers_local);
-        expect(response.statusCode).toEqual(200);
-        expect(response.body.length).toEqual(1);
-        response = await request.put('/user/board').set(headers_local).send({ boards: boards.map(x => x.boardId) });
-        console.log(response.body);
-        expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/board').set(headers_local);
-        expect(response.statusCode).toEqual(200);
-        expect(response.body.length).not.toEqual(boards.length);
-        response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => (x.boardId !== 'nofree')) });
-        console.log(response.body);
-        expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/board').set(headers_local);
-        expect(response.statusCode).toEqual(200);
-        expect(response.body.length).toEqual(boards.filter(x => (x.boardId !== 'nofree')).length);
-
-        done();
-    })
-    test('user group get test', async(done) => {
-        let response = await request.get('/user/group').set(headers);
-        expect(response.statusCode).toEqual(403);
-        response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
-        expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
-        response = await request.get('/user/group').set(headers_local).query({ userId: 'blue' });
-        expect(response.statusCode).toEqual(200);
-        expect(response.body.length).toBeGreaterThan(1);
-        response = await request.get('/user/group').set(headers_local).query({ userId: 'orange' });
-        expect(response.statusCode).toEqual(200);
-        expect(response.body.length).toBeGreaterThan(1);
-
-        response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
-        expect(response.statusCode).toEqual(200);
-        headers_local = {...headers, 'x-auth': response.body.token };
-        response = await request.get('/user/group').set(headers_local).query({ userId: 'orange' });
-        expect(response.statusCode).toEqual(400);
-        done();
-    })
+    
     test('user group put test', async(done) => {
         let response = await request.put('/user/group').set(headers);
         expect(response.statusCode).toEqual(403);
@@ -370,19 +352,47 @@ describe('Test the user path', async() => {
         const groups = await groupModel.getGroups(true, ['N', 'M', 'G']);
         expect(groups.length).toBeGreaterThan(2);
         //admin
-        response = await request.put('/user/group').set(headers_local).send({ groups: groups[0].groupId });
+        response = await request.put('/user/group').set(headers_local).send({userId:'blue', groups: groups[0].groupId });
         console.log(response.body);
         expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/group').set(headers_local);
+        response = await request.get('/user/group').set(headers_local).query({userId:'blue'});
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toEqual(1);
-        response = await request.put('/user/group').set(headers_local).send({ groups: groups.map(x => x.groupId) });
+        //no admin
+        response = await request.put('/user/group').set(headers_local).send({userId:'orange', groups: groups[0].groupId });
         console.log(response.body);
         expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/group').set(headers_local);
+        response = await request.get('/user/group').set(headers_local).query({userId:'orange'});
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toEqual(1);
+        response = await request.put('/user/group').set(headers_local).send({userId:'orange', groups: groups.map(x => x.groupId) });
+        console.log(response.body);
+        expect(response.statusCode).toEqual(200);
+        response = await request.get('/user/group').set(headers_local).query({userId:'orange'});
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toEqual(groups.length);
         done();
     })
+    test('user group get test', async(done) => {
+        let response = await request.get('/user/group').set(headers);
+        expect(response.statusCode).toEqual(403);
+        response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
+        expect(response.statusCode).toEqual(200);
+        let headers_local = {...headers, 'x-auth': response.body.token };
+        response = await request.get('/user/group').set(headers_local).query({ userId: 'blue' });
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toBeGreaterThan(0);
+        response = await request.get('/user/group').set(headers_local).query({ userId: 'orange' });
+        expect(response.statusCode).toEqual(200);
+        expect(response.body.length).toBeGreaterThan(1);
+
+        response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
+        expect(response.statusCode).toEqual(200);
+        headers_local = {...headers, 'x-auth': response.body.token };
+        response = await request.get('/user/group').set(headers_local).query({ userId: 'orange' });
+        expect(response.statusCode).toEqual(403);
+        done();
+    })
+    
 
 })
