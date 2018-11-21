@@ -158,8 +158,10 @@ exports.deleteBoardAuth = async(boardId, groupId) => {
 
 const deleteUserBoard = async(userId, boardId) => {
     const board = (await getBoard(boardId))[0];
-    if (!board || board.ownerId === userId) { //소유자 이전 후 삭제 가능
+    if (!board){
         return 0;
+    }else if(board.ownerId === userId) { //소유자 이전 후 삭제 가능
+        return -1;
     }
     let query = builder.delete()
         .from('SS_MST_USER_BOARD')
@@ -173,12 +175,12 @@ const deleteUserBoard = async(userId, boardId) => {
 };
 exports.deleteUserBoard = deleteUserBoard;
 
-exports.createUserBoard = async(userId, boardId) => {
+exports.createUserBoard = async(userId, boardId, isAdmin) => {
     const board = (await getBoard(boardId))[0];
     if (!board) {
         return 0;
     }
-    if (board.allGroupAuth === 'NONE') {
+    if (board.allGroupAuth === 'NONE' && !isAdmin) {
         const groups = (await groupModel.getUserGroup(userId)).map(x => x.groupId);
         let auths = await getBoardAuth(boardId);
         if (auths.filter(x => groups.includes(x)).length < 1) {
@@ -194,15 +196,6 @@ exports.createUserBoard = async(userId, boardId) => {
             'JOIN_DATE': util.getYYYYMMDD(),
             'ORDER_NUMBER': builder.str('SELECT COALESCE(MAX(ORDER_NUMBER), 0) + 1 FROM SS_MST_USER_BOARD WHERE USER_ID = ?', userId)
         })
-        // .fromQuery(['USER_ID', 'BOARD_ID', 'JOIN_DATE', 'ORDER_NUMBER'],
-        //     builder.select()
-        //     .field(builder.str('?', userId), 'USER_ID')
-        //     .field(builder.str('?', boardId), 'BOARD_ID')
-        //     .field(builder.str('?', util.getYYYYMMDD()), 'JOIN_DATE')
-        //     .field('MAX(COALESCE(ORDER_NUMBER, 0)) + 1', 'ORDER_NUMBER')
-        //     .from('SS_MST_USER_BOARD')
-        //     .where('USER_ID = ?', userId)
-        // )
         .toParam()
     )
 }
