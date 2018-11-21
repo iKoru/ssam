@@ -28,6 +28,9 @@ router.put('/', requiredSignin, async(req, res) => {
                 res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${moment(req.userObject.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
                 return;
             }
+            if(user.loungeNickName.length > 50){
+                return res.status(400).json({target:'loungeNickName', message:'입력된 라운지 필명이 너무 깁니다. 최대 50자로 입력해주세요.'});
+            }
             result = await userModel.checkNickName(user.userId, user.loungeNickName);
             if (result[0] && result[0].count > 0) {
                 res.status(409).json({ target: 'loungeNickName', message: '이미 존재하는 라운지 필명입니다.' });
@@ -48,6 +51,9 @@ router.put('/', requiredSignin, async(req, res) => {
             if (req.userObject.topicNickNameModifiedDate && moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment())) {
                 res.status(400).json({ target: 'topicNickName', message: `마지막으로 토픽 닉네임을 변경한 날(${moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
                 return;
+            }
+            if(user.topicNickName.length > 50){
+                return res.status(400).json({target:'topicNickName', message:'입력된 토픽 닉네임이 너무 깁니다. 최대 50자로 입력해주세요.'});
             }
             result = await userModel.checkNickName(user.userId, user.topicNickName);
             if (result[0] && result[0].count > 0) {
@@ -106,6 +112,9 @@ router.put('/', requiredSignin, async(req, res) => {
             if (user.email && user.email !== req.userObject.email) {
                 const email = constants.emailRegex.exec(user.email);
                 if (email) { //matched email
+                    if(email.length > 100){
+                        return res.status(400).json({target:'email', message:'입력된 이메일 주소의 길이가 너무 깁니다. 관리자에게 문의해주세요.'});
+                    }
                     result = await userModel.checkEmail(user.email);
                     if (result && result[0] && result[0].count > 0) {
                         res.status(409).json({ target: 'email', message: '이미 사용중인 이메일입니다.' });
@@ -200,6 +209,9 @@ router.post('/', async(req, res) => { //회원가입
     }
     const email = constants.emailRegex.exec(user.email);
     if (email) { //matched email
+        if(email.length > 100){
+            return res.status(400).json({target:'email', message:'입력된 이메일 주소의 길이가 너무 깁니다. 관리자에게 문의해주세요.'});
+        }
         result = await userModel.checkEmail(user.email);
         if (result && result[0] && result[0].count > 0) {
             res.status(409).json({ target: 'email', message: '이미 사용중인 이메일입니다.' });
@@ -287,7 +299,10 @@ router.post('/picture', requiredSignin, multer.single('picture'), async(req, res
                 logger.error(`파일 삭제 실패(임시 파일 삭제) : ${req.file.path}, ${err}`);
             }
         })
-        res.status(400).json({ target: 'userId', message: '로그인 정보가 없습니다. 로그아웃 후 다시 시도해주세요.' });
+        return res.status(400).json({ target: 'userId', message: '로그인 정보가 없습니다. 로그아웃 후 다시 시도해주세요.' });
+    }
+    if(req.file.path.length > 200){
+        return res.status(400).json({target:'path', message:'파일 경로가 너무 길어 저장하지 못했습니다. 관리자에게 문의해주세요.'});
     }
     if (req.userObject.picturePath) {
         fs.unlink(req.userObject.picturePath, (err) => {
