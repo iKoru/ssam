@@ -16,10 +16,10 @@ const getGroup = async(groupId, groupType) => {
         })
         .from('SS_MST_GROUP')
         .where('GROUP_ID = ?', groupId)
-    if(groupType){
+    if (groupType) {
         query.where('GROUP_TYPE IN ?', groupType)
     }
-    return await pool.executeQuery('getGroup' + (groupType?groupType.length:''),
+    return await pool.executeQuery('getGroup' + (groupType ? groupType.length : ''),
         query
         .limit(1)
         .toParam()
@@ -30,7 +30,7 @@ exports.getGroup = getGroup;
 
 exports.getGroups = async(isAdmin, groupType = ['N', 'M', 'G', 'R'], page = 1) => {
     let query = builder.select()
-    if(isAdmin){
+    if (isAdmin) {
         query.fields({
                 'GROUP_ID': '"groupId"',
                 'GROUP_NAME': '"groupName"',
@@ -43,7 +43,7 @@ exports.getGroups = async(isAdmin, groupType = ['N', 'M', 'G', 'R'], page = 1) =
             })
             .from('SS_MST_GROUP')
             .where('GROUP_TYPE IN ?', groupType)
-    }else{
+    } else {
         query.fields({
                 'GROUP_ID': '"groupId"',
                 'GROUP_NAME': '"groupName"',
@@ -56,18 +56,18 @@ exports.getGroups = async(isAdmin, groupType = ['N', 'M', 'G', 'R'], page = 1) =
             .where('GROUP_TYPE IN ?', groupType)
             .where('IS_OPEN_TO_USERS = true')
     }
-    
-    if(page !== null){
+
+    if (page !== null) {
         query.limit(30)
-        .offset((page - 1) * 30)
+            .offset((page - 1) * 30)
     }
     query.order('ORDER_NUMBER')
     return isAdmin ?
-        await pool.executeQuery('getGroupsForAdmin' + groupType.length + (page===null?'all':''),
+        await pool.executeQuery('getGroupsForAdmin' + (groupType ? groupType.length : '') + (page === null ? 'all' : ''),
             query
             .toParam()
         ) :
-        await pool.executeQuery('getGroups' + groupType.length + (page===null?'all':''),
+        await pool.executeQuery('getGroups' + (groupType ? groupType.length : '') + (page === null ? 'all' : ''),
             query
             .toParam()
         );
@@ -166,16 +166,16 @@ exports.getUserGroup = async(userId, groupType) => {
             'MGROUP.PARENT_GROUP_ID': '"parentGroupId"'
         })
         .from(builder.select().fields(['USER_ID', 'GROUP_ID']).from('SS_MST_USER_GROUP').where('USER_ID = ?', userId).where('EXPIRE_DATE > ?', util.getYYYYMMDD()), 'USERGROUP');
-    if(groupType){
-        if(typeof groupType === 'string'){
+    if (groupType) {
+        if (typeof groupType === 'string') {
             groupType = [groupType];
         }
         query.join(builder.select().from('SS_MST_GROUP').where('GROUP_TYPE IN ?', groupType), 'MGROUP', 'MGROUP.GROUP_ID = USERGROUP.GROUP_ID')
-    }else{
+    } else {
         query.join('SS_MST_GROUP', 'MGROUP', 'MGROUP.GROUP_ID = USERGROUP.GROUP_ID')
     }
-    return await pool.executeQuery('getUserGroup' + (groupType?groupType.length : ''),
-        query        
+    return await pool.executeQuery('getUserGroup' + (groupType ? groupType.length : ''),
+        query
         .order('MGROUP.ORDER_NUMBER')
         .toParam()
     );
@@ -183,8 +183,8 @@ exports.getUserGroup = async(userId, groupType) => {
 
 exports.getGroupByRegion = async(region) => {
     return await pool.executeQuery('getGroupByRegion',
-    builder.select()
-    .fields({
+        builder.select()
+        .fields({
             'GROUP_ID': '"groupId"',
             'GROUP_NAME': '"groupName"',
             'GROUP_DESCRIPTION': '"groupDescription"',
@@ -194,9 +194,9 @@ exports.getGroupByRegion = async(region) => {
             'IS_OPEN_TO_USERS': '"isOpenToUsers"',
             'EXPIRE_PERIOD': '"expirePeriod"'
         })
-    .from('SS_MST_GROUP')
-    .where('GROUP_NAME = ?', region)
-    .where('GROUP_TYPE = \'R\'')
-    .toParam()
+        .from('SS_MST_GROUP')
+        .where('GROUP_NAME = ?', region)
+        .where('GROUP_TYPE = \'R\'')
+        .toParam()
     )
 }
