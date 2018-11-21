@@ -28,8 +28,8 @@ router.put('/', requiredSignin, async(req, res) => {
                 res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${moment(req.userObject.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
                 return;
             }
-            if(user.loungeNickName.length > 50){
-                return res.status(400).json({target:'loungeNickName', message:'입력된 라운지 필명이 너무 깁니다. 최대 50자로 입력해주세요.'});
+            if (user.loungeNickName.length > 50) {
+                return res.status(400).json({ target: 'loungeNickName', message: '입력된 라운지 필명이 너무 깁니다. 최대 50자로 입력해주세요.' });
             }
             result = await userModel.checkNickName(user.userId, user.loungeNickName);
             if (result[0] && result[0].count > 0) {
@@ -52,8 +52,8 @@ router.put('/', requiredSignin, async(req, res) => {
                 res.status(400).json({ target: 'topicNickName', message: `마지막으로 토픽 닉네임을 변경한 날(${moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
                 return;
             }
-            if(user.topicNickName.length > 50){
-                return res.status(400).json({target:'topicNickName', message:'입력된 토픽 닉네임이 너무 깁니다. 최대 50자로 입력해주세요.'});
+            if (user.topicNickName.length > 50) {
+                return res.status(400).json({ target: 'topicNickName', message: '입력된 토픽 닉네임이 너무 깁니다. 최대 50자로 입력해주세요.' });
             }
             result = await userModel.checkNickName(user.userId, user.topicNickName);
             if (result[0] && result[0].count > 0) {
@@ -112,8 +112,8 @@ router.put('/', requiredSignin, async(req, res) => {
             if (user.email && user.email !== req.userObject.email) {
                 const email = constants.emailRegex.exec(user.email);
                 if (email) { //matched email
-                    if(email.length > 100){
-                        return res.status(400).json({target:'email', message:'입력된 이메일 주소의 길이가 너무 깁니다. 관리자에게 문의해주세요.'});
+                    if (email.length > 100) {
+                        return res.status(400).json({ target: 'email', message: '입력된 이메일 주소의 길이가 너무 깁니다. 관리자에게 문의해주세요.' });
                     }
                     result = await userModel.checkEmail(user.email);
                     if (result && result[0] && result[0].count > 0) {
@@ -209,8 +209,8 @@ router.post('/', async(req, res) => { //회원가입
     }
     const email = constants.emailRegex.exec(user.email);
     if (email) { //matched email
-        if(email.length > 100){
-            return res.status(400).json({target:'email', message:'입력된 이메일 주소의 길이가 너무 깁니다. 관리자에게 문의해주세요.'});
+        if (email.length > 100) {
+            return res.status(400).json({ target: 'email', message: '입력된 이메일 주소의 길이가 너무 깁니다. 관리자에게 문의해주세요.' });
         }
         result = await userModel.checkEmail(user.email);
         if (result && result[0] && result[0].count > 0) {
@@ -279,7 +279,6 @@ router.post('/', async(req, res) => { //회원가입
             result = await groupModel.createUserGroup(user.userId, user.userGroup[trial]);
             if (typeof result !== 'number') {
                 userModel.deleteUser(user.userId);
-                console.log(result);
                 res.status(500).json({ message: '회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.' + (result.error ? `(${result.error})` : '') });
                 return;
             }
@@ -301,8 +300,8 @@ router.post('/picture', requiredSignin, multer.single('picture'), async(req, res
         })
         return res.status(400).json({ target: 'userId', message: '로그인 정보가 없습니다. 로그아웃 후 다시 시도해주세요.' });
     }
-    if(req.file.path.length > 200){
-        return res.status(400).json({target:'path', message:'파일 경로가 너무 길어 저장하지 못했습니다. 관리자에게 문의해주세요.'});
+    if (req.file.path.length > 200) {
+        return res.status(400).json({ target: 'path', message: '파일 경로가 너무 길어 저장하지 못했습니다. 관리자에게 문의해주세요.' });
     }
     if (req.userObject.picturePath) {
         fs.unlink(req.userObject.picturePath, (err) => {
@@ -357,7 +356,6 @@ router.get('/list', adminOnly, async(req, res) => {
 });
 
 router.delete('/:userId', adminOnly, async(req, res) => {
-    console.log(req.params);
     if (!req.params.userId) {
         res.status(400).json({ target: 'userId', message: '요청에 필요한 정보가 없습니다.' });
         return;
@@ -433,8 +431,6 @@ router.put('/board', requiredSignin, async(req, res) => {
         boards = [boards];
     }
     let currentBoard = await boardModel.getUserBoard(req.userObject.userId, req.userObject.isAdmin);
-    console.log("target boards : ", boards);
-    console.log("current boards : ", currentBoard);
     let result;
     let failedBoard = [];
     if (Array.isArray(currentBoard)) {
@@ -446,7 +442,7 @@ router.put('/board', requiredSignin, async(req, res) => {
                     result = await boardModel.createUserBoard(req.userObject.userId, boards[i], req.userObject.isAdmin)
                     if (typeof result === 'object') {
                         failedBoard.push(boards[i]);
-                    }console.log("added board : ", boards[i])
+                    }
                 } else {
                     result = await boardModel.getUserBoardAuth(req.userObject.userId, boards[i]);
                     if (result && result.length > 0) {
@@ -456,7 +452,7 @@ router.put('/board', requiredSignin, async(req, res) => {
                         }
                     } else {
                         failedBoard.push(boards[i]);
-                    }console.log("added board(2) : ", boards[i]);
+                    }
                 }
             }
             i++;
@@ -467,10 +463,9 @@ router.put('/board', requiredSignin, async(req, res) => {
                 result = await boardModel.deleteUserBoard(req.userObject.userId, currentBoard[i].boardId);
                 if (typeof result === 'object' || result === 0) {
                     failedBoard.push(currentBoard[i].boardId);
-                }else if(result < 0){
+                } else if (result < 0) {
                     failedBoard.push(-1);
                 }
-                console.log("deleted board : ", currentBoard[i].boardId, result)
             }
             i++;
         }
@@ -478,12 +473,12 @@ router.put('/board', requiredSignin, async(req, res) => {
         res.status(500).json({ message: '기존 정보를 불러오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
         return;
     }
-    if (failedBoard.length > 0){
-        if(failedBoard.indexOf(-1)>=0){
+    if (failedBoard.length > 0) {
+        if (failedBoard.indexOf(-1) >= 0) {
             res.status(400).json({ message: '토픽지기는 토픽을 구독 취소할 수 없습니다. 먼저 토픽을 다른 사람에게 양도하시거나, 토픽 자체를 삭제해주세요.' });
-        }else if(boards.length === failedBoard.length){
+        } else if (boards.length === failedBoard.length) {
             res.status(400).json({ message: '게시판을 구독할 권한이 없거나, 구독(취소) 과정에서 오류가 발생하였습니다.', boardId: failedBoard })
-        }else{
+        } else {
             res.status(200).json({ message: `게시판을 구독할 권한이 없거나, 구독(취소) 과정에서 오류가 ${failedBoard.length}건 발생하였습니다.`, boardId: failedBoard })
         }
     } else {
@@ -492,8 +487,8 @@ router.put('/board', requiredSignin, async(req, res) => {
 });
 
 router.get('/group', adminOnly, async(req, res) => {
-    if(typeof req.query.userId !== 'string' || req.query.userId === ''){
-        return res.status(400).json({target:'userId', message:'잘못된 접근입니다.'});
+    if (typeof req.query.userId !== 'string' || req.query.userId === '') {
+        return res.status(400).json({ target: 'userId', message: '잘못된 접근입니다.' });
     }
     let result = await groupModel.getUserGroup(req.query.userId);
     if (Array.isArray(result)) {
@@ -503,7 +498,7 @@ router.get('/group', adminOnly, async(req, res) => {
     }
 });
 router.put('/group', adminOnly, async(req, res) => {
-    if(!req.body.userId || typeof req.body.userId !== 'string' || req.body.userId === ''){
+    if (!req.body.userId || typeof req.body.userId !== 'string' || req.body.userId === '') {
         return res.status(400).json({ message: 'userId', message: '잘못된 접근입니다.' });
     }
     let groups = req.body.groups;
@@ -513,7 +508,6 @@ router.put('/group', adminOnly, async(req, res) => {
         groups = [groups];
     }
     let currentGroup = await groupModel.getUserGroup(req.body.userId);
-    console.log("target groups : ", groups, "current groups : ", currentGroup)
     let result;
     let failedGroup = [];
     if (Array.isArray(currentGroup)) {
@@ -528,13 +522,12 @@ router.put('/group', adminOnly, async(req, res) => {
                         while (j < currentType.length) {
                             groupModel.deleteUserGroup(req.body.userId, currentType[j].groupId); //delete current group with same group type
                             j++;
-                            console.log("delete user group : ", currentType[j].groupId);
                         }
                     }
                     result = await groupModel.createUserGroup(req.body.userId, groups[i]);
                     if (typeof result === 'object') {
                         failedGroup.push(groups[i]);
-                    }console.log("add user group : ", groups[i], result);
+                    }
                 }
             }
             i++;
@@ -545,7 +538,7 @@ router.put('/group', adminOnly, async(req, res) => {
                 result = await groupModel.deleteUserGroup(req.body.userId, currentGroup[i].groupId);
                 if (typeof result === 'object') {
                     failedGroup.push(currentGroup[i].groupId);
-                }console.log('delete user group(2) : ', currentGroup[i].groupId);
+                }
             }
             i++;
         }
@@ -554,10 +547,10 @@ router.put('/group', adminOnly, async(req, res) => {
         return;
     }
     if (failedGroup.length > 0) {
-        if(failedGroup.length === groups.length){
+        if (failedGroup.length === groups.length) {
             res.status(400).json({ message: '회원 그룹을 등록(제거)시 오류가 발생하였습니다.', groupId: groups })
-        }else{
-            res.status(200).json({ message: `회원 그룹을 변경할 때 오류가 ${failedGroup.length}건 발생하였습니다.`, groupId:failedGroup });
+        } else {
+            res.status(200).json({ message: `회원 그룹을 변경할 때 오류가 ${failedGroup.length}건 발생하였습니다.`, groupId: failedGroup });
         }
     } else {
         res.status(200).json({ message: '회원 그룹을 변경하였습니다.' });

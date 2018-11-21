@@ -15,7 +15,6 @@ describe('Test the user path', async() => {
         let response = await request.get('/user').set(headers);
         expect(response.statusCode).toEqual(403);
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
-        console.log(response.body);
         expect(response.statusCode).toEqual(200);
         let jwt = response.body.token;
         response = await request.get('/user').set({ 'x-auth': jwt, ...headers }).query({ 'userId': 'orange' });
@@ -41,7 +40,6 @@ describe('Test the user path', async() => {
         expect(response.statusCode).toEqual(400);
         //successfully signed up
         response = await request.post('/user').set(headers).send({ userId: 'orange1', email: 'orange1@sen.go.kr', password: 'xptmxm1!' });
-        console.log(response.body);
         expect(response.statusCode).toEqual(200);
         //created user id check
         let user = await userModel.getUser('orange1');
@@ -275,20 +273,16 @@ describe('Test the user path', async() => {
         expect(boards.length).toBeGreaterThan(2);
         //admin
         response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => x.allGroupAuth !== 'NONE')[0].boardId });
-        console.log(response.body);
         expect(response.statusCode).toEqual(200);
         response = await request.get('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toEqual(1);
         response = await request.put('/user/board').set(headers_local).send({ boards: boards.map(x => x.boardId) });
-        console.log(response.body);
         expect(response.statusCode).toEqual(200);
         response = await request.get('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(200);
-        console.log(response.body);
         expect(response.body.length).toEqual(boards.length);
-        response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => (x.boardId !== 'nofree')).map(x=>x.boardId) });
-        console.log(response.body);
+        response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => (x.boardId !== 'nofree')).map(x => x.boardId) });
         expect(response.statusCode).toEqual(200);
         response = await request.get('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(200);
@@ -302,19 +296,16 @@ describe('Test the user path', async() => {
         expect(response.statusCode).toEqual(400);
 
         response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => (x.allGroupAuth !== 'NONE') && (x.ownerId === 'orange'))[0].boardId });
-        console.log(response.body);
         expect(response.statusCode).toEqual(200);
         response = await request.get('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toBeGreaterThan(0);
         response = await request.put('/user/board').set(headers_local).send({ boards: boards.map(x => x.boardId) });
-        console.log(response.body);
         expect(response.statusCode).toEqual(200);
         response = await request.get('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).not.toEqual(boards.length);
-        response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => (x.boardId !== 'nofree')).map(x=>x.boardId) });
-        console.log(response.body);
+        response = await request.put('/user/board').set(headers_local).send({ boards: boards.filter(x => (x.boardId !== 'nofree')).map(x => x.boardId) });
         expect(response.statusCode).toEqual(200);
         response = await request.get('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(200);
@@ -340,7 +331,7 @@ describe('Test the user path', async() => {
         expect(response.body.length).toBeGreaterThan(0);
         done();
     })
-    
+
     test('user group put test', async(done) => {
         let response = await request.put('/user/group').set(headers);
         expect(response.statusCode).toEqual(403);
@@ -352,23 +343,20 @@ describe('Test the user path', async() => {
         const groups = await groupModel.getGroups(true, ['N', 'M', 'G']);
         expect(groups.length).toBeGreaterThan(2);
         //admin
-        response = await request.put('/user/group').set(headers_local).send({userId:'blue', groups: groups[0].groupId });
-        console.log(response.body);
+        response = await request.put('/user/group').set(headers_local).send({ userId: 'blue', groups: groups[0].groupId });
         expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/group').set(headers_local).query({userId:'blue'});
+        response = await request.get('/user/group').set(headers_local).query({ userId: 'blue' });
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toEqual(1);
         //no admin
-        response = await request.put('/user/group').set(headers_local).send({userId:'orange', groups: groups[0].groupId });
-        console.log(response.body);
+        response = await request.put('/user/group').set(headers_local).send({ userId: 'orange', groups: groups[0].groupId });
         expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/group').set(headers_local).query({userId:'orange'});
+        response = await request.get('/user/group').set(headers_local).query({ userId: 'orange' });
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toEqual(1);
-        response = await request.put('/user/group').set(headers_local).send({userId:'orange', groups: groups.map(x => x.groupId) });
-        console.log(response.body);
+        response = await request.put('/user/group').set(headers_local).send({ userId: 'orange', groups: groups.map(x => x.groupId) });
         expect(response.statusCode).toEqual(200);
-        response = await request.get('/user/group').set(headers_local).query({userId:'orange'});
+        response = await request.get('/user/group').set(headers_local).query({ userId: 'orange' });
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toEqual(groups.length);
         done();
@@ -393,6 +381,6 @@ describe('Test the user path', async() => {
         expect(response.statusCode).toEqual(403);
         done();
     })
-    
+
 
 })
