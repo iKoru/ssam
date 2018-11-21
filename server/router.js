@@ -12,9 +12,7 @@ const signRouter = require('./routes/signRouter'),
     messageRouter = require('./routes/messageRouter'),
     groupRouter = require('./routes/groupRouter');
 
-module.exports = function (router) {
-    router.use('/', signRouter);
-    router.use('/', mainRouter);//need to be located at the last of routing '/'
+module.exports = function(router) {
     router.use('/board', boardRouter);
     router.use('/comment', commentRouter);
     router.use('/document', documentRouter);
@@ -26,4 +24,6 @@ module.exports = function (router) {
     router.use('/event', eventRouter);
     router.use('/group', groupRouter);
     router.use('/message', messageRouter);
+    router.use('/', signRouter);
+    router.use('/', mainRouter); //need to be located at the last of routing '/'
 };
