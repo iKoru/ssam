@@ -27,9 +27,9 @@ exports.getUserAuth = async(userId, status, page = 1) => {
         .where('USER_ID = ?', userId)
     if (status) {
         query.where('STATUS = ?', status)
-            .where('SEND_DATETIME > ?', util.getYYYYMMDDHH24MISS(moment(-1, 'months')))
+            .where('SEND_DATETIME > ?', util.getYYYYMMDDHH24MISS(util.moment().add(-1, 'months')))
     }
-    return await pool.executeQuery('getUserAuth',
+    return await pool.executeQuery('getUserAuth' + (status?'stat':''),
         query.limit(10).offset((page - 1) * 10)
         .order('SEND_DATETIME', false)
         .toParam()
@@ -48,7 +48,7 @@ exports.updateUserAuth = async(auth) => {
     if (auth.status) {
         query.set('STATUS', auth.status)
     }
-    return await pool.executeQuery('updateUserAuth' + (auth.sendDateTime ? 'time' : '') + (auth.status || ''),
+    return await pool.executeQuery('updateUserAuth' + (auth.sendDateTime ? 'time' : '') + (auth.status?'stat': ''),
         query.where('USER_ID = ?', auth.userId)
         .where('AUTH_KEY = ?', auth.authKey)
         .toParam()
