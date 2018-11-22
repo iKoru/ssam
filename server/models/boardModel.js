@@ -122,6 +122,25 @@ const getBoardAuth = async(boardId) => {
 
 exports.getBoardAuth = getBoardAuth;
 
+exports.getBoardAuthName = async(boardId, isAdmin) => {
+    let query = builder.select()
+        .fields({
+            'GROUP.GROUP_ID':'"groupId"',
+            'GROUP.GROUP_NAME':'"groupName"',
+            'AUTH.AUTH_TYPE': '"authType"'
+        })
+        .from('SS_MST_BOARD_AUTH', 'AUTH')
+        .join('SS_MST_GROUP', 'GROUP', 'GROUP.GROUP_ID = AUTH.ALLOWED_GROUP_ID')
+        .where('BOARD_ID = ?', boardId);
+    if(!isAdmin){
+        query.where('GROUP.IS_OPEN_TO_USERS = true')
+    }
+    return await pool.executeQuery('getBoardAuthName' + (isAdmin?'a':''),
+        query
+        .toParam()
+    );
+}
+
 exports.createBoardAuth = async(boardId, groupId, authType) => {
     return await pool.executeQuery('createBoardAuth',
         builder.insert()
@@ -252,7 +271,7 @@ exports.updateBoard = async(board) => {
         query.set('ALL_GROUP_AUTH', board.allGroupAuth)
     }
     if (board.allowAnonymous !== undefined) {
-        query.set('ALLOW_ANONYMOUS', board.allowAnonymous)
+        query.set('IS_ANONYMOUSABLE', board.isAnonymousable)
     }
     if (board.reservedDate !== undefined) {
         query.set('RESERVED_DATE', board.reservedDate)
