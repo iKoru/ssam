@@ -279,14 +279,14 @@ router.post('/', async(req, res) => { //회원가입
             result = await groupModel.createUserGroup(user.userId, user.userGroup[trial]);
             if (typeof result !== 'number') {
                 userModel.deleteUser(user.userId);
-                res.status(500).json({ message: '회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.' + (result.error ? `(${result.error})` : '') });
+                res.status(500).json({ message: '회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.' + (result.code ? `(${result.code})` : '') });
                 return;
             }
             trial++;
         }
         res.status(200).json({ message: '회원가입에 성공하였습니다. 입력하신 이메일 주소로 인증메일을 보냈으니 확인해주세요.' });
     } else {
-        res.status(500).json({ message: '회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해주세요.' + (result.error ? `(${result.error})` : '') });
+        res.status(500).json({ message: '회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해주세요.' + (result.code ? `(${result.code})` : '') });
     }
 });
 

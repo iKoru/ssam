@@ -6,7 +6,7 @@ const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly');
 const signModel = require('../models/signModel'),
     userModel = require('../models/userModel'),
-    authModel = require('../models/authModel')
+    authModel = require('../models/authModel'),
 util = require('../util');
 
 //based on /

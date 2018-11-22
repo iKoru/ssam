@@ -32,7 +32,7 @@ router.get('/', checkSignin, async(req, res) => { //get group list
     }
     let result = await groupModel.getGroups(req.userObject ? req.userObject.isAdmin : false, groupType, req.query.page)
     if (!Array.isArray(result)) {
-        return res.status(500).json({ message: `그룹 정보를 받아오는 중에 오류가 발생했습니다.[${result.error}]` });
+        return res.status(500).json({ message: `그룹 정보를 받아오는 중에 오류가 발생했습니다.[${result.code}]` });
     } else {
         return res.status(200).json(result);
     }
@@ -64,8 +64,8 @@ router.post('/', adminOnly, async(req, res) => { //create new group
     group.groupDescription = util.safeStringLength(group.groupDescription, 500);
 
     let result = await groupModel.createGroup(group)
-    if ((typeof result === 'object' && result.error) || result.rowCount === 0) {
-        return res.status(500).json({ message: `그룹을 추가하던 중 오류가 발생했습니다.[${result.error}]` });
+    if ((typeof result === 'object' && result.code) || result.rowCount === 0) {
+        return res.status(500).json({ message: `그룹을 추가하던 중 오류가 발생했습니다.[${result.code}]` });
     } else {
         return res.status(200).json({ message: `${group.groupName} 그룹을 추가하였습니다.`, groupId: result.rows[0].groupId });
     }
@@ -102,7 +102,7 @@ router.put('/', adminOnly, async(req, res) => { //update current group
 
     let result = await groupModel.updateGroup(group)
     if (typeof result === 'object') {
-        return res.status(500).json({ message: `그룹을 변경하던 중 오류가 발생했습니다.[${result.error}]` });
+        return res.status(500).json({ message: `그룹을 변경하던 중 오류가 발생했습니다.[${result.code}]` });
     } else if (result === 0) {
         return res.status(404).json({ message: '존재하지 않는 그룹ID입니다.' });
     } else {
@@ -117,7 +117,7 @@ router.delete('/:groupId([0-9]+)', adminOnly, async(req, res) => { //delete exis
     }
     let result = await groupModel.deleteGroup(parseInt(groupId));
     if (typeof result === 'object' || result === 0) {
-        return res.status(500).json({ message: `그룹을 삭제하던 중 오류가 발생했습니다.[${result.error}]` });
+        return res.status(500).json({ message: `그룹을 삭제하던 중 오류가 발생했습니다.[${result.code}]` });
     } else {
         return res.status(200).json({ message: '그룹을 삭제하였습니다.' });
     }

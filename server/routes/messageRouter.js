@@ -22,7 +22,7 @@ router.get('/list', requiredSignin, async(req, res) => {
     }
     let result = await messageModel.getChats(req.userObject.userId, null, req.query.chatType, req.query.page)
     if (!Array.isArray(result)) {
-        return res.status(500).json({ message: `채팅 정보를 받아오는 중에 오류가 발생했습니다.[${result.error}]` });
+        return res.status(500).json({ message: `채팅 정보를 받아오는 중에 오류가 발생했습니다.[${result.code}]` });
     } else {
         result = result.filter(x => {
             return (x.user1Id === req.userObject.userId ? (x.user1Status === 'NORMAL') : (x.user2Status === 'NORMAL'))
@@ -62,8 +62,8 @@ router.post('/list', requiredSignin, async(req, res) => {
         }
     }
     result = await messageModel.createChat(req.userObject.userId, other[0].userId, chat.chatType);
-    if ((typeof result === 'object' && result.error) || result.rowCount === 0) {
-        return res.status(500).json({ message: `채팅을 개설하던 중 오류가 발생했습니다.[${result.error}]` });
+    if ((typeof result === 'object' && result.code) || result.rowCount === 0) {
+        return res.status(500).json({ message: `채팅을 개설하던 중 오류가 발생했습니다.[${result.code}]` });
     } else {
         return res.status(200).json({ message: '새로운 채팅을 개설하였습니다.', chatId: result.rows[0].chatId });
     }
@@ -93,7 +93,7 @@ router.get('/', requiredSignin, async(req, res) => {
     }
     result = await messageModel.getMessages(query.chatId, query.timestampBefore, query.timestampAfter);
     if (!Array.isArray(result)) {
-        return res.status(500).json({ message: `채팅 내용을 받아오는 중에 오류가 발생했습니다.[${result.error}]` });
+        return res.status(500).json({ message: `채팅 내용을 받아오는 중에 오류가 발생했습니다.[${result.code}]` });
     } else {
         result.map(x => {
             x.isSender = (x.senderUserId === req.userObject.userId);
@@ -121,7 +121,7 @@ router.post('/', requiredSignin, async(req, res) => {
     }
     result = await messageModel.createMessage(message.chatId, req.userObject.userId, message.contents);
     if (typeof result === 'object') {
-        return res.status(500).json({ message: `메시지를 보내던 중 오류가 발생했습니다.[${result.error}]` });
+        return res.status(500).json({ message: `메시지를 보내던 중 오류가 발생했습니다.[${result.code}]` });
     } else if (result === 0) {
         return res.status(404).json({ message: '메시지를 보내지 못했습니다. 다시 시도해주세요.' });
     } else {
@@ -160,7 +160,7 @@ router.delete('/:chatId([0-9]+)', requiredSignin, async(req, res) => {
         }
     }
     if (typeof result === 'object') {
-        return res.status(500).json({ message: `채팅을 삭제하던 중 오류가 발생했습니다.[${result.error}]` });
+        return res.status(500).json({ message: `채팅을 삭제하던 중 오류가 발생했습니다.[${result.code}]` });
     } else if (result === 0) {
         return res.status(404).json({ message: '존재하지 않는 채팅입니다.' });
     } else {
