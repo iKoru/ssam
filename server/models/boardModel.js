@@ -18,7 +18,7 @@ exports.checkBoardId = async(boardId) => {
     );
 }
 
-exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boardName", sortTarget = "boardName", isAscending = true) => {
+exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boardName", sortTarget = "boardName", isAscending = true, isAdmin = false) => {
     let query = builder.select().fields({
             'BOARD_ID': '"boardId"',
             'BOARD_NAME': '"boardName"',
@@ -31,8 +31,10 @@ exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boar
             'RESERVED_DATE': '"reservedDate"',
             'RESERVED_CONTENTS': '"reservedContents"'
         })
-        .from('SS_MST_BOARD')
-        .where('STATUS <> \'DELETED\'');
+        .from('SS_MST_BOARD');
+    if (!isAdmin) {
+        query.where('STATUS <> \'DELETED\'');
+    }
     if (searchQuery) {
         if (searchTarget === 'boardName') {
             query.where('BOARD_NAME LIKE \'%\'||?||\'%\'', searchQuery)
@@ -53,7 +55,7 @@ exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boar
             query.order('BOARD_NAME', isAscending);
             break;
     }
-    return await pool.executeQuery('getBoards' + (searchQuery && searchTarget === 'boardName' ? 'name' : '') + (boardType ? 'type' : ''),
+    return await pool.executeQuery('getBoards' + (isAdmin ? 'admin' : '') + (searchQuery && searchTarget === 'boardName' ? 'name' : '') + (boardType ? 'type' : ''),
         query.limit(15).offset((page - 1) * 15)
         .toParam()
     )
@@ -76,13 +78,13 @@ exports.getUserBoard = async(userId, isAdmin) => {
         .from('SS_MST_USER_BOARD', 'USERBOARD')
         .join('SS_MST_BOARD', 'BOARD', 'BOARD.BOARD_ID = USERBOARD.BOARD_ID')
         .where('USERBOARD.USER_ID = ?', userId);
-    if(!isAdmin){
+    if (!isAdmin) {
         query.where('STATUS <> \'DELETED\'')
     }
-    return await pool.executeQuery('getUserBoard' + (isAdmin?'admin':''),
+    return await pool.executeQuery('getUserBoard' + (isAdmin ? 'admin' : ''),
         query
         .toParam())
-        
+
 }
 
 const getBoard = async(boardId) => {
@@ -125,17 +127,17 @@ exports.getBoardAuth = getBoardAuth;
 exports.getBoardAuthName = async(boardId, isAdmin) => {
     let query = builder.select()
         .fields({
-            'GROUP.GROUP_ID':'"groupId"',
-            'GROUP.GROUP_NAME':'"groupName"',
+            'GROUP.GROUP_ID': '"groupId"',
+            'GROUP.GROUP_NAME': '"groupName"',
             'AUTH.AUTH_TYPE': '"authType"'
         })
         .from('SS_MST_BOARD_AUTH', 'AUTH')
         .join('SS_MST_GROUP', 'GROUP', 'GROUP.GROUP_ID = AUTH.ALLOWED_GROUP_ID')
         .where('BOARD_ID = ?', boardId);
-    if(!isAdmin){
+    if (!isAdmin) {
         query.where('GROUP.IS_OPEN_TO_USERS = true')
     }
-    return await pool.executeQuery('getBoardAuthName' + (isAdmin?'a':''),
+    return await pool.executeQuery('getBoardAuthName' + (isAdmin ? 'a' : ''),
         query
         .toParam()
     );
@@ -177,9 +179,9 @@ exports.deleteBoardAuth = async(boardId, groupId) => {
 
 const deleteUserBoard = async(userId, boardId) => {
     const board = (await getBoard(boardId))[0];
-    if (!board){
+    if (!board) {
         return 0;
-    }else if(board.ownerId === userId) { //소유자 이전 후 삭제 가능
+    } else if (board.ownerId === userId) { //소유자 이전 후 삭제 가능
         return -1;
     }
     let query = builder.delete()
@@ -271,7 +273,7 @@ exports.updateBoard = async(board) => {
         query.set('ALL_GROUP_AUTH', board.allGroupAuth)
     }
     if (board.allowAnonymous !== undefined) {
-        query.set('IS_ANONYMOUSABLE', board.isAnonymousable)
+        query.set('ALLOW_ANONYMOUS', board.allowAnonymous)
     }
     if (board.reservedDate !== undefined) {
         query.set('RESERVED_DATE', board.reservedDate)
