@@ -6,7 +6,6 @@ const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly');
 const signModel = require('../models/signModel'),
     userModel = require('../models/userModel'),
-    authModel = require('../models/authModel'),
 util = require('../util');
 
 //based on /
@@ -45,7 +44,7 @@ router.post('/signin', async(req, res) => {
                         res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
                     } else {
                         signModel.createSigninLog(userId, req.ip, true);
-                        if (user[0].status === 'NORMAL' || moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isAfter(moment())) {
+                        if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
                             res.status(200).json({ token: token, redirectTo: '/auth' });
                         }
                         res.status(200).json({ token: token });
