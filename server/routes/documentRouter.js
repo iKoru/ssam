@@ -3,47 +3,54 @@ const requiredAuth = require('../middlewares/requiredAuth'),
     adminOnly = require('../middlewares/adminOnly');
 const boardModel = require('../models/boardModel'),
     documentModel = require('../models/documentModel'),
-    fs = require('fs'),
-    multer = require('multer')({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 } }), //max 4MB
+    util = require('../util'),
+    path = require('path'),
+    multer = require('multer')({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) //max 4MB
     //based on /document
 
-    router.post('/', requiredAuth, async (req, res) => {
-        let document = { ...req.body };
-        if (typeof document.boardId !== 'string' || document.boardId === '') {
-            return res.status(400).json({ taget: 'boardId', message: '게시물을 작성할 라운지/토픽을 선택해주세요.' })
-        } else if (typeof document.isAnonymous !== 'boolean') {
-            return res.status(400).json({ target: 'isAnonymous', message: '익명여부 선택이 올바르지 않습니다.' })
-        } else if (typeof document.title !== 'string' || document.title === '') {
-            return res.status(400).json({ target: 'title', message: '게시물 제목을 입력해주세요.' })
-        } else if (document.title.length > 300) {
-            return res.status(400).json({ target: 'title', message: `게시물 제목이 너무 깁니다.(${document.title.length}/300자)` })
-        } else if (typeof document.contents !== 'string' || document.contents === '') {
-            return res.status(400).json({ target: 'contents', message: '게시물 내용을 입력해주세요.' })
-        } else if (typeof document.allowAnonymous !== 'boolean') {
-            return res.status(400).json({ target: 'allowAnonymous', message: '익명댓글 허용여부가 올바르지 않습니다.' })
-        }
+router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
+    let document = {...req.body };
+    if (typeof document.boardId !== 'string' || document.boardId === '') {
+        return res.status(400).json({ taget: 'boardId', message: '게시물을 작성할 라운지/토픽을 선택해주세요.' })
+    } else if (typeof document.isAnonymous !== 'boolean') {
+        return res.status(400).json({ target: 'isAnonymous', message: '익명여부 선택이 올바르지 않습니다.' })
+    } else if (typeof document.title !== 'string' || document.title === '') {
+        return res.status(400).json({ target: 'title', message: '게시물 제목을 입력해주세요.' })
+    } else if (document.title.length > 300) {
+        return res.status(400).json({ target: 'title', message: `게시물 제목이 너무 깁니다.(${document.title.length}/300자)` })
+    } else if (typeof document.contents !== 'string' || document.contents === '') {
+        return res.status(400).json({ target: 'contents', message: '게시물 내용을 입력해주세요.' })
+    } else if (typeof document.allowAnonymous !== 'boolean') {
+        return res.status(400).json({ target: 'allowAnonymous', message: '익명댓글 허용여부가 올바르지 않습니다.' })
+    }
 
-        let result = await boardModel.getBoard(document.boardId);
-        if (Array.isArray(result) && result > 0) {
-            if (result[0].boardType === 'T') {
-                document.userNickName = req.userObject.topicNickName;
-            } else {
-                document.userNickName = req.userObject.loungeNickName;
-            }
+    let result = await boardModel.getBoard(document.boardId);
+    if (Array.isArray(result) && result > 0) {
+        if (result[0].boardType === 'T') {
+            document.userNickName = req.userObject.topicNickName;
         } else {
-            return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
+            document.userNickName = req.userObject.loungeNickName;
         }
+    } else {
+        return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
+    }
 
-        document.userId = req.userObject.userId;
-        result = await documentModel.createDocument(document);
-        if (result.error || result.rowCount === 0) {
-            return res.status(500).json({ message: `게시물을 저장하던 도중 오류가 발생했습니다.[${result.code}]` })
+    document.userId = req.userObject.userId;
+    result = await documentModel.createDocument(document);
+    if (result.error || result.rowCount === 0) {
+        return res.status(500).json({ message: `게시물을 저장하던 도중 오류가 발생했습니다.[${result.code}]` })
+    } else {
+        req.body.documentId = result.rows[0].documentId;
+        if (req.files && req.files.length > 0) {
+            result = await util.uploadFile(req.files, 'attach', documentId, documentModel.createDocumentAttach);
+            return res.status(result.status).json({ message: result.status === 200 ? '게시물을 등록하였습니다.' : '게시물을 등록하였으나, 첨부파일을 업로드하지 못했습니다.', documentId: req.body.documentId });
         } else {
-            return res.status(200).json({ message: '게시물을 등록하였습니다.', documentId: result.rows[0].documentId })
+            return res.status(200).json({ message: '게시물을 등록하였습니다.', documentId: req.body.documentId })
         }
-    });
+    }
+});
 
-router.put('/', requiredAuth, async (req, res) => {
+router.put('/', requiredAuth, async(req, res) => {
     let document = {
         documentId: req.body.documentId,
         isDeleted: req.body.isDeleted,
@@ -89,7 +96,7 @@ router.put('/', requiredAuth, async (req, res) => {
     }
 });
 
-router.delete('/:documentId(^[\\d]+$)', adminOnly, async (req, res) => {
+router.delete('/:documentId(^[\\d]+$)', adminOnly, async(req, res) => {
     let documentId = req.params.documentId;
     if ((typeof documentId !== 'string' && typeof documentId !== 'number') || documentId === '') {
         return res.status(400).json({ target: 'documentId', message: '요청을 수행하기 위해 필요한 정보가 없거나 올바르지 않습니다.' });
@@ -102,12 +109,25 @@ router.delete('/:documentId(^[\\d]+$)', adminOnly, async (req, res) => {
     }
 });
 
-router.post('/attach', requiredAuth, multer.array('attach'), async (req, res) => {
+router.post('/attach', requiredAuth, multer.array('attach'), async(req, res) => {
     let documentId = req.body.documentId;
-
+    let document = await documentModel.getDocument(documentId);
+    if (!Array.isArray(req.files) || req.files.length < 1) {
+        return res.status(400).json({ target: 'files', message: '첨부파일을 올려주세요.' })
+    }
+    if (Array.isArray(document) && document.length > 0) {
+        if ((document[0].userId === req.userObject.userId) || req.userObject.isAdmin) {
+            const result = await util.uploadFile(req.files, 'attach', documentId, documentModel.createDocumentAttach);
+            return res.status(result.status).json({ message: result.message });
+        } else {
+            return res.status(403).json({ target: 'documentId', message: '첨부파일을 올릴 수 있는 권한이 없습니다.' })
+        }
+    } else {
+        return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
+    }
 });
 
-router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredAuth, async (req, res) => {
+router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredAuth, async(req, res) => {
     let documentId = req.params.documentId;
     let attachId = req.params.attachId;
     if (typeof documentId !== 'string' && typeof documentId !== 'number') {
@@ -135,7 +155,7 @@ router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredAuth, async (re
 
     let result;
     fs.access(attach.attachPath, fs.constants.F_OK, (err) => {
-        if (err) {//file not exists. just delete from db
+        if (err) { //file not exists. just delete from db
             result = await documentModel.deleteDocumentAttach(documentId, attachId);
             if (result > 0) {
                 return res.status(200).json({ message: '첨부파일을 삭제하였습니다.' })

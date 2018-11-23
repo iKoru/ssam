@@ -4,7 +4,7 @@ const util = require('../util');
 const boardModel = require('./boardModel'),
     userModel = require('./userModel');
 
-exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending = false, page, isAdmin = false) => {
+exports.getDocuments = async(boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending = false, page, isAdmin = false) => {
     if (!boardId) {
         return [];
     }
@@ -100,7 +100,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
         }
         const pages = await pool.executeQuery('findDocumentPage' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc'),
             builder.select().with('DOCUMENTS', withQuery).field('CEIL(NUM/10.0)', '"page"').from('DOCUMENTS').where('DOCUMENT_ID = ?', documentId)
-                .toParam()
+            .toParam()
         );
         if (pages && pages.length === 1 && pages[0].page) {
             page = pages[0].page;
@@ -114,29 +114,29 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
     //select documents
     return await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc'),
         query.limit(10).offset((page - 1) * 10)
-            .toParam()
+        .toParam()
     )
 }
 
-exports.getBestDocuments = async (boardId, documentId, boardType, searchQuery, searchTarget, page) => {
+exports.getBestDocuments = async(boardId, documentId, boardType, searchQuery, searchTarget, page) => {
     let query = builder.select();
     if (boardType === 'L' && !boardId) { //lounge best
         query.with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = \'L\''))
     }
     query.fields({
-        'DOCUMENT_ID': '"documentId"',
-        'DOCUMENT.BOARD_ID': '"boardId"',
-        'COMMENT_COUNT': '"commentCount"',
-        'VOTE_UP_COUNT': '"voteUpCount"',
-        'VOTE_DOWN_COUNT': '"voteDownCount"',
-        'VIEW_COUNT': '"viewCount"',
-        'WRITE_DATETIME': '"writeDateTime"',
-        'TITLE': '"title"',
-        'RESERVED1': '"reserved1"',
-        'RESERVED2': '"reserved2"',
-        'RESERVED3': '"reserved3"',
-        'RESERVED4': '"reserved4"'
-    })
+            'DOCUMENT_ID': '"documentId"',
+            'DOCUMENT.BOARD_ID': '"boardId"',
+            'COMMENT_COUNT': '"commentCount"',
+            'VOTE_UP_COUNT': '"voteUpCount"',
+            'VOTE_DOWN_COUNT': '"voteDownCount"',
+            'VIEW_COUNT': '"viewCount"',
+            'WRITE_DATETIME': '"writeDateTime"',
+            'TITLE': '"title"',
+            'RESERVED1': '"reserved1"',
+            'RESERVED2': '"reserved2"',
+            'RESERVED3': '"reserved3"',
+            'RESERVED4': '"reserved4"'
+        })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_DOCUMENT', 'DOCUMENT')
         .where('IS_DELETED = false')
@@ -193,7 +193,7 @@ exports.getBestDocuments = async (boardId, documentId, boardType, searchQuery, s
         }
         const pages = await pool.executeQuery('findDocumentPage' + boardType + boardId + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
             builder.select().with('DOCUMENTS', withQuery).field('CEIL(NUM/10.0)', '"page"').from('DOCUMENTS').where('DOCUMENT_ID = ?', documentId)
-                .toParam()
+            .toParam()
         );
         if (pages && pages.length === 1 && pages[0].page) {
             page = pages[0].page;
@@ -206,11 +206,11 @@ exports.getBestDocuments = async (boardId, documentId, boardType, searchQuery, s
 
     return await pool.executeQuery('getBestDocumenta' + boardType + boardId + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
         query.order('BEST_DATETIME', false).limit(10).offset((page - 1) * 10)
-            .toParam()
+        .toParam()
     )
 }
 
-exports.updateDocument = async (document) => {
+exports.updateDocument = async(document) => {
     if (!document.documentId) {
         return 0;
     }
@@ -251,93 +251,93 @@ exports.updateDocument = async (document) => {
     }
     return await pool.executeQuery(null,
         query.where('DOCUMENT_ID = ?', document.documentId)
-            .toParam()
+        .toParam()
     );
 }
 
-exports.deleteDocument = async (documentId) => {
+exports.deleteDocument = async(documentId) => {
     const document = (await getDocument(documentId))[0];
     if (!document) {
         return 0;
     }
     const result = await pool.executeQuery('deleteDocument',
-        builder.delete()
+            builder.delete()
             .from('SS_MST_DOCUMENT')
             .where('DOCUMENT_ID = ?', documentId)
             .toParam()
-    )
-    // if (result > 0 && document.commentCount > 0) {
-    //     await pool.executeQuery('deleteDocumentComment',
-    //         builder.delete()
-    //         .from('SS_MST_COMMENT')
-    //         .where('DOCUMENT_ID = ?', documentId)
-    //         .toParam()
-    //     )
-    // }
+        )
+        // if (result > 0 && document.commentCount > 0) {
+        //     await pool.executeQuery('deleteDocumentComment',
+        //         builder.delete()
+        //         .from('SS_MST_COMMENT')
+        //         .where('DOCUMENT_ID = ?', documentId)
+        //         .toParam()
+        //     )
+        // }
     return result;
 }
 
-exports.createDocument = async (document) => {
+exports.createDocument = async(document) => {
     const user = await userModel.getUser(document.userId);
     const board = await boardModel.getBoard(document.boardId);
     return await pool.executeQuery('createDocument',
         builder.insert()
-            .into('SS_MST_DOCUMENT')
-            .setFields({
-                'DOCUMENT_ID': builder.rstr('nextval(\'SEQ_SS_MST_DOCUMENT\')'),
-                'BOARD_ID': document.boardId,
-                'USER_ID': document.userId,
-                'USER_NICKNAME': board[0].boardType === 'T' ? user[0].topicNickName : user[0].loungeNickName,
-                'IS_ANONYMOUS': board[0].isAnonymousable ? document.isAnonymous : false,
-                'WRITE_DATETIME': util.getYYYYMMDDHH24MISS(),
-                'TITLE': document.title,
-                'CONTENTS': document.contents,
-                'SURVEY_CONTENTS': document.surveyContents,
-                'ALLOW_ANONYMOUS': document.allowAnonymous,
-                'RESTRICTION': document.restriction,
-                'RESERVED1': document.reserved1,
-                'RESERVED2': document.reserved2,
-                'RESERVED3': document.reserved3,
-                'RESERVED4': document.reserved4
-            })
-            .returning('DOCUMENT_ID', '"documentId"')
-            .toParam()
+        .into('SS_MST_DOCUMENT')
+        .setFields({
+            'DOCUMENT_ID': builder.rstr('nextval(\'SEQ_SS_MST_DOCUMENT\')'),
+            'BOARD_ID': document.boardId,
+            'USER_ID': document.userId,
+            'USER_NICKNAME': board[0].boardType === 'T' ? user[0].topicNickName : user[0].loungeNickName,
+            'IS_ANONYMOUS': board[0].isAnonymousable ? document.isAnonymous : false,
+            'WRITE_DATETIME': util.getYYYYMMDDHH24MISS(),
+            'TITLE': document.title,
+            'CONTENTS': document.contents,
+            'SURVEY_CONTENTS': document.surveyContents,
+            'ALLOW_ANONYMOUS': document.allowAnonymous,
+            'RESTRICTION': document.restriction,
+            'RESERVED1': document.reserved1,
+            'RESERVED2': document.reserved2,
+            'RESERVED3': document.reserved3,
+            'RESERVED4': document.reserved4
+        })
+        .returning('DOCUMENT_ID', '"documentId"')
+        .toParam()
     )
 }
 
-const getDocument = async (documentId) => {
+const getDocument = async(documentId) => {
     return await pool.executeQuery('getDocument',
         builder.select()
-            .fields({
-                'DOCUMENT_ID': '"documentId"',
-                'BOARD_ID': '"boardId"',
-                'USER_ID': '"userId"',
-                'IS_DELETED': '"isDeleted"',
-                'COMMENT_COUNT': '"commentCount"',
-                'REPORT_COUNT': '"reportCount"',
-                'VOTE_UP_COUNT': '"voteUpCount"',
-                'VOTE_DOWN_COUNT': '"voteDownCount"',
-                'VIEW_COUNT': '"viewCount"',
-                'WRITE_DATETIME': '"writeDateTime"',
-                'BEST_DATETIME': '"bestDateTime"',
-                'TITLE': '"title"',
-                'SURVEY_CONTENTS': '"surveyContents"',
-                'RESTRICTION': '"restriction"',
-                'RESERVED1': '"reserved1"',
-                'RESERVED2': '"reserved2"',
-                'RESERVED3': '"reserved3"',
-                'RESERVED4': '"reserved4"'
-            })
-            .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
-            .field(builder.case().when('IS_DELETED = true').then('삭제된 글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
-            .from('SS_MST_DOCUMENT')
-            .where('DOCUMENT_ID = ?', documentId)
-            .toParam()
+        .fields({
+            'DOCUMENT_ID': '"documentId"',
+            'BOARD_ID': '"boardId"',
+            'USER_ID': '"userId"',
+            'IS_DELETED': '"isDeleted"',
+            'COMMENT_COUNT': '"commentCount"',
+            'REPORT_COUNT': '"reportCount"',
+            'VOTE_UP_COUNT': '"voteUpCount"',
+            'VOTE_DOWN_COUNT': '"voteDownCount"',
+            'VIEW_COUNT': '"viewCount"',
+            'WRITE_DATETIME': '"writeDateTime"',
+            'BEST_DATETIME': '"bestDateTime"',
+            'TITLE': '"title"',
+            'SURVEY_CONTENTS': '"surveyContents"',
+            'RESTRICTION': '"restriction"',
+            'RESERVED1': '"reserved1"',
+            'RESERVED2': '"reserved2"',
+            'RESERVED3': '"reserved3"',
+            'RESERVED4': '"reserved4"'
+        })
+        .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+        .field(builder.case().when('IS_DELETED = true').then('삭제된 글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
+        .from('SS_MST_DOCUMENT')
+        .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
     );
 }
 
 exports.getDocument = getDocument;
-exports.getUserDocument = async (userId, isAdmin, page = 1) => {
+exports.getUserDocument = async(userId, isAdmin, page = 1) => {
     let query = builder.select()
         .fields({
             'DOCUMENT_ID': '"documentId"',
@@ -367,77 +367,102 @@ exports.getUserDocument = async (userId, isAdmin, page = 1) => {
     }
     return await pool.executeQuery('getUserDocument' + (isAdmin ? 'admin' : ''),
         query
-            .order('DOCUMENT_ID', false)
-            .offset((page - 1) * 15)
-            .limit(15)
-            .toParam()
+        .order('DOCUMENT_ID', false)
+        .offset((page - 1) * 15)
+        .limit(15)
+        .toParam()
     );
 }
 
-exports.getNickNameDocument = async (nickName, boardType, page = 1) => {
+exports.getNickNameDocument = async(nickName, boardType, page = 1) => {
     const user = await userModel.getUserIdByNickName(nickName, boardType);
     if (!user || !(user[0])) {
         return [];
     }
     return await pool.executeQuery('getNickNameDocument',
         builder.select()
-            .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType))
-            .fields({
-                'DOCUMENT_ID': '"documentId"',
-                'DOCUMENT.BOARD_ID': '"boardId"',
-                'USER_NICKNAME': '"nickName"',
-                'COMMENT_COUNT': '"commentCount"',
-                'VOTE_UP_COUNT': '"voteUpCount"',
-                'VOTE_DOWN_COUNT': '"voteDownCount"',
-                'VIEW_COUNT': '"viewCount"',
-                'WRITE_DATETIME': '"writeDateTime"',
-                'TITLE': '"title"',
-                'CONTENTS': '"contents"',
-                'RESTRICTION': '"restriction"',
-                'RESERVED1': '"reserved1"',
-                'RESERVED2': '"reserved2"',
-                'RESERVED3': '"reserved3"',
-                'RESERVED4': '"reserved4"'
-            })
-            .from('SS_MST_DOCUMENT', 'DOCUMENT')
-            .where('DOCUMENT.BOARD_ID IN (SELECT BOARD_ID FROM BOARDS)')
-            .where('USER_NICKNAME = ?', nickName)
-            .where('USER_ID = ?', user[0].userId)
-            .where('IS_DELETED = false')
-            .where('IS_ANONYMOUS = false')
-            .order('WRITE_DATETIME', false)
-            .limit(10)
-            .offset((page - 1) * 10)
-            .toParam()
+        .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType))
+        .fields({
+            'DOCUMENT_ID': '"documentId"',
+            'DOCUMENT.BOARD_ID': '"boardId"',
+            'USER_NICKNAME': '"nickName"',
+            'COMMENT_COUNT': '"commentCount"',
+            'VOTE_UP_COUNT': '"voteUpCount"',
+            'VOTE_DOWN_COUNT': '"voteDownCount"',
+            'VIEW_COUNT': '"viewCount"',
+            'WRITE_DATETIME': '"writeDateTime"',
+            'TITLE': '"title"',
+            'CONTENTS': '"contents"',
+            'RESTRICTION': '"restriction"',
+            'RESERVED1': '"reserved1"',
+            'RESERVED2': '"reserved2"',
+            'RESERVED3': '"reserved3"',
+            'RESERVED4': '"reserved4"'
+        })
+        .from('SS_MST_DOCUMENT', 'DOCUMENT')
+        .where('DOCUMENT.BOARD_ID IN (SELECT BOARD_ID FROM BOARDS)')
+        .where('USER_NICKNAME = ?', nickName)
+        .where('USER_ID = ?', user[0].userId)
+        .where('IS_DELETED = false')
+        .where('IS_ANONYMOUS = false')
+        .order('WRITE_DATETIME', false)
+        .limit(10)
+        .offset((page - 1) * 10)
+        .toParam()
     )
 }
 
-exports.updateDocumentCommentCount = async (documentId) => {
+exports.updateDocumentCommentCount = async(documentId) => {
     return await pool.executeQuery('updateDocumentCommentCount',
         builder.update()
-            .table('SS_MST_DOCUMENT')
-            .set('COMMENT_COUNT', builder.str('COMMENT_COUNT + 1'))
-            .where('DOCUMENT_ID = ?', documentId)
-            .toParam()
+        .table('SS_MST_DOCUMENT')
+        .set('COMMENT_COUNT', builder.str('COMMENT_COUNT + 1'))
+        .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
     )
 }
 
-exports.updateDocumentVote = async (documentId, isUp, isCancel) => {
+exports.updateDocumentVote = async(documentId, isUp, isCancel) => {
     return await pool.executeQuery('updateDocumentVote' + (isUp ? 'up' : 'down') + (isCancel ? '1' : '0'),
         builder.update()
-            .table('SS_MST_DOCUMENT')
-            .set(isUp ? 'VOTE_UP_COUNT' : 'VOTE_DOWN_COUNT', builder.str(isUp ? `VOTE_UP_COUNT ${isCancel ? '-' : '+'} 1` : `VOTE_DOWN_COUNT ${isCancel ? '-' : '+'} 1`))
-            .where('DOCUMENT_ID = ?', documentId)
-            .toParam()
+        .table('SS_MST_DOCUMENT')
+        .set(isUp ? 'VOTE_UP_COUNT' : 'VOTE_DOWN_COUNT', builder.str(isUp ? `VOTE_UP_COUNT ${isCancel ? '-' : '+'} 1` : `VOTE_DOWN_COUNT ${isCancel ? '-' : '+'} 1`))
+        .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
     )
 }
 
-exports.updateDocumentReport = async (documentId) => {
+exports.updateDocumentReport = async(documentId) => {
     return await pool.executeQuery('updateDocumentReport',
         builder.update()
-            .table('SS_MST_DOCUMENT')
-            .set('REPORT_COUNT', builder.str('REPORT_COUNT + 1'))
-            .where('DOCUMENT_ID = ?', documentId)
-            .toParam()
+        .table('SS_MST_DOCUMENT')
+        .set('REPORT_COUNT', builder.str('REPORT_COUNT + 1'))
+        .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
+    )
+}
+
+exports.createDocumentAttach = async(documentId, attachId, attachName, attachType, attachPath) => {
+    return await pool.executeQuery('createDocumentAttach',
+        builder.insert()
+        .into('SS_MST_DOCUMENT_ATTACH')
+        .setFields({
+            'DOCUMENT_ID': documentId,
+            'ATTACH_ID': attachId,
+            'ATTACH_NAME': attachName,
+            'ATTACH_TYPE': attachType,
+            'ATTACH_PATH': attachPath
+        })
+        .toParam()
+    )
+}
+
+exports.deleteDocumentAttach = async(documentId, attachId) => {
+    return await pool.executeQuery('deleteDocumentAttach',
+        builder.delete()
+        .from('SS_MST_DOCUMENT_ATTACH')
+        .where('DOCUMENT_ID = ?', documentId)
+        .where('ATTACH_ID = ?', attachId)
+        .toParam()
     )
 }
