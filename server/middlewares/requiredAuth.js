@@ -25,7 +25,7 @@ const auth = (req, res, next) => {
             message: `잘못된 접근입니다.[${error.message}]`
         })
     }
-    p.then(async (result) => {
+    p.then(async(result) => {
         if (result.userId) {
             let user = await userModel.getUser(result.userId);
             if (user && user[0]) {
@@ -35,11 +35,12 @@ const auth = (req, res, next) => {
                 } else {
                     onError({ message: '인증이 필요합니다.' });
                 }
-            }else{
-                onError({message:'존재하지 않는 ID입니다.'});
+            } else {
+                onError({ message: '존재하지 않는 ID입니다.' });
             }
+        } else {
+            onError({ message: '비정상적인 접근' });
         }
-        onError({ message: '비정상적인 접근' });
     }).catch(onError)
 }
 
