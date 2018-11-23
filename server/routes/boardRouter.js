@@ -1,5 +1,6 @@
 const router = require('express').Router();
-const requiredAuth = require('../middlewares/requiredAuth')
+const requiredAuth = require('../middlewares/requiredAuth'),
+    adminOnly = require('../middlewares/adminOnly')
 const boardModel = require('../models/boardModel'),
     userModel = require('../models/userModel'),
     groupModel = require('../models/groupModel')
@@ -50,11 +51,11 @@ router.put('/', requiredAuth, async(req, res) => {
         return res.status(403).json({ message: `이미 ${moment(board[0].reservedDate, 'YYYYMMDD').format('YYYY-M-D')}에 예약된 변경내용이 존재합니다.` });
     }
     let reservedContents = {};
-    if (typeof req.body.boardName === 'string' && req.body.boardName !== '') {
+    if (typeof req.body.boardName === 'string' && req.body.boardName !== '' && safeStringLength(req.body.boardName, 200) !== board[0].boardName) {
         reservedContents.boardName = safeStringLength(req.body.boardName, 200)
     }
-    if (typeof req.body.boardDescription === 'string') {
-        reservedContents.boardDescription = safeStringLength(req.body.boardDescription, 1000)
+    if (typeof req.body.boardDescription === 'string' && safeStringLength(req.body.boardDescription, 1000) !== board[0].boardDescription) {
+        reservedContents.boardDescription = safeStringLength(req.body.boardDescription, 1000);
     }
     if (typeof req.body.ownerNickName === 'string') {
         const nextOwner = await userModel.getUserIdByNickName(req.body.ownerNickName, board[0].boardType);
@@ -64,17 +65,18 @@ router.put('/', requiredAuth, async(req, res) => {
             let result = await boardModel.getUserBoard(nextOwner[0].userId);
             if (!Array.isArray(result) || !result.find(x => x.boardId === boardId)) {
                 return res.status(404).json({ target: 'ownerNickName', message: '해당 사용자는 이 라운지/토픽을 구독중이지 않습니다.' })
+            } else if (nextOwner[0].userId !== board[0].ownerId) {
+                reservedContents.ownerId = nextOwner[0].userId
             }
         }
-        reservedContents.ownerId = nextOwner[0].userId
     }
-    if (typeof req.body.allowAnonymous === 'boolean') {
+    if (typeof req.body.allowAnonymous === 'boolean' && req.body.allowAnonymous !== board[0].allowAnonymous) {
         reservedContents.allowAnonymous = req.body.allowAnonymous
     }
-    if (typeof req.body.status === 'string' && ['NORMAL', 'DELETED'].indexOf(req.body.status) >= 0) {
+    if (typeof req.body.status === 'string' && ['NORMAL', 'DELETED'].indexOf(req.body.status) >= 0 && req.body.status !== board[0].status) {
         reservedContents.status = req.body.status;
     }
-    if (typeof req.body.allGroupAuth === 'string' && ['NONE', 'READONLY', 'READWRITE'].indexOf(req.body.allGroupAuth) >= 0) {
+    if (typeof req.body.allGroupAuth === 'string' && ['NONE', 'READONLY', 'READWRITE'].indexOf(req.body.allGroupAuth) >= 0 && req.body.allGroupAuth !== board[0].allGroupAuth) {
         reservedContents.allGroupAuth = req.body.allGroupAuth
     }
 
@@ -109,10 +111,13 @@ router.put('/', requiredAuth, async(req, res) => {
                 i++;
             }
         }
+        if (reservedContents.auth.length === 0) {
+            delete reservedContents.auth;
+        }
     }
 
     if (Object.keys(reservedContents).length < 1) {
-        return res.status(400).json({ message: '변경될 내용이 없습니다.' });
+        return res.status(400).json({ message: '변경될 내용이 없습니다. 입력한 값이 올바른지 확인해주세요.' });
     } else {
         let result = await boardModel.updateBoard({ boardId: boardId, reservedDate: moment().add(1, 'months').format('YYYYMMDD'), reservedContents: reservedContents });
         if (typeof result === 'object' || result === 0) {
@@ -134,17 +139,19 @@ router.post('/', requiredAuth, async(req, res) => {
         return res.status(400).json({ target: 'boardType', message: '라운지/토픽 구분값이 올바르지 않습니다.' });
     } else if (typeof board.boardId !== 'string' || board.boardId === '') {
         return res.status(400).json({ target: 'boardId', message: `${name[board.boardType]} ID가 올바르지 않습니다.` })
-    } else if (typeof board.boardName !== 'string') {
+    } else if (typeof board.boardName !== 'string' || board.boardName === '') {
         return res.status(400).json({ target: 'boardName', message: `${name[board.boardType]} 이름은 필수입니다.` });
-    } else if (typeof board.boardDescription !== 'string') {
+    } else if (board.boardDescription !== undefined && typeof board.boardDescription !== 'string') {
         return res.status(400).json({ target: 'boardDescription', message: '설명 값이 올바르지 않습니다.' });
     } else if (board.allowAnonymous !== undefined && typeof board.allowAnonymous !== 'boolean') {
         return res.status(400).json({ target: 'allowAnonymous', message: '익명 허용 여부가 올바르지 않습니다.' })
     } else if (!['NONE', 'READONLY', 'READWRITE'].includes(board.allGroupAuth)) {
         return res.status(400).json({ target: 'allGroupAuth', message: '전체 허용 여부 값이 올바르지 않습니다.' });
     } else {
-        if (!constants.boardIdRegex.test(board.boardId)) {
+        if (!constants.boardIdRegex[0].test(board.boardId)) {
             return res.status(400).json({ target: 'boardId', message: `${name[board.boardType]} ID의 길이가 너무 길거나, [_, -] 이외의 특수문자가 있습니다.` })
+        } else if (!constants.boardIdRegex[1].test(board.boardId)) {
+            return res.status(400).json({ target: 'boardId', message: `${name[board.boardType]} ID에 연속된 [_, -]가 있습니다.` })
         }
         let i = 0;
         while (i < reserved.length) {
@@ -160,9 +167,31 @@ router.post('/', requiredAuth, async(req, res) => {
         return res.status(409).json({ target: 'boardId', message: `이미 존재하는 ${name[board.boardType]} ID입니다.` });
     }
     board.ownerId = req.userObject.userId;
+    board.boardDescription = safeStringLength(board.boardDescription, 1000);
+    board.boardName = safeStringLength(board.boardName, 200);
+    let groups = [];
+    if (Array.isArray(board.groups)) {
+        let i = 0;
+        while (i < board.groups.length) {
+            if ((typeof board.groups[i].groupId === 'string' || typeof board.groups[i].groupId === 'number') && ['READONLY', 'READWRITE'].includes(board.groups[i].authType)) {
+                check = await groupModel.getGroup(board.groups[i].groupId);
+                if (Array.isArray(check) && check.length > 0 && (check[0].isOpenToUsers || req.userObject.isAdmin)) {
+                    groups.push({ groupId: board.groups[i].groupId, authType: board.groups[i].authType });
+                }
+            }
+            i++;
+        }
+    }
 
     check = await boardModel.createBoard(board);
     if (check > 0) {
+        if (groups.length > 0) {
+            let i = 0;
+            while (i < groups.length) {
+                await boardModel.createBoardAuth(board.boardId, groups[i].groupId, groups[i].authType);
+                i++;
+            }
+        }
         return res.status(200).json({ message: `${name[board.boardType]}을 만들었습니다.` })
     } else {
         return res.status(500).json({ message: `${name[board.boardType]} 생성에 실패하였습니다.[${check.code}] 잠시 후 다시 시도해주세요.` })
@@ -222,7 +251,7 @@ const applyReservedContents = async(boardId) => {
         return 0;
     }
     board = board[0];
-    const reservedContents = board.reservedContents;
+    let reservedContents = board.reservedContents;
     if (reservedContents.auth) {
         let i = 0;
         while (i < reservedContents.auth.length) {
@@ -236,9 +265,8 @@ const applyReservedContents = async(boardId) => {
             i++;
         }
     }
-    delete board.reservedContents;
-    delete board.reservedDate;
-    let result = await boardModel.updateBoard(board);
+    reservedContents.boardId = boardId;
+    let result = await boardModel.updateBoard(reservedContents);
     if (typeof result === 'object' || result === 0) {
         logger.error('board update apply error : ' + result);
         return -1;

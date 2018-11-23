@@ -127,15 +127,15 @@ exports.getBoardAuth = getBoardAuth;
 exports.getBoardAuthName = async(boardId, isAdmin) => {
     let query = builder.select()
         .fields({
-            'GROUP.GROUP_ID': '"groupId"',
-            'GROUP.GROUP_NAME': '"groupName"',
+            'MGROUP.GROUP_ID': '"groupId"',
+            'MGROUP.GROUP_NAME': '"groupName"',
             'AUTH.AUTH_TYPE': '"authType"'
         })
         .from('SS_MST_BOARD_AUTH', 'AUTH')
-        .join('SS_MST_GROUP', 'GROUP', 'GROUP.GROUP_ID = AUTH.ALLOWED_GROUP_ID')
+        .join('SS_MST_GROUP', 'MGROUP', 'MGROUP.GROUP_ID = AUTH.ALLOWED_GROUP_ID')
         .where('BOARD_ID = ?', boardId);
     if (!isAdmin) {
-        query.where('GROUP.IS_OPEN_TO_USERS = true')
+        query.where('MGROUP.IS_OPEN_TO_USERS = true')
     }
     return await pool.executeQuery('getBoardAuthName' + (isAdmin ? 'a' : ''),
         query
@@ -149,7 +149,7 @@ exports.createBoardAuth = async(boardId, groupId, authType) => {
         .into('SS_MST_BOARD_AUTH')
         .setFields({
             'BOARD_ID': boardId,
-            'GROUP_ID': groupId,
+            'ALLOWED_GROUP_ID': groupId,
             'AUTH_TYPE': authType
         })
         .toParam()
@@ -163,6 +163,15 @@ exports.updateBoardAuth = async(boardId, groupId, authType) => {
         .set('AUTH_TYPE', authType)
         .where('BOARD_ID = ?', boardId)
         .where('ALLOWED_GROUP_ID = ?', groupId)
+        .toParam()
+    );
+}
+
+const deleteBoardAuthOnly = async(boardId) => {
+    return await pool.executeQuery('deleteBoardAuth',
+        builder.delete()
+        .from('SS_MST_BOARD_AUTH')
+        .where('BOARD_ID = ?', boardId)
         .toParam()
     );
 }
@@ -231,7 +240,7 @@ exports.createBoard = async(board) => {
             'OWNER_ID': board.ownerId,
             'BOARD_DESCRIPTION': board.boardDescription,
             'BOARD_TYPE': board.boardType,
-            'ALLOW_ANONYMOUS': board.allowAnonymous,
+            'ALLOW_ANONYMOUS': !!board.allowAnonymous,
             'ALL_GROUP_AUTH': board.allGroupAuth
         })
         .toParam()
@@ -240,6 +249,7 @@ exports.createBoard = async(board) => {
 
 exports.deleteBoard = async(boardId) => {
     await deleteUserBoard(null, boardId);
+    await deleteBoardAuthOnly(boardId);
     return await pool.executeQuery('deleteBoard',
         builder.delete()
         .from('SS_MST_BOARD')
@@ -279,7 +289,7 @@ exports.updateBoard = async(board) => {
         query.set('RESERVED_DATE', board.reservedDate)
     }
     if (board.reservedContents !== undefined) {
-        query.set('RESERVED_CONTENTS', board.reservedContents)
+        query.set('RESERVED_CONTENTS', JSON.stringify(board.reservedContents))
     }
     return await pool.executeQuery(null,
         query.where('BOARD_ID = ?', board.boardId)
