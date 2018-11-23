@@ -17,7 +17,7 @@ exports.reservedNickName = ['admin', 'ADMIN', 'ADMINISTRATOR', 'administrator', 
 
 exports.emailRegex = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(sen|goe|ice|gwe|cbe|cne|dje|sje|jbe|jne|gen|gbe|gne|use|pen|jje)\.go\.kr\b/
 exports.userIdRegex = /(?=.*[a-zA-Z]+)(?=.*[a-zA-Z0-9_!\^&\*\$]{4,50}).*/
-exports.boardIdRegex = /(?=.*[a-zA-Z]+)(?=.*[a-zA-Z0-9\-_]{1,15}).*/
+exports.boardIdRegex = [/^(?:[a-zA-Z]+)(?:[a-zA-Z0-9\-_]{0,15})$/, /^((?!(\-\-|__)).)*$/]
 exports.regionGroup = {
     sen: '서울',
     goe: '경기',
