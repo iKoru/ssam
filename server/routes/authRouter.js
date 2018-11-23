@@ -1,16 +1,16 @@
 const router = require('express').Router();
 const requiredSignin = require('../middlewares/requiredSignin');
 const authModel = require('../models/authModel'),
-userModel = require('../models/userModel'),
+    userModel = require('../models/userModel'),
     util = require('../util');
 //based on /auth
 router.get('/', requiredSignin, (req, res) => {
     res.status(501).end();
 });
 
-router.post('/', requiredSignin, async (req, res) => {
+router.post('/', requiredSignin, async(req, res) => {
     if (req.userObject.status === 'AUTHORIZED' && req.userObject.emailVerifiedDate && util.moment(req.userObject.emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isAfter(util.moment())) {
-        return res.status(403).json({message:'이미 인증을 받으셨습니다.'});
+        return res.status(403).json({ message: '이미 인증을 받으셨습니다.' });
     }
     let userId = req.userObject.userId;
     let email = req.userObject.email;
@@ -28,25 +28,25 @@ router.post('/', requiredSignin, async (req, res) => {
         result = await authModel.createUserAuth(userId, authKey);
     }
     //TODO : send email(async)
-    if(typeof result === 'number' && result>0){
-        return res.status(200).json({message:'등록된 이메일로 인증메일을 보내드렸습니다. 이메일을 확인해주세요.'});
-    }else{
-        return res.status(500).json({message:`인증 메일을 생성하는 도중에 오류가 발생했습니다.[${result.code}]`})
+    if (typeof result === 'number' && result > 0) {
+        return res.status(200).json({ message: '등록된 이메일로 인증메일을 보내드렸습니다. 이메일을 확인해주세요.' });
+    } else {
+        return res.status(500).json({ message: `인증 메일을 생성하는 도중에 오류가 발생했습니다.[${result.code}]` })
     }
-    
+
 });
 
-router.get('/submit', async (req, res) => { // get /auth/submit 
+router.get('/submit', async(req, res) => { // get /auth/submit 
     if (!req.query.userId || !req.query.authKey) {
         return res.status(400).json({ message: '잘못된 접근입니다.' }); //TODO : show failed page
     } else {
         let userId = req.query.userId,
             authKey = req.query.authKey;
         const user = await userModel.getUser(userId);
-        if(!Array.isArray(user) || user.length < 1){
-            return res.status(404).json({message:'잘못된 접근입니다.'});
-        }else if(user[0].status !== 'NORMAL'){
-            return res.status(400).json({message:'이미 인증되어있거나, 인증을 진행할 수 없는 상태입니다. 관리자에게 문의해주세요.'});
+        if (!Array.isArray(user) || user.length < 1) {
+            return res.status(404).json({ message: '잘못된 접근입니다.' });
+        } else if (user[0].status !== 'NORMAL') {
+            return res.status(400).json({ message: '이미 인증되어있거나, 인증을 진행할 수 없는 상태입니다. 관리자에게 문의해주세요.' });
         }
         let history = await authModel.getUserAuth(userId, 'NORMAL');
         if (history && history.length > 0) {
@@ -58,7 +58,7 @@ router.get('/submit', async (req, res) => { // get /auth/submit
                         authKey: authKey,
                         status: 'DONE'
                     })
-                    if (await userModel.updateUserAuth(userId) === 1 && await userModel.updateUserInfo({userId:userId, status:'AUTHORIZED'}) === 1) {
+                    if (await userModel.updateUserAuth(userId) === 1 && await userModel.updateUserInfo({ userId: userId, status: 'AUTHORIZED' }) === 1) {
                         return res.status(200).json({ message: '정상적으로 인증되었습니다!' }); //TODO : show success page
                     } else {
                         return res.status(500).json({ message: '인증사항을 저장하는 데 실패하였습니다. 관리자에게 문의해주세요.' }); //TODO : show failed page
