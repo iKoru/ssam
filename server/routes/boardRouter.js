@@ -4,7 +4,8 @@ const boardModel = require('../models/boardModel'),
     userModel = require('../models/userModel'),
     groupModel = require('../models/groupModel')
 const { safeStringLength, moment } = require('../util'),
-    logger = require('../logger'), { reserved } = require('../constants');
+    logger = require('../logger'), { reserved } = require('../constants'),
+    constants = require('../constants');
 
 //based on /board
 
@@ -142,6 +143,9 @@ router.post('/', requiredAuth, async(req, res) => {
     } else if (!['NONE', 'READONLY', 'READWRITE'].includes(board.allGroupAuth)) {
         return res.status(400).json({ target: 'allGroupAuth', message: '전체 허용 여부 값이 올바르지 않습니다.' });
     } else {
+        if (!constants.boardIdRegex.test(board.boardId)) {
+            return res.status(400).json({ target: 'boardId', message: `${name[board.boardType]} ID의 길이가 너무 길거나, [_, -] 이외의 특수문자가 있습니다.` })
+        }
         let i = 0;
         while (i < reserved.length) {
             if (board.boardId.indexOf(reserved[i]) >= 0) {
