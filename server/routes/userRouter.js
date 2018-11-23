@@ -247,7 +247,7 @@ router.post('/', async(req, res) => { //회원가입
     if (result > 0) {
         //TODO : send email
         trial = 0;
-        while (trial < user.userGroup) {
+        while (trial < user.userGroup.length) {
             result = await groupModel.createUserGroup(user.userId, user.userGroup[trial]);
             if (typeof result !== 'number') {
                 userModel.deleteUser(user.userId);
