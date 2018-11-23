@@ -442,6 +442,18 @@ exports.updateDocumentReport = async(documentId) => {
     )
 }
 
+exports.getDocumentAttach = async(documentId, attachId) => {
+    let query = builder.select()
+        .from('SS_MST_DOCUMENT_ATTACH')
+        .where('DOCUMENT_ID = ?', documentId);
+    if (attachId) {
+        query.where('ATTACH_ID = ?', attachId)
+    }
+    return await pool.executeQuery('getDocumentAttach' + (attachId ? 'att' : ''),
+        query.toParam()
+    )
+}
+
 exports.createDocumentAttach = async(documentId, attachId, attachName, attachType, attachPath) => {
     return await pool.executeQuery('createDocumentAttach',
         builder.insert()

@@ -5,6 +5,7 @@ const boardModel = require('../models/boardModel'),
     documentModel = require('../models/documentModel'),
     util = require('../util'),
     path = require('path'),
+    fs = require('fs'),
     multer = require('multer')({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) //max 4MB
     //based on /document
 
@@ -154,28 +155,16 @@ router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredAuth, async(req
     }
 
     let result;
-    fs.access(attach.attachPath, fs.constants.F_OK, (err) => {
-        if (err) { //file not exists. just delete from db
-            result = await documentModel.deleteDocumentAttach(documentId, attachId);
-            if (result > 0) {
-                return res.status(200).json({ message: '첨부파일을 삭제하였습니다.' })
-            } else {
-                return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code}]` })
-            }
+    result = await util.unlink(attach.attachPath);
+    if (result && result !== 'ENOENT') {
+        return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code}]` })
+    } else {
+        let result = await documentModel.deleteDocumentAttach(documentId, attachId);
+        if (typeof result !== 'object') {
+            return res.status(200).json({ message: '첨부파일을 삭제하였습니다.' })
         } else {
-            fs.unlink(attach.attachPath, (err2) => {
-                if (err2) {
-                    return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code}]` })
-                } else {
-                    let result = await documentModel.deleteDocumentAttach(documentId, attachId);
-                    if (result > 0) {
-                        return res.status(200).json({ message: '첨부파일을 삭제하였습니다.' })
-                    } else {
-                        return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code}]` })
-                    }
-                }
-            })
+            return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code}]` })
         }
-    })
+    }
 })
 module.exports = router;
