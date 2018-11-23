@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const multer = require('multer')({ dest: 'profiles/', limits: { fileSize: 1024 * 200 } }), //max 200kB
+const multer = require('multer')({ dest: 'profiles/', limits: { fileSize: 1024 * 200 }, filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }), //max 200kB
     fs = require('fs'),
     bcrypt = require('bcrypt');
 const constants = require('../constants'),
@@ -138,6 +138,12 @@ router.put('/', requiredSignin, async(req, res) => {
                 return res.status(500).json({ message: '비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.' });
             }
         }
+        if (user.picturePath === '' && req.userObject.picturePath) {
+            result = await util.unlink(req.userObject.picturePath);
+            if (result !== 'ENOENT') {
+                return res.status(500).json({ target: 'picturePath', message: `이미지를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.[${result}]` })
+            }
+        }
         if (typeof parameters.isAdmin === 'boolean') {
             result = await userModel.updateUserAdmin(parameters);
             if (result > 0 && Object.keys(parameters).length > 2) { //userId, isAdmin
@@ -262,38 +268,19 @@ router.post('/', async(req, res) => { //회원가입
 });
 
 router.post('/picture', requiredSignin, multer.single('picture'), async(req, res) => { //사진 업로드
-    let userId = req.userObject.userId;
-    if (!userId) {
-        fs.unlink(req.file.path, (err) => {
-            if (err) {
-                logger.error(`파일 삭제 실패(임시 파일 삭제) : ${req.file.path}, ${err}`);
-            }
-        })
-        return res.status(400).json({ target: 'userId', message: '로그인 정보가 없습니다. 로그아웃 후 다시 시도해주세요.' });
-    }
-    if (req.file.path.length > 200) {
-        return res.status(400).json({ target: 'path', message: '파일 경로가 너무 길어 저장하지 못했습니다. 관리자에게 문의해주세요.' });
-    }
-    if (req.userObject.picturePath) {
-        fs.unlink(req.userObject.picturePath, (err) => {
-            if (err) {
-                logger.error(`파일 삭제 실패(저장된 파일 삭제) : ${req.userObject.picturePath}, ${err}`);
-            }
-        })
-    }
-    let result = await userModel.updateUserInfo({
-        userId: userId,
-        picturePath: req.file.path
-    })
-    if (result > 0) {
-        return res.status(200).json({ message: '정상적으로 반영되었습니다.', path: req.file.path });
+    let userId = req.userObject.userId,
+        result;
+    if (typeof req.file === 'object' && req.file.filename) {
+        const originalFilePath = req.userObject.picturePath;
+        result = await util.uploadFile([req.file], 'profiles', userId, userModel.updateUserPicture);
+        if (result.status === 200 && originalFilePath) {
+            await util.unlink(originalFilePath);
+            return res.status(200).json({ message: '정상적으로 반영되었습니다.' })
+        } else {
+            return res.status(500).json({ message: '사진 저장에 실패하였습니다. 다시 시도해주세요.' });
+        }
     } else {
-        fs.unlink(req.file.path, (err) => {
-            if (err) {
-                logger.error(`파일 삭제 실패(임시 파일 삭제..) : ${req.file.path}, ${err}`);
-            }
-        })
-        return res.status(500).json({ message: '사진 저장에 실패하였습니다. 다시 시도해주세요.' });
+        return res.status(400).json({ target: 'file', message: '업로드된 파일이 없거나, 최대 크기 200KB를 초과하였습니다.' });
     }
 });
 

@@ -111,7 +111,7 @@ exports.updateUserInfo = async(user) => {
                     .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'G\''))
                     .toParam()
                 );
-                if(user.grade !== ''){
+                if (user.grade !== '') {
                     result += await groupModel.createUserGroup(user.userId, user.grade);
                 }
             }
@@ -123,7 +123,7 @@ exports.updateUserInfo = async(user) => {
                     .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'M\''))
                     .toParam()
                 );
-                if(user.major !== ''){
+                if (user.major !== '') {
                     result += await groupModel.createUserGroup(user.userId, user.major);
                 }
             }
@@ -135,7 +135,7 @@ exports.updateUserInfo = async(user) => {
                     .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'R\''))
                     .toParam()
                 );
-                if(user.region !== ''){
+                if (user.region !== '') {
                     result += await groupModel.createUserGroup(user.userId, user.region);
                 }
             }
@@ -303,10 +303,20 @@ exports.updateUserInfoDate = async(userId, infoModifiedDate, loungeNickNameModif
         builder.update()
         .table('SS_MST_USER')
         .setFields({
-            'INFO_MODIFIED_DATE':infoModifiedDate===undefined?builder.rstr('INFO_MODIFIED_DATE'):infoModifiedDate,
-            'LOUNGE_NICKNAME_MODIFIED_DATE':loungeNickNameModifiedDate===undefined?builder.rstr('LOUNGE_NICKNAME_MODIFIED_DATE'):loungeNickNameModifiedDate,
-            'TOPIC_NICKNAME_MODIFIED_DATE':topicNickNameModifiedDate===undefined?builder.rstr('TOPIC_NICKNAME_MODIFIED_DATE'):topicNickNameModifiedDate
+            'INFO_MODIFIED_DATE': infoModifiedDate === undefined ? builder.rstr('INFO_MODIFIED_DATE') : infoModifiedDate,
+            'LOUNGE_NICKNAME_MODIFIED_DATE': loungeNickNameModifiedDate === undefined ? builder.rstr('LOUNGE_NICKNAME_MODIFIED_DATE') : loungeNickNameModifiedDate,
+            'TOPIC_NICKNAME_MODIFIED_DATE': topicNickNameModifiedDate === undefined ? builder.rstr('TOPIC_NICKNAME_MODIFIED_DATE') : topicNickNameModifiedDate
         })
+        .where('USER_ID = ?', userId)
+        .toParam()
+    )
+}
+
+exports.updateUserPicture = async(userId, uuid, originalFileName, fileType, filePath) => {
+    return await pool.executeQuery('updateUserPicture',
+        builder.update()
+        .table('SS_MST_USER')
+        .set('PICTURE_PATH', filePath)
         .where('USER_ID = ?', userId)
         .toParam()
     )
