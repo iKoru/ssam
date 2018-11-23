@@ -46,6 +46,10 @@ router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredSignin, (req, r
     }
     let result = await documentModel.getDocument(documentId);
     if (Array.isArray(result) && result.length > 0) {
+        if (result[0].survey) {
+            //let survey = await documentModel.getDocumentSurvey(documentId);
+            //TODO : survey handling. get survey status && the current user has taken part of this survey or not
+        }
         return res.status(200).json(result[0]);
     } else {
         return res.status(404).json({ target: 'documentId', message: '존재하지 않는 게시물입니다.' })
