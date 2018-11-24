@@ -34,7 +34,7 @@ const util = require('../../server/util');
 // done();
 //});
 
-test('get boards', async (done) => {
+test('get boards', async(done) => {
     expect(await boardModel.getBoards('orange')).toHaveLength(0);
     expect(await boardModel.getBoards()).toHaveLength(3);
     expect(await boardModel.getBoards(null, 'L')).toHaveLength(2);
@@ -44,7 +44,7 @@ test('get boards', async (done) => {
     done();
 });
 
-test('create board', async (done) => {
+test('create board', async(done) => {
     expect(await boardModel.createBoard({
         boardId: 'test',
         boardName: '테스트게시판',
@@ -57,14 +57,14 @@ test('create board', async (done) => {
     done();
 });
 
-test('get board', async (done) => {
+test('get board', async(done) => {
     const board = await boardModel.getBoards();
     expect(board.length).toBeGreaterThan(2);
     expect((await boardModel.getBoard(board[0].boardId))[0]).toEqual(board[0]);
     done();
 });
 
-test('update board', async (done) => {
+test('update board', async(done) => {
     let board = await boardModel.getBoard('test');
     expect(board).toHaveLength(1);
     board = board[0];
@@ -82,53 +82,53 @@ test('update board', async (done) => {
     done();
 });
 
-test('check board id', async (done) => {
+test('check board id', async(done) => {
     expect(await boardModel.checkBoardId('document')).toEqual([{ count: 1 }]); //reserved
     expect(await boardModel.checkBoardId('test')).toEqual([{ count: 1 }]); //exists
     expect(await boardModel.checkBoardId('aaa')).toEqual([{ count: 0 }]); //not exists
     done();
 });
 
-test('create user board', async (done) => {
-    expect(await boardModel.createUserBoard('blue', 'aaa', true)).toEqual(0); //not exists
-    expect(await boardModel.createUserBoard('blue', 'test', true)).toEqual(0); //not authorized to enter the board
-    expect(await boardModel.createUserBoard('blue', 'free', true)).toEqual(1);
+test('create user board', async(done) => {
+    expect(await boardModel.createUserBoard('blue', 'aaa')).toEqual(0); //not exists
+    expect(await boardModel.createUserBoard('blue', 'test')).toEqual(0); //not authorized to enter the board
+    expect(await boardModel.createUserBoard('blue', 'free')).toEqual(1);
     done();
 });
 
-test('delete user board', async (done) => {
+test('delete user board', async(done) => {
     expect(await boardModel.deleteUserBoard('blue', 'free')).toEqual(1);
     done();
 });
-(async () => {
+(async() => {
     const group = await groupModel.getGroups(true, ['N'])[0];
-    test('create board auth', async (done) => {
+    test('create board auth', async(done) => {
         expect(await boardModel.createBoardAuth('test', group.groupId, 'READONLY'));
         const boardAuth = await boardModel.getBoardAuth('test')
         expect(boardAuth).toHaveLength(1);
         expect(boardAuth[0]).toHaveProperty('AuthType', 'READONLY');
         expect(await groupModel.createUserGroup('blue', group.groupId, true)).toEqual(1);
-        expect(await boardModel.createUserBoard('blue', 'test', true)).toEqual(1); //authorized to enter the board
+        expect(await boardModel.createUserBoard('blue', 'test')).toEqual(1); //authorized to enter the board
         expect(await boardModel.deleteUserBoard('blue', 'test')).toEqual(1);
         done();
     });
 
-    test('update board auth', async (done) => {
+    test('update board auth', async(done) => {
         expect(await boardModel.updateBoardAuth('test', group.groupId, 'READWRITE')).toEqual(1);
-        expect(await boardModel.createUserBoard('blue', 'test', true)).toEqual(1); //authorized to enter the board
+        expect(await boardModel.createUserBoard('blue', 'test')).toEqual(1); //authorized to enter the board
         expect(await boardModel.deleteUserBoard('blue', 'test')).toEqual(1);
         done();
     });
 
-    test('delete board auth', async (done) => {
+    test('delete board auth', async(done) => {
         expect(await boardModel.deleteBoardAuth('test', group.groupId)).toEqual(1);
-        expect(await boardModel.createUserBoard('blue', 'test', true)).toEqual(0); //unauthorized to enter the board
+        expect(await boardModel.createUserBoard('blue', 'test')).toEqual(0); //unauthorized to enter the board
         done();
     })
 
 })();
 
-test('delete Board', async (done) => {
+test('delete Board', async(done) => {
     expect(await boardModel.deleteBoard('test')).toEqual(1);
     done();
 });

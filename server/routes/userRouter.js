@@ -393,8 +393,8 @@ router.put('/board', requiredSignin, async(req, res) => {
                 result = await boardModel.getBoard(boards[i]);
                 if (Array.isArray(result) && result[0] && result[0].boardType === 'T') {
                     result = await boardModel.checkUserBoardSubscribable(req.userObject.userId, boards[i]);
-                    if (result && result.length > 0 && result[0].count > 0) {
-                        result = await boardModel.createUserBoard(req.userObject.userId, boards[i], req.userObject.isAdmin);
+                    if ((result && result.length > 0 && result[0].count > 0) || req.userObject.isAdmin) {
+                        result = await boardModel.createUserBoard(req.userObject.userId, boards[i]);
                         if (typeof result === 'object' || result === 0) {
                             failedBoard.push(boards[i]);
                         }

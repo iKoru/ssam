@@ -199,18 +199,7 @@ const deleteUserBoard = async(userId, boardId) => {
 };
 exports.deleteUserBoard = deleteUserBoard;
 
-exports.createUserBoard = async(userId, boardId, isAdmin) => {
-    const board = (await getBoard(boardId))[0];
-    if (!board) {
-        return 0;
-    }
-    if (board.allGroupAuth === 'NONE' && !isAdmin) {
-        const groups = (await groupModel.getUserGroup(userId)).map(x => x.groupId);
-        let auths = await getBoardAuth(boardId);
-        if (auths.filter(x => groups.includes(x)).length < 1) {
-            return 0;
-        }
-    }
+exports.createUserBoard = async(userId, boardId) => {
     return await pool.executeQuery('createUserBoard',
         builder.insert()
         .into('SS_MST_USER_BOARD')

@@ -276,7 +276,7 @@ describe('Test the user path', async() => {
         expect(response.statusCode).toEqual(200);
         response = await request.get('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(200);
-        expect(response.body.length).toEqual(1);
+        expect(response.body.length).toBeGreaterThan(0);
         response = await request.put('/user/board').set(headers_local).send({ boards: boards.map(x => x.boardId) });
         expect(response.statusCode).toEqual(200);
         response = await request.get('/user/board').set(headers_local);
@@ -286,7 +286,7 @@ describe('Test the user path', async() => {
         expect(response.statusCode).toEqual(200);
         response = await request.get('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(200);
-        expect(response.body.length).toEqual(boards.filter(x => (x.boardId !== 'nofree')).length);
+        expect(response.body.length).toBeGreaterThan(boards.filter(x => (x.boardId !== 'nofree')).length);
 
         //not admin
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
