@@ -111,7 +111,7 @@ router.put('/', requiredAuth, async(req, res) => {
         delete document.hasSurvey
     }
 
-    let result = await documentModel.updateDocument(document);
+    result = await documentModel.updateDocument(document);
     if (result > 0) {
         return res.status(200).json({ message: '게시물을 변경하였습니다.' });
     } else {

@@ -19,6 +19,7 @@ router.get('/profile', requiredSignin, (req, res) => {
 });
 
 router.get('/:boardId([a-zA-Z]+)', requiredAuth, (req, res, next) => {
+    console.log('/:boardId targeted', req.params.boardId)
     if (req.params.boardId === 'loungeBest' || req.params.boardId === 'topicBest') {
 
     } else if (typeof req.params.boardId === 'number' || reserved.includes(req.params.boardId)) {
@@ -29,7 +30,8 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, (req, res, next) => {
     }
     console.log(req.route);
     console.log('/:boardId targeted', req.params.boardId)
-    next(); //temporary 
+    return res.status(501).end();
+    //next(); //temporary 
 });
 
 const getDocument = async(req, res) => {
@@ -44,7 +46,7 @@ const getDocument = async(req, res) => {
                     return res.status(403).json({ target: 'documentId', message: '게시물을 읽을 수 있는 권한이 없습니다.' })
                 }
             }
-            let view = await documentModel.createDocumentViewLog(documentId, userId);
+            let view = await documentModel.createDocumentViewLog(documentId, req.userObject.userId);
             if (view && view.rows && view.rows.length > 0 && view.rows[0].viewCount > 0) {
                 result[0].viewCount = view.rows[0].viewCount;
             }
@@ -78,7 +80,8 @@ const getDocument = async(req, res) => {
     }
 }
 
-router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, (req, res, next) => {
+router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async(req, res, next) => {
+    console.log('/:boardId/:documentId targeted');
     if (typeof req.params.boardId === 'number' || reserved.includes(req.params.boardId)) {
         next();
         return;
@@ -91,11 +94,12 @@ router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, (req, res
             return;
         }
     }
-    return getDocument(req, res);
+    return await getDocument(req, res);
 });
 
-router.get('/:documentId(^[\\d]+$)', requiredAuth, (req, res, next) => {
-    let documentId = req.params.documentId;
+router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredAuth, async(req, res, next) => {
+    let documentId = req.params[0];
+    console.log('/:documentId targeted', documentId);
     if (!Number.isInteger(documentId)) {
         documentId = parseInt(documentId);
         if (isNaN(documentId)) {
@@ -103,10 +107,11 @@ router.get('/:documentId(^[\\d]+$)', requiredAuth, (req, res, next) => {
             return;
         }
     }
-    return getDocument(req, res);
+    req.params.documentId = documentId;
+    return await getDocument(req, res);
 });
 
-router.post('/survey', requiredAuth, (req, res) => {
+router.post('/survey', requiredAuth, async(req, res) => {
     let survey = { documentId: req.body.documentId, answer: req.body.answer }
     let document = await documentModel.getDocument(survey.documentId);
     if (!Array.isArray(document) || document.length === 0) {
