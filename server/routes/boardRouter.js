@@ -31,9 +31,8 @@ router.get('/', requiredAuth, async(req, res) => {
         delete board.ownerId;
     }
     delete board.status;
-    if (board.allGroupAuth !== 'READWRITE') {
-        board.boardAuth = await boardModel.getBoardAuthName(board.boardId, req.userObject.isAdmin);
-    }
+    board.boardAuth = await boardModel.getBoardAuthName(board.boardId, req.userObject.isAdmin);
+
     return res.status(200).json(board);
 });
 
@@ -134,13 +133,13 @@ router.put('/', requiredAuth, async(req, res) => {
 
 router.post('/', requiredAuth, async(req, res) => {
     let board = {...req.body };
-    const name = { L: '라운지', T: '토픽', D: '아카이브' }
-    if (!['L', 'T', 'D'].includes(board.boardType) || (board.boardType !== 'T' && !req.userObject.isAdmin)) {
+
+    if (!constants.boardTypeDomain.hasOwnProperty(board.boardType) || (board.boardType !== 'T' && !req.userObject.isAdmin)) {
         return res.status(400).json({ target: 'boardType', message: '라운지/토픽 구분값이 올바르지 않습니다.' });
     } else if (typeof board.boardId !== 'string' || board.boardId === '') {
-        return res.status(400).json({ target: 'boardId', message: `${name[board.boardType]} ID가 올바르지 않습니다.` })
+        return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID가 올바르지 않습니다.` })
     } else if (typeof board.boardName !== 'string' || board.boardName === '') {
-        return res.status(400).json({ target: 'boardName', message: `${name[board.boardType]} 이름은 필수입니다.` });
+        return res.status(400).json({ target: 'boardName', message: `${constants.boardTypeDomain[board.boardType]} 이름은 필수입니다.` });
     } else if (board.boardDescription !== undefined && typeof board.boardDescription !== 'string') {
         return res.status(400).json({ target: 'boardDescription', message: '설명 값이 올바르지 않습니다.' });
     } else if (board.allowAnonymous !== undefined && typeof board.allowAnonymous !== 'boolean') {
@@ -149,14 +148,14 @@ router.post('/', requiredAuth, async(req, res) => {
         return res.status(400).json({ target: 'allGroupAuth', message: '전체 허용 여부 값이 올바르지 않습니다.' });
     } else {
         if (!constants.boardIdRegex[0].test(board.boardId)) {
-            return res.status(400).json({ target: 'boardId', message: `${name[board.boardType]} ID의 길이가 너무 길거나, [_, -] 이외의 특수문자가 있습니다.` })
+            return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID의 길이가 너무 길거나, [_, -] 이외의 특수문자가 있습니다.` })
         } else if (!constants.boardIdRegex[1].test(board.boardId)) {
-            return res.status(400).json({ target: 'boardId', message: `${name[board.boardType]} ID에 연속된 [_, -]가 있습니다.` })
+            return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID에 연속된 [_, -]가 있습니다.` })
         }
         let i = 0;
         while (i < reserved.length) {
             if (board.boardId.indexOf(reserved[i]) >= 0) {
-                return res.status(403).json({ target: 'boardId', message: `${name[board.boardType]} ID가 허용되지 않는 문자(${reserved[i]})를 포함합니다.` })
+                return res.status(403).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID가 허용되지 않는 문자(${reserved[i]})를 포함합니다.` })
             }
             i++;
         }
@@ -164,7 +163,7 @@ router.post('/', requiredAuth, async(req, res) => {
 
     let check = await boardModel.getBoard(board.boardId);
     if (Array.isArray(check) && check.length > 0) {
-        return res.status(409).json({ target: 'boardId', message: `이미 존재하는 ${name[board.boardType]} ID입니다.` });
+        return res.status(409).json({ target: 'boardId', message: `이미 존재하는 ${constants.boardTypeDomain[board.boardType]} ID입니다.` });
     }
     board.ownerId = req.userObject.userId;
     board.boardDescription = safeStringLength(board.boardDescription, 1000);
@@ -192,9 +191,9 @@ router.post('/', requiredAuth, async(req, res) => {
                 i++;
             }
         }
-        return res.status(200).json({ message: `${name[board.boardType]}을 만들었습니다.` })
+        return res.status(200).json({ message: `${constants.boardTypeDomain[board.boardType]}을 만들었습니다.` })
     } else {
-        return res.status(500).json({ message: `${name[board.boardType]} 생성에 실패하였습니다.[${check.code}] 잠시 후 다시 시도해주세요.` })
+        return res.status(500).json({ message: `${constants.boardTypeDomain[board.boardType]} 생성에 실패하였습니다.[${check.code}] 잠시 후 다시 시도해주세요.` })
     }
 });
 
