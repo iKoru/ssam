@@ -550,6 +550,17 @@ exports.createDocumentSurveyHistory = async(documentId, userId, response) => {
     )
 }
 
+exports.getDocumentSurveyHistory = async(documentId, userId) => {
+    return await pool.executeQuery('getDocumentSurveyHistory',
+        builder.select()
+        .field('COUNT(*)', 'count')
+        .from('SS_HST_DOCUMENT_SURVEY')
+        .where('DOCUMENT_ID = ?', documentId)
+        .where('USER_ID = ?', userId)
+        .toParam()
+    )
+}
+
 exports.deleteDocumentSurvey = async(documentId) => {
     return await pool.executeQuery('deleteDocumentSurvey',
         builder.delete()
