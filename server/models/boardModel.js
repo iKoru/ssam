@@ -315,10 +315,11 @@ exports.checkUserBoardReadable = async(userId, boardId) => {
     const board = await getBoard(boardId);
     if (!Array.isArray(board) || board.length === 0) {
         return [{ count: 0 }];
-    } else if (board[0].boardType !== 'T' || board[0].allGroupAuth !== 'NONE') {
+    } else if (board[0].boardType !== 'T' || board[0].allGroupAuth !== 'NONE') { //lounge or open topic
         return [{ count: 1 }];
+    } else {
+        return checkUserBoard(userId, boardId);
     }
-    return checkUserBoard(userId, boardId);
 }
 
 exports.checkUserBoardWritable = async(userId, boardId) => {

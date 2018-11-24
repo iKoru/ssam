@@ -36,3 +36,5 @@ exports.regionGroup = {
     pen: '부산',
     jje: '제주'
 }
+
+exports.boardTypeDomain = { 'D': '아카이브', 'L': '라운지', 'T': '토픽' };
