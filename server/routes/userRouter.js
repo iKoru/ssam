@@ -13,7 +13,8 @@ const userModel = require('../models/userModel'),
     documentModel = require('../models/documentModel'),
     commentModel = require('../models/commentModel'),
     boardModel = require('../models/boardModel'),
-    scrapModel = require('../models/scrapModel');
+    scrapModel = require('../models/scrapModel'),
+    messageModel = require('../models/messageModel');
 let moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Seoul');
 //based on /user
@@ -337,8 +338,40 @@ router.delete('/:userId', adminOnly, async(req, res) => {
     if (req.params.userId === req.userObject.userId) {
         return res.status(400).json({ target: 'userId', message: '로그인 한 아이디는 삭제할 수 없습니다.' });
     } else if (req.params.userId) {
-        let result = await userModel.deleteUser(req.params.userId)
-            //TODO : remove board it owns, delete chat it participates
+        let result = await boardModel.getBoardByOwnerId(req.params.userId);
+        if (Array.isArray(result) && result.length > 0) {
+            return res.status(400).json({ target: 'userId', message: '해당하는 아이디가 관리중인 라운지/토픽이 존재합니다.' });
+        }
+        let j;
+        while (true) {
+            result = await messageModel.getChats(req.params.userId, null, null, 1); //삭제된 것은 제외되고 검색됨
+            if (Array.isArray(result)) {
+                j = 0;
+                while (j < result.length) {
+                    if (result[j].user1Id === req.params.userId) { //user1
+                        if (result[j].user2Status === 'NORMAL') { //change flag
+                            result = await messageModel.updateChat(chatId, req.params.userId, 'DELETED')
+                        } else { //delete
+                            result = await messageModel.deleteChat(chatId);
+                        }
+                    } else { //user2
+                        if (result[j].user1Status === 'NORMAL') { //change flag
+                            result = await messageModel.updateChat(chatId, req.params.userId, 'DELETED')
+                        } else { //delete
+                            result = await messageModel.deleteChat(chatId);
+                        }
+                    }
+                }
+                if (result.length === 10) { //다음 페이지도 있을 수 있으므로 다시 검색한다.
+                    continue;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        result = await userModel.deleteUser(req.params.userId)
         if (result > 0) {
             return res.status(200).json({ message: req.params.userId + ' 아이디를 삭제하였습니다.' });
         } else {

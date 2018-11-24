@@ -2,7 +2,7 @@ const router = require('express').Router();
 const requiredSignin = require('../middlewares/requiredSignin'),
     messageModel = require('../models/messageModel'),
     userModel = require('../models/userModel');
-const {moment} = require('../util');
+const { moment } = require('../util');
 //based on /message
 
 router.get('/list', requiredSignin, async(req, res) => {
@@ -21,14 +21,18 @@ router.get('/list', requiredSignin, async(req, res) => {
         }
     }
     let result = await messageModel.getChats(req.userObject.userId, null, req.query.chatType, req.query.page)
+    let other;
     if (!Array.isArray(result)) {
         return res.status(500).json({ message: `채팅 정보를 받아오는 중에 오류가 발생했습니다.[${result.code}]` });
     } else {
-        result = result.filter(x => {
-            return (x.user1Id === req.userObject.userId ? (x.user1Status === 'NORMAL') : (x.user2Status === 'NORMAL'))
-        });
         result.map(x => {
             x.otherStatus = (x.user1Id === req.userObject.userId ? x.user2Status : x.user1Status);
+            other = await userModel.getUser(x.user1Id === req.userObject.userId ? x.user2Id : x.user1Id);
+            if (Array.isArray(other) && other.length > 0) {
+                x.otherNickName = req.query.chatType === 'T' ? other[0].topicNickName : other[0].loungeNickName
+            } else {
+                x.otherNickName = '(알 수 없음)'
+            }
             delete x.user1Id;
             delete x.user2Id;
             delete x.user1Status;
@@ -50,13 +54,13 @@ router.post('/list', requiredSignin, async(req, res) => {
     if (!Array.isArray(other) || other.length < 1) {
         return res.status(404).json({ target: 'nickName', message: '채팅을 시작할 대상이 존재하지 않습니다.' })
     }
-    
+
     let result = await messageModel.getChats(req.userObject.userId, other[0].userId, chat.chatType);
-    if(Array.isArray(result) && result.length>0){
-        let i=0;
-        while(i<result.length){
-            if(result[i].user1Status === 'NORMAL' && result[i].user2Status === 'NORMAL'){
-                return res.status(409).json({message:'이미 개설된 채팅이 있습니다.', chatId:result[i].chatId});
+    if (Array.isArray(result) && result.length > 0) {
+        let i = 0;
+        while (i < result.length) {
+            if (result[i].user1Status === 'NORMAL' && result[i].user2Status === 'NORMAL') {
+                return res.status(409).json({ message: '이미 개설된 채팅이 있습니다.', chatId: result[i].chatId });
             }
             i++;
         }
@@ -112,11 +116,11 @@ router.post('/', requiredSignin, async(req, res) => {
         return res.status(400).json({ target: 'contents', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
     }
     let result = await messageModel.getChat(message.chatId);
-    if (!Array.isArray(result) || result.length < 1){
+    if (!Array.isArray(result) || result.length < 1) {
         return res.status(404).json({ target: 'chatId', message: '존재하지 않는 채팅입니다.' });
-    } else if(result[0].user1Id !== req.userObject.userId && result[0].user2Id !== req.userObject.userId) {
+    } else if (result[0].user1Id !== req.userObject.userId && result[0].user2Id !== req.userObject.userId) {
         return res.status(403).json({ target: 'chatId', message: '잘못된 접근입니다.' });
-    }else if ((result[0].user1Status !== 'NORMAL') || (result[0].user2Status !== 'NORMAL')) {
+    } else if ((result[0].user1Status !== 'NORMAL') || (result[0].user2Status !== 'NORMAL')) {
         return res.status(400).json({ target: 'chatId', message: '상대방이 채팅을 종료하였습니다.' });
     }
     result = await messageModel.createMessage(message.chatId, req.userObject.userId, message.contents);

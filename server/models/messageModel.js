@@ -20,7 +20,7 @@ const getChat = async(chatId) => {
 
 exports.getChat = getChat;
 
-exports.getChats = async(user1Id, user2Id, chatType, page = 1) => {
+exports.getChatsAdmin = async(user1Id, user2Id, chatType, page = 1) => {
     if (!user1Id) return [];
     let query = builder.select()
         .fields({
@@ -35,6 +35,30 @@ exports.getChats = async(user1Id, user2Id, chatType, page = 1) => {
         .where('USER1_ID = ? OR USER2_ID = ?', user1Id, user1Id);
     if (user2Id) {
         query.where('USER1_ID = ? OR USER2_ID = ?', user2Id, user2Id);
+    }
+    if (chatType) {
+        query.where('CHAT_TYPE = ?', chatType);
+    }
+    return await pool.executeQuery('findChat' + (user2Id ? '2' : '') + (chatType ? 'type' : ''),
+        query.limit(10).offset((page - 1) * 10).order('CHAT_ID').toParam()
+    );
+}
+
+exports.getChats = async(user1Id, user2Id, chatType, page = 1) => {
+    if (!user1Id) return [];
+    let query = builder.select()
+        .fields({
+            'CHAT_ID': '"chatId"',
+            'CHAT_TYPE': '"chatType"',
+            'USER1_ID': '"user1Id"',
+            'USER2_ID': '"user2Id"',
+            'USER1_STATUS': '"user1Status"',
+            'USER2_STATUS': '"user2Status"'
+        })
+        .from('SS_MST_CHAT')
+        .where('(USER1_ID = ? AND USER1_STATUS <> \'DELETED\') OR (USER2_ID = ? AND USER2_STATUS <> \'DELETED\')', user1Id, user1Id);
+    if (user2Id) {
+        query.where('(USER1_ID = ? AND USER1_STATUS <> \'DELETED\') OR (USER2_ID = ? AND USER2_STATUS <> \'DELETED\')', user2Id, user2Id);
     }
     if (chatType) {
         query.where('CHAT_TYPE = ?', chatType);
