@@ -338,6 +338,7 @@ router.delete('/:userId', adminOnly, async(req, res) => {
         return res.status(400).json({ target: 'userId', message: '로그인 한 아이디는 삭제할 수 없습니다.' });
     } else if (req.params.userId) {
         let result = await userModel.deleteUser(req.params.userId)
+            //TODO : remove board it owns, delete chat it participates
         if (result > 0) {
             return res.status(200).json({ message: req.params.userId + ' 아이디를 삭제하였습니다.' });
         } else {
