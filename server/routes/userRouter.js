@@ -12,7 +12,8 @@ const userModel = require('../models/userModel'),
     groupModel = require('../models/groupModel'),
     documentModel = require('../models/documentModel'),
     commentModel = require('../models/commentModel'),
-    boardModel = require('../models/boardModel');
+    boardModel = require('../models/boardModel'),
+    scrapModel = require('../models/scrapModel');
 let moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Seoul');
 //based on /user
@@ -134,13 +135,15 @@ router.put('/', requiredSignin, async(req, res) => {
         }
         if (user.password && user.password !== '') {
             result = await userModel.updateUserPassword({ userId: user.userId, password: await bcrypt.hash(user.password, config.bcryptSalt) });
-            if (!util.isNumeric(result) || result < 1) {
+            if (typeof result === 'object' || result < 1) {
+                logger.error('비밀번호 변경 중 에러 : ', result, user.userId, req.userObject.userId);
                 return res.status(500).json({ message: '비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.' });
             }
         }
         if (user.picturePath === '' && req.userObject.picturePath) {
             result = await util.unlink(req.userObject.picturePath);
             if (result !== 'ENOENT') {
+                logger.error('프로필사진 삭제 중 에러 : ', result, user.userId, req.userObject.userId);
                 return res.status(500).json({ target: 'picturePath', message: `이미지를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.[${result}]` })
             }
         }
@@ -149,16 +152,18 @@ router.put('/', requiredSignin, async(req, res) => {
             if (result > 0 && Object.keys(parameters).length > 2) { //userId, isAdmin
                 result = await userModel.updateUserInfo(parameters);
             }
-            if (!util.isNumeric(result) || result < 1) {
-                return res.status(500).json({ message: '입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.(2)' });
+            if (typeof result === 'object' || result < 1) {
+                logger.error('관리자 정보 저장 중 에러 : ', result, user.userId, req.userObject.userId)
+                return res.status(500).json({ message: `입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.[${result.code}]` });
             } else {
                 return res.status(200).json({ message: '정상적으로 저장하였습니다.' });
             }
         } else {
             if (Object.keys(parameters).length > 1) { //userId
                 result = await userModel.updateUserInfo(parameters);
-                if (!util.isNumeric(result) || result < 1) {
-                    return res.status(500).json({ message: '입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.' });
+                if (typeof result === 'object' || result < 1) {
+                    logger.error('사용자 정보 변경 중 에러 : ', result, user.userId, req.userObject.userId);
+                    return res.status(500).json({ message: `입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.[${result.code}]` });
                 } else {
                     return res.status(200).json({ message: '정상적으로 저장하였습니다.' });
                 }
@@ -239,31 +244,33 @@ router.post('/', async(req, res) => { //회원가입
     while (true) {
         user.nickName = util.partialUUID() + util.partialUUID();
         result = await userModel.checkNickName(user.userId, user.nickName);
-        if (!result) {
-            return res.status(500).json({ message: '닉네임 생성에 실패하였습니다. 관리자에게 문의해주세요.' });
-        } else if (result[0] && result[0].count === 0) {
+        if (Array.isArray(result) && result.length > 0 && result[0].count === 0) {
             break;
         } else if (trial > 10) { //max 10 times trial
+            logger.error('닉네임 생성 시도 횟수 초과...')
             return res.status(500).json({ message: '닉네임 생성에 실패하였습니다. 관리자에게 문의해주세요.' });
         }
-        trial += 1;
+        trial++;
     }
     user.password = await bcrypt.hash(user.password, config.bcryptSalt);
     result = await userModel.createUser(user);
-    if (result > 0) {
+    if (typeof result !== 'object' && result > 0) {
         //TODO : send email
         trial = 0;
         while (trial < user.userGroup.length) {
             result = await groupModel.createUserGroup(user.userId, user.userGroup[trial]);
             if (typeof result !== 'number') {
                 userModel.deleteUser(user.userId);
-                return res.status(500).json({ message: '회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.' + (result.code ? `(${result.code})` : '') });
+                logger.error('사용자 그룹 생성 도중 에러 : ', result, user.userId, req.userObject.userId);
+                return res.status(500).json({ message: `회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.[${result.code}]` });
             }
             trial++;
         }
+        await scrapModel.createScrapGroup(user.userId, '기본 그룹');
         return res.status(200).json({ message: '회원가입에 성공하였습니다. 입력하신 이메일 주소로 인증메일을 보냈으니 확인해주세요.' });
     } else {
-        return res.status(500).json({ message: '회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해주세요.' + (result.code ? `(${result.code})` : '') });
+        logger.error('사용자 생성 중 에러 : ', result, user);
+        return res.status(500).json({ message: `회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.[${result.code}]` });
     }
 });
 
@@ -277,6 +284,7 @@ router.post('/picture', requiredSignin, multer.single('picture'), async(req, res
             await util.unlink(originalFilePath);
             return res.status(200).json({ message: '정상적으로 반영되었습니다.' })
         } else {
+            logger.error('프로필 사진 저장 중 에러 : ', result, userId);
             return res.status(500).json({ message: '사진 저장에 실패하였습니다. 다시 시도해주세요.' });
         }
     } else {
@@ -289,18 +297,27 @@ router.get('/', requiredSignin, async(req, res) => {
     if (!req.userObject.isAdmin && userId !== req.userObject.userId) {
         return res.status(403).json({ target: 'userId', message: '요청에 대한 권한이 없습니다.' });
     }
-    let result = await userModel.getUser(req.query.userId);
-    if (Array.isArray(result)) {
-        delete result[0].password;
-        if (!req.userObject.isAdmin) {
-            delete result[0].isAdmin;
-            delete result[0].inviter;
-            delete result[0].memo;
-        }
-        return res.status(200).json(result[0]);
+    let result;
+    if (req.userObject.userId === userId) {
+        result = {...req.userObject };
     } else {
-        return res.status(500).json({ message: '정보 불러오기에 실패하였습니다.', ...result })
+        result = await userModel.getUser(req.query.userId);
+        if (!Array.isArray(result) || result.length === 0) {
+            logger.error('사용자 정보 불러오기 중 에러 : ', result, req.query.userId, req.userObject.userId);
+            return res.status(500).json({ message: `정보 불러오기에 실패하였습니다.[${result.code}]` })
+        }
     }
+    delete result.password;
+    if (!req.userObject.isAdmin) {
+        delete result.isAdmin;
+        delete result.inviter;
+        delete result.memo;
+        delete result.reserved1;
+        delete result.reserved2;
+        delete result.reserved3;
+        delete result.reserved4;
+    }
+    return res.status(200).json(result);
 })
 
 router.get('/list', adminOnly, async(req, res) => {
@@ -308,6 +325,7 @@ router.get('/list', adminOnly, async(req, res) => {
     if (Array.isArray(result)) {
         return res.status(200).json(result)
     } else {
+        logger.error('사용자 정보 검색 중 에러 : ', result)
         return res.status(500).json({ message: '회원 정보 검색에 실패하였습니다.', ...result })
     }
 });
@@ -344,6 +362,7 @@ router.get('/document', requiredSignin, async(req, res) => {
         }
         return res.status(200).json(result);
     } else {
+        logger.error('사용자 작성 게시물 조회 중 에러 : ', result, req.query.userId);
         return res.status(500).json({ message: '정보를 읽어오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
@@ -363,6 +382,7 @@ router.get('/comment', requiredSignin, async(req, res) => {
         }
         return res.status(200).json(result);
     } else {
+        logger.error('사용자 작성 댓글 조회 중 에러 : ', result, req.query.userId);
         return res.status(500).json({ message: '정보를 읽어오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
@@ -372,6 +392,7 @@ router.get('/board', requiredSignin, async(req, res) => {
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {
+        logger.error('사용자 게시판 조회 중 에러 : ', result, req.userObject.userId);
         return res.status(500).json({ message: '정보를 읽어오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
@@ -426,7 +447,8 @@ router.put('/board', requiredSignin, async(req, res) => {
             i++;
         }
     } else {
-        return res.status(500).json({ message: '기존 정보를 불러오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
+        logger.error('사용자 게시판 목록 조회 중 에러 : ', result, boards, req.userObject.userId);
+        return res.status(500).json({ message: `기존 정보를 불러오던 중 오류가 발생했습니다.[${result.code}]` })
     }
     if (failedBoard.length > 0) {
         if (failedBoard.indexOf(-1) >= 0) {
@@ -447,6 +469,7 @@ router.get('/group', adminOnly, async(req, res) => {
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {
+        logger.error('사용자 그룹 정보 조회 중 에러 : ', result, req.query.userId)
         return res.status(500).json({ message: '정보를 불러오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
@@ -496,7 +519,8 @@ router.put('/group', adminOnly, async(req, res) => {
             i++;
         }
     } else {
-        return res.status(500).json({ message: '기존 정보를 불러오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
+        logger.error('사용자 그룹 정보 조회 중 에러 : ', result, req.body.userId, groups)
+        return res.status(500).json({ message: `기존 정보를 불러오던 중 오류가 발생했습니다.[${result.code}]` })
     }
     if (failedGroup.length > 0) {
         return res.status(200).json({ message: `회원 그룹을 변경할 때 오류가 ${failedGroup.length}건 발생하였습니다.`, groupId: failedGroup });
