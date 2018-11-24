@@ -10,9 +10,18 @@ const boardModel = require('../models/boardModel'),
     //based on /document
 
 router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
-    let document = {...req.body };
+    let document = {
+        userId: req.userObject.userId,
+        boardId: req.body.boardId,
+        title: req.body.title,
+        contents: req.body.contents,
+        isAnonymous: req.body.isAnonymous,
+        allowAnonymous: req.body.isAnonymous === true ? true : req.body.allowAnonymous,
+        restriction: req.body.restriction,
+        survey: req.body.survey
+    };
     if (typeof document.boardId !== 'string' || document.boardId === '') {
-        return res.status(400).json({ taget: 'boardId', message: '게시물을 작성할 라운지/토픽을 선택해주세요.' })
+        return res.status(400).json({ target: 'boardId', message: '게시물을 작성할 라운지/토픽을 선택해주세요.' })
     } else if (typeof document.isAnonymous !== 'boolean') {
         return res.status(400).json({ target: 'isAnonymous', message: '익명여부 선택이 올바르지 않습니다.' })
     } else if (typeof document.title !== 'string' || document.title === '') {
@@ -23,20 +32,25 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
         return res.status(400).json({ target: 'contents', message: '게시물 내용을 입력해주세요.' })
     } else if (typeof document.allowAnonymous !== 'boolean') {
         return res.status(400).json({ target: 'allowAnonymous', message: '익명댓글 허용여부가 올바르지 않습니다.' })
+    } else if (document.survey !== undefined && typeof document.survey !== 'object') {
+        return res.status(400).json({ target: 'survey', message: '설문조사 내용이 올바르지 않습니다.' })
     }
 
     let result = await boardModel.getBoard(document.boardId);
-    if (Array.isArray(result) && result > 0) {
+    if (Array.isArray(result) && result.length > 0) {
         if (result[0].boardType === 'T') {
             document.userNickName = req.userObject.topicNickName;
         } else {
             document.userNickName = req.userObject.loungeNickName;
         }
+        if (!result[0].allowAnonymous) {
+            document.isAnonymous = false;
+            document.allowAnonymous = false;
+        }
     } else {
         return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
     }
 
-    document.userId = req.userObject.userId;
     document.attach = req.files && req.files.length > 0;
     result = await documentModel.createDocument(document);
     if (result.error || result.rowCount === 0) {
@@ -76,7 +90,7 @@ router.put('/', requiredAuth, async(req, res) => {
     if (!Array.isArray(original) || original.length < 1) {
         return res.status(404).json({ target: 'documentId', message: '변경할 게시물을 찾지 못했습니다.' })
     } else if (original[0].isDeleted && !req.userObject.isAdmin) {
-        return res.status(404).json({ taget: 'documentId', message: '이미 삭제된 게시물입니다.' })
+        return res.status(404).json({ target: 'documentId', message: '이미 삭제된 게시물입니다.' })
     } else if (req.userObject.userId !== original[0].userId && !req.userObject.isAdmin) {
         return res.status(403).json({ target: 'documentId', message: '게시물을 변경할 권한이 없습니다.' })
     }
@@ -86,7 +100,8 @@ router.put('/', requiredAuth, async(req, res) => {
         delete document.title;
     } else if (typeof document.title !== 'string' || document.title.length > 300) {
         return res.status(400).json({ target: 'title', message: '입력된 제목이 올바르지 않습니다.' })
-    } else if (typeof document.contents !== 'string' || document.contents === '') {
+    }
+    if (typeof document.contents !== 'string' || document.contents === '') {
         return res.status(400).json({ target: 'contents', message: '게시물 내용을 입력해주세요.' })
     }
 
@@ -119,13 +134,16 @@ router.put('/', requiredAuth, async(req, res) => {
     }
 });
 
-router.delete('/:documentId(^[\\d]+$)', adminOnly, async(req, res) => {
-    let documentId = req.params.documentId;
+router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async(req, res) => {
+    let documentId = req.params[0];
     if ((typeof documentId !== 'string' && typeof documentId !== 'number') || documentId === '') {
         return res.status(400).json({ target: 'documentId', message: '요청을 수행하기 위해 필요한 정보가 없거나 올바르지 않습니다.' });
     }
     let result = await documentModel.getDocument(documentId);
     if (Array.isArray(result) && result.length > 0) {
+        if ((result[0].userId !== req.userObject.userId) && !req.userObject.isAdmin) {
+            return res.status(403).json({ target: 'documentId', message: '게시물을 삭제할 수 있는 권한이 없습니다.' })
+        }
         if (result[0].hasSurvey) {
             await documentModel.deleteDocumentSurvey(documentId);
             await documentModel.deleteDocumentSurveyHistory(documentId);
