@@ -307,21 +307,14 @@ exports.getUserBoardAuth = async(userId, boardId) => {
 }
 
 exports.checkUserBoardReadable = async(userId, boardId) => {
-    const board = await getBoard(boardId);
-    if (!board || !board[0]) {
-        return [{ count: 0 }];
-    } else if (board[0].allGroupAuth !== 'NONE') {
-        return [{ count: 1 }];
-    } else {
-        return pool.executeQuery('checkUserBoardReadable',
-            builder.select()
-            .field('COUNT(*)', 'count')
-            .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId), 'AUTH')
-            .where('ALLOWED_GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_USER_GROUP WHERE USER_ID = ?)', userId)
-            .limit(1)
-            .toParam()
-        );
-    }
+    return pool.executeQuery('checkUserBoardReadable',
+        builder.select()
+        .field('COUNT(*)', 'count')
+        .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId), 'AUTH')
+        .where('ALLOWED_GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_USER_GROUP WHERE USER_ID = ?)', userId)
+        .limit(1)
+        .toParam()
+    );
 }
 
 exports.checkUserBoardWritable = async(userId, boardId) => {
