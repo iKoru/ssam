@@ -113,6 +113,12 @@ router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredAuth, async(req, res, next) => {
 
 router.post('/survey', requiredAuth, async(req, res) => {
     let survey = { documentId: req.body.documentId, answer: req.body.answer }
+    if (typeof survey.documentId === 'string') {
+        survey.documentId = parseInt(survey.documentId)
+    }
+    if (!Number.isInteger(survey.documentId)) {
+        return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
+    }
     let document = await documentModel.getDocument(survey.documentId);
     if (!Array.isArray(document) || document.length === 0) {
         return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });

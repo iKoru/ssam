@@ -155,7 +155,7 @@ router.put('/', requiredSignin, async(req, res) => {
             }
             if (typeof result === 'object' || result < 1) {
                 logger.error('관리자 정보 저장 중 에러 : ', result, user.userId, req.userObject.userId)
-                return res.status(500).json({ message: `입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.[${result.code}]` });
+                return res.status(500).json({ message: `입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.[${result.code || ''}]` });
             } else {
                 return res.status(200).json({ message: '정상적으로 저장하였습니다.' });
             }
@@ -164,7 +164,7 @@ router.put('/', requiredSignin, async(req, res) => {
                 result = await userModel.updateUserInfo(parameters);
                 if (typeof result === 'object' || result < 1) {
                     logger.error('사용자 정보 변경 중 에러 : ', result, user.userId, req.userObject.userId);
-                    return res.status(500).json({ message: `입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.[${result.code}]` });
+                    return res.status(500).json({ message: `입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.[${result.code || ''}]` });
                 } else {
                     return res.status(200).json({ message: '정상적으로 저장하였습니다.' });
                 }
@@ -263,7 +263,7 @@ router.post('/', async(req, res) => { //회원가입
             if (typeof result !== 'number') {
                 userModel.deleteUser(user.userId);
                 logger.error('사용자 그룹 생성 도중 에러 : ', result, user.userId, req.userObject.userId);
-                return res.status(500).json({ message: `회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.[${result.code}]` });
+                return res.status(500).json({ message: `회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.[${result.code || ''}]` });
             }
             trial++;
         }
@@ -271,7 +271,7 @@ router.post('/', async(req, res) => { //회원가입
         return res.status(200).json({ message: '회원가입에 성공하였습니다. 입력하신 이메일 주소로 인증메일을 보냈으니 확인해주세요.' });
     } else {
         logger.error('사용자 생성 중 에러 : ', result, user);
-        return res.status(500).json({ message: `회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.[${result.code}]` });
+        return res.status(500).json({ message: `회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.[${result.code || ''}]` });
     }
 });
 
@@ -305,7 +305,7 @@ router.get('/', requiredSignin, async(req, res) => {
         result = await userModel.getUser(req.query.userId);
         if (!Array.isArray(result) || result.length === 0) {
             logger.error('사용자 정보 불러오기 중 에러 : ', result, req.query.userId, req.userObject.userId);
-            return res.status(500).json({ message: `정보 불러오기에 실패하였습니다.[${result.code}]` })
+            return res.status(500).json({ message: `정보 불러오기에 실패하였습니다.[${result.code || ''}]` })
         }
     }
     delete result.password;
@@ -482,7 +482,7 @@ router.put('/board', requiredSignin, async(req, res) => {
         }
     } else {
         logger.error('사용자 게시판 목록 조회 중 에러 : ', result, boards, req.userObject.userId);
-        return res.status(500).json({ message: `기존 정보를 불러오던 중 오류가 발생했습니다.[${result.code}]` })
+        return res.status(500).json({ message: `기존 정보를 불러오던 중 오류가 발생했습니다.[${result.code || ''}]` })
     }
     if (failedBoard.length > 0) {
         if (failedBoard.indexOf(-1) >= 0) {
@@ -554,7 +554,7 @@ router.put('/group', adminOnly, async(req, res) => {
         }
     } else {
         logger.error('사용자 그룹 정보 조회 중 에러 : ', result, req.body.userId, groups)
-        return res.status(500).json({ message: `기존 정보를 불러오던 중 오류가 발생했습니다.[${result.code}]` })
+        return res.status(500).json({ message: `기존 정보를 불러오던 중 오류가 발생했습니다.[${result.code || ''}]` })
     }
     if (failedGroup.length > 0) {
         return res.status(200).json({ message: `회원 그룹을 변경할 때 오류가 ${failedGroup.length}건 발생하였습니다.`, groupId: failedGroup });

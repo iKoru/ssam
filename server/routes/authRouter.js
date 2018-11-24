@@ -31,7 +31,7 @@ router.post('/', requiredSignin, async(req, res) => {
     if (typeof result === 'number' && result > 0) {
         return res.status(200).json({ message: '등록된 이메일로 인증메일을 보내드렸습니다. 이메일을 확인해주세요.' });
     } else {
-        return res.status(500).json({ message: `인증 메일을 생성하는 도중에 오류가 발생했습니다.[${result.code}]` })
+        return res.status(500).json({ message: `인증 메일을 생성하는 도중에 오류가 발생했습니다.[${result.code || ''}]` })
     }
 
 });

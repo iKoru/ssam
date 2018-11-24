@@ -120,7 +120,7 @@ router.put('/', requiredAuth, async(req, res) => {
     } else {
         let result = await boardModel.updateBoard({ boardId: boardId, reservedDate: moment().add(1, 'months').format('YYYYMMDD'), reservedContents: reservedContents });
         if (typeof result === 'object' || result === 0) {
-            return res.status(500).json({ message: `변경될 내용을 저장하는 데 실패하였습니다.[${result.code}] 다시 시도해주세요.` });
+            return res.status(500).json({ message: `변경될 내용을 저장하는 데 실패하였습니다.[${result.code || ''}] 다시 시도해주세요.` });
         } else {
             if (process.env.NODE_ENV === 'development') {
                 await applyReservedContents(boardId);
@@ -240,7 +240,7 @@ router.get('/list', requiredAuth, async(req, res) => {
         }
         return res.status(200).json(result);
     } else {
-        return res.status(500).json({ message: `정보를 가져오는 도중에 오류가 발생했습니다.[${result.code}]` })
+        return res.status(500).json({ message: `정보를 가져오는 도중에 오류가 발생했습니다.[${result.code || ''}]` })
     }
 });
 

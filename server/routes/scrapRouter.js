@@ -14,7 +14,7 @@ router.get('/group', requiredSignin, async(req, res) => { //scrapgroup
         return res.status(200).json(result);
     } else {
         logger.error('스크랩그룹 조회 중 에러 : ', result, req.userObject.userId)
-        return res.status(500).json({ message: `스크랩 정보를 가져오지 못했습니다. 잠시 후 다시 시도해주세요.[${result.code}]` })
+        return res.status(500).json({ message: `스크랩 정보를 가져오지 못했습니다. 잠시 후 다시 시도해주세요.[${result.code || ''}]` })
     }
 });
 
@@ -30,7 +30,7 @@ router.post('/group', requiredSignin, async(req, res) => {
         return res.status(200).json({ message: '스크랩 그룹을 만들었습니다.', scrapGroupId: result.rows[0].scrapGroupId })
     } else {
         logger.error('스크랩 그룹 생성 에러 : ', result, req.userObject.userId, scrapGroupName);
-        return res.status(500).json({ message: `스크랩 그룹을 만들지 못했습니다.[${result.code}]` });
+        return res.status(500).json({ message: `스크랩 그룹을 만들지 못했습니다.[${result.code || ''}]` });
     }
 })
 
@@ -46,7 +46,7 @@ router.delete(/\/group\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) =
     let result = await scrapModel.deleteScrapGroup(req.userObject.userId, scrapGroupId)
     if (typeof result === 'object') {
         logger.error('스크랩 그룹 삭제 중 에러 : ', result, req.userObject.userId, scrapGroupId)
-        return res.status(500).json({ message: `스크랩 그룹을 삭제하지 못했습니다.[${result.code}]` })
+        return res.status(500).json({ message: `스크랩 그룹을 삭제하지 못했습니다.[${result.code || ''}]` })
     } else if (result === 0) {
         return res.status(404).json({ target: 'scrapGroupId', message: '존재하지 않는 스크랩 그룹입니다.' })
     } else {
@@ -68,7 +68,7 @@ router.put('/group', requiredSignin, async(req, res) => {
     let result = await scrapModel.updateScrapGroup(req.userObject.userId, scrapGroupId, scrapGroupName)
     if (typeof result === 'object') {
         logger.error('스크랩 그룹 이름 변경 중 에러 : ', result, req.userObject.userId, scrapGroupId, scrapGroupName);
-        return res.status(500).json({ message: `스크랩 그룹 이름을 변경하지 못했습니다.[${result.code}]` })
+        return res.status(500).json({ message: `스크랩 그룹 이름을 변경하지 못했습니다.[${result.code || ''}]` })
     } else if (result === 0) {
         return res.status(404).json({ target: 'scrapGroupId', message: '존재하지 않는 스크랩 그룹입니다.' })
     } else {
@@ -100,7 +100,7 @@ router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) => { //scra
         return res.status(200).json(result);
     } else {
         logger.error('스크랩 기록 조회 중 에러 : ', result, req.userObject.userId);
-        return res.status(500).json({ message: `스크랩 기록을 가져오는 데 실패하였습니다.[${result.code}]` })
+        return res.status(500).json({ message: `스크랩 기록을 가져오는 데 실패하였습니다.[${result.code || ''}]` })
     }
 });
 
@@ -133,7 +133,7 @@ router.post('/', requiredAuth, async(req, res) => { //add document into scrap gr
         return res.status(409).json({ message: '이미 해당 그룹에 스크랩되어있습니다.' });
     } else {
         logger.error('스크랩 추가 중 에러 : ', result, req.userObject.userId, scrapGroupId, documentId);
-        return res.status(500).json({ message: `글을 스크랩하지 못했습니다.[${result.code}]` });
+        return res.status(500).json({ message: `글을 스크랩하지 못했습니다.[${result.code || ''}]` });
     }
 });
 
@@ -160,7 +160,7 @@ router.delete(/\/(\d+)\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) =
         return res.status(404).json({ message: '이미 해제되어있는 게시물입니다.' });
     } else {
         logger.error('스크랩 제거 중 에러 : ', result, req.userObject.userId, scrapGroupId, documentId);
-        return res.status(500).json({ message: `글을 스크랩 해제하지 못했습니다.[${result.code}]` });
+        return res.status(500).json({ message: `글을 스크랩 해제하지 못했습니다.[${result.code || ''}]` });
     }
 });
 
