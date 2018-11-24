@@ -192,6 +192,18 @@ exports.deleteUser = async(userId) => {
             .where('USER_ID = ?', userId)
             .toParam()
         )
+        await pool.executeQuery('deleteUserScrapGroupByUserId',
+            builder.delete()
+            .from('SS_MST_USER_SCRAP_GROUP')
+            .where('USER_ID = ?', userId)
+            .toParam()
+        )
+        await pool.executeQuery('deleteUserScrapByUserId',
+            builder.delete()
+            .from('SS_HST_USER_SCRAP')
+            .where('USER_ID = ?', userId)
+            .toParam()
+        )
         return result;
     }
 }
