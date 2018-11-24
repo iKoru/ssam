@@ -37,14 +37,21 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
     }
 
     document.userId = req.userObject.userId;
+    document.attach = req.files && req.files.length > 0;
     result = await documentModel.createDocument(document);
     if (result.error || result.rowCount === 0) {
         return res.status(500).json({ message: `게시물을 저장하던 도중 오류가 발생했습니다.[${result.code}]` })
     } else {
         req.body.documentId = result.rows[0].documentId;
-        if (req.files && req.files.length > 0) {
+        if (document.survey) {
+            result = await documentModel.createDocumentSurvey(document.documentId, document.survey);
+            if (typeof result === 'object' || result === 0) {
+                return res.status(200).json({ target: 'survey', message: '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' });
+            }
+        }
+        if (document.attach) {
             result = await util.uploadFile(req.files, 'attach', documentId, documentModel.createDocumentAttach);
-            return res.status(result.status).json({ message: result.status === 200 ? '게시물을 등록하였습니다.' : '게시물을 등록하였으나, 첨부파일을 업로드하지 못했습니다.', documentId: req.body.documentId });
+            return res.status(200).json({ target: 'attach', message: result.status === 200 ? '게시물을 등록하였습니다.' : '게시물을 등록하였으나, 첨부파일을 업로드하지 못했습니다.', documentId: req.body.documentId });
         } else {
             return res.status(200).json({ message: '게시물을 등록하였습니다.', documentId: req.body.documentId })
         }
@@ -57,7 +64,8 @@ router.put('/', requiredAuth, async(req, res) => {
         isDeleted: req.body.isDeleted,
         title: req.body.title,
         contents: req.body.contents,
-        restriction: req.body.restriction
+        restriction: req.body.restriction,
+        hasSurvey: req.body.hasSurvey !== undefined ? !!req.body.hasSurvey : undefined
     };
     if (typeof document.documentId !== 'string' && typeof document.documentId !== 'number') {
         return res.status(400).json({ target: 'documentId', message: '변경할 게시물을 찾을 수 없습니다.' })
@@ -88,6 +96,20 @@ router.put('/', requiredAuth, async(req, res) => {
     if (document.isDeleted === original.isDeleted) {
         delete document.isDeleted;
     }
+    let result;
+    if (document.hasSurvey === false && original.hasSurvey && req.userObject.isAdmin) {
+        result = await documentModel.deleteDocumentSurvey(document.documentId);
+        if (typeof result !== 'object') {
+            result = await documentModel.deleteDocumentSurveyHistory(document.documentId)
+            if (typeof result === object) {
+                return res.status(500).json({ target: 'hasSurvey', message: `설문조사 내역을 삭제하는 데 실패하였습니다.[${result.code}]` })
+            }
+        } else {
+            return res.status(500).json({ target: 'hasSurvey', message: `설문조사를 삭제하는 데 실패하였습니다.[${result.code}]` })
+        }
+    } else {
+        delete document.hasSurvey
+    }
 
     let result = await documentModel.updateDocument(document);
     if (result > 0) {
@@ -102,11 +124,34 @@ router.delete('/:documentId(^[\\d]+$)', adminOnly, async(req, res) => {
     if ((typeof documentId !== 'string' && typeof documentId !== 'number') || documentId === '') {
         return res.status(400).json({ target: 'documentId', message: '요청을 수행하기 위해 필요한 정보가 없거나 올바르지 않습니다.' });
     }
-    let result = await documentModel.deleteDocument(documentId);
-    if (typeof result === 'object' || result === 0) {
-        return res.status(500).json({ message: '게시물을 삭제하는 중에 오류가 발생했습니다.' });
+    let result = await documentModel.getDocument(documentId);
+    if (Array.isArray(result) && result.length > 0) {
+        if (result[0].hasSurvey) {
+            await documentModel.deleteDocumentSurvey(documentId);
+            await documentModel.deleteDocumentSurveyHistory(documentId);
+        }
+        if (result[0].hasAttach) {
+            result = await documentModel.getDocumentAttach(documentId);
+            let i = 0,
+                err;
+            while (i < result.length) {
+                err = await util.unlink(result[i].attachPath)
+                if (err) {
+                    logger.error('게시물 삭제에 따른 첨부파일 삭제 실패 : ', result[i].attachPath, err);
+                } else {
+                    await documentModel.deleteDocumentAttach(documentId, result[i].attachId);
+                }
+                i++;
+            }
+        }
+        result = await documentModel.deleteDocument(documentId);
+        if (typeof result === 'object' || result === 0) {
+            return res.status(500).json({ message: '게시물을 삭제하는 중에 오류가 발생했습니다.' });
+        } else {
+            return res.status(200).json({ message: '게시물을 삭제하였습니다.' });
+        }
     } else {
-        return res.status(200).json({ message: '게시물을 삭제하였습니다.' });
+        return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
 });
 
@@ -119,6 +164,9 @@ router.post('/attach', requiredAuth, multer.array('attach'), async(req, res) => 
     if (Array.isArray(document) && document.length > 0) {
         if ((document[0].userId === req.userObject.userId) || req.userObject.isAdmin) {
             const result = await util.uploadFile(req.files, 'attach', documentId, documentModel.createDocumentAttach);
+            if (result.status === 200 && !document[0].hasAttach) {
+                await documentModel.updateDocument({ documentId: documentId, hasAttach: true });
+            }
             return res.status(result.status).json({ message: result.message });
         } else {
             return res.status(403).json({ target: 'documentId', message: '첨부파일을 올릴 수 있는 권한이 없습니다.' })
@@ -161,6 +209,10 @@ router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredAuth, async(req
     } else {
         let result = await documentModel.deleteDocumentAttach(documentId, attachId);
         if (typeof result !== 'object') {
+            result = await documentModel.getDocumentAttach(documentId);
+            if (Array.isArray(result) && result.length === 0) { //no more attachments
+                await documentModel.updateDocument({ documentId: documentId, hasAttach: false });
+            }
             return res.status(200).json({ message: '첨부파일을 삭제하였습니다.' })
         } else {
             return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code}]` })
