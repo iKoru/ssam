@@ -316,7 +316,7 @@ exports.deleteAnimalNames = async(animalNames) => {
     return await pool.executeQuery('deleteAnimalName' + animalNames.length,
         builder.delete()
         .from('SS_MST_ANIMAL_NAME')
-        .where('ANIMAL_NAME IN ?', (typeof animalNames === 'object' ? animalNames : [animalNames]))
+        .where('ANIMAL_NAME IN ?', animalNames)
         .toParam()
     )
 }
