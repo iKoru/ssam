@@ -131,9 +131,9 @@ describe('Test the document path', async() => {
         expect(response.body).toHaveProperty('target', 'documentId')
 
         response = await request.put('/document').set(headers_local).send({ documentId: 'aaaa' });
-        expect(response.statusCode).toEqual(404);
+        expect(response.statusCode).toEqual(400);
         expect(response.body).toHaveProperty('target', 'documentId')
-        response = await request.put('/document').set(headers_local).send({ documentId: 'aaaa', isDeleted: 'aaaa' });
+        response = await request.put('/document').set(headers_local).send({ documentId: 123, isDeleted: 'aaaa' });
         expect(response.statusCode).toEqual(400);
         expect(response.body).toHaveProperty('target', 'isDeleted')
 

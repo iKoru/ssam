@@ -28,8 +28,6 @@ exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boar
             'STATUS': '"status"',
             'ALL_GROUP_AUTH': '"allGroupAuth"',
             'ALLOW_ANONYMOUS': '"allowAnonymous"',
-            'RESERVED_DATE': '"reservedDate"',
-            'RESERVED_CONTENTS': '"reservedContents"'
         })
         .from('SS_MST_BOARD');
     if (!isAdmin) {
@@ -338,6 +336,27 @@ exports.getBoardByDocument = async(documentId) => {
         })
         .from(builder.select().field('BOARD_ID').from('SS_MST_DOCUMENT').where('DOCUMENT_ID = ?', documentId), 'DOCUMENT')
         .join('SS_MST_BOARD', 'BOARD', 'BOARD.BOARD_ID = DOCUMENT.BOARD_ID')
+        .toParam()
+    )
+}
+
+exports.getBoardByOwnerId = async(ownerId) => {
+    return await pool.executeQuery('getBoardByOwnerId',
+        builder.select()
+        .fields({
+            'BOARD_ID': '"boardId"',
+            'BOARD_NAME': '"boardName"',
+            'OWNER_ID': '"ownerId"',
+            'BOARD_DESCRIPTION': '"boardDescription"',
+            'BOARD_TYPE': '"boardType"',
+            'STATUS': '"status"',
+            'ALL_GROUP_AUTH': '"allGroupAuth"',
+            'ALLOW_ANONYMOUS': '"allowAnonymous"',
+            'RESERVED_DATE': '"reservedDate"',
+            'RESERVED_CONTENTS': '"reservedContents"'
+        })
+        .from('SS_MST_BOARD')
+        .where('OWNER_ID = ?', ownerId)
         .toParam()
     )
 }

@@ -81,11 +81,15 @@ router.put('/', requiredAuth, async(req, res) => {
         restriction: req.body.restriction,
         hasSurvey: req.body.hasSurvey !== undefined ? !!req.body.hasSurvey : undefined
     };
-    if (typeof document.documentId !== 'string' && typeof document.documentId !== 'number') {
+    if (typeof document.documentId === 'string') {
+        document.documentId = parseInt(document.documentId);
+    }
+    if (!Number.isInteger(document.documentId)) {
         return res.status(400).json({ target: 'documentId', message: '변경할 게시물을 찾을 수 없습니다.' })
     } else if (typeof document.isDeleted !== 'boolean' && document.isDeleted !== undefined) {
         return res.status(400).json({ target: 'isDeleted', message: '삭제여부 값이 올바르지 않습니다.' })
     }
+
     let original = await documentModel.getDocument(document.documentId)
     if (!Array.isArray(original) || original.length < 1) {
         return res.status(404).json({ target: 'documentId', message: '변경할 게시물을 찾지 못했습니다.' })
@@ -136,8 +140,11 @@ router.put('/', requiredAuth, async(req, res) => {
 
 router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async(req, res) => {
     let documentId = req.params[0];
-    if ((typeof documentId !== 'string' && typeof documentId !== 'number') || documentId === '') {
-        return res.status(400).json({ target: 'documentId', message: '요청을 수행하기 위해 필요한 정보가 없거나 올바르지 않습니다.' });
+    if (typeof documentId === 'string') {
+        documentId = parseInt(documentId);
+    }
+    if (!Number.isInteger(documentId)) {
+        return res.status(400).json({ target: 'documentId', message: '삭제할 게시물을 찾을 수 없습니다.' });
     }
     let result = await documentModel.getDocument(documentId);
     if (Array.isArray(result) && result.length > 0) {
@@ -175,6 +182,12 @@ router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async(req, res) => {
 
 router.post('/attach', requiredAuth, multer.array('attach'), async(req, res) => {
     let documentId = req.body.documentId;
+    if (typeof documentId === 'string') {
+        documentId = parseInt(documentId)
+        if (!Number.isInteger(documentId)) {
+            return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
+        }
+    }
     let document = await documentModel.getDocument(documentId);
     if (!Array.isArray(req.files) || req.files.length < 1) {
         return res.status(400).json({ target: 'files', message: '첨부파일을 올려주세요.' })
@@ -197,7 +210,10 @@ router.post('/attach', requiredAuth, multer.array('attach'), async(req, res) => 
 router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredAuth, async(req, res) => {
     let documentId = req.params.documentId;
     let attachId = req.params.attachId;
-    if (typeof documentId !== 'string' && typeof documentId !== 'number') {
+    if (typeof documentId === 'string') {
+        documentId = parseInt(documentId)
+    }
+    if (!Number.isInteger(documentId)) {
         return res.status(400).json({ target: 'documentId', message: '대상 게시물을 찾을 수 없습니다.' })
     } else if (typeof attachId !== 'string') {
         return res.status(400).json({ target: 'attachId', message: '삭제할 첨부파일이 올바르지 않습니다.' })

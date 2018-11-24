@@ -25,7 +25,7 @@ router.get('/list', requiredSignin, async(req, res) => {
     if (!Array.isArray(result)) {
         return res.status(500).json({ message: `채팅 정보를 받아오는 중에 오류가 발생했습니다.[${result.code}]` });
     } else {
-        result.map(x => {
+        result.map(async x => {
             x.otherStatus = (x.user1Id === req.userObject.userId ? x.user2Status : x.user1Status);
             other = await userModel.getUser(x.user1Id === req.userObject.userId ? x.user2Id : x.user1Id);
             if (Array.isArray(other) && other.length > 0) {
@@ -78,8 +78,10 @@ router.get('/', requiredSignin, async(req, res) => {
     if (!query.chatId) {
         return res.status(400).json({ target: 'chatId', message: '잘못된 접근입니다.' });
     }
-    query.chatId = parseInt(query.chatId);
-    if (isNaN(query.chatId)) {
+    if (typeof query.chatId === 'string') {
+        query.chatId = parseInt(query.chatId);
+    }
+    if (!Number.isInteger(query.chatId)) {
         return res.status(400).json({ target: 'chatId', message: '잘못된 접근입니다.' });
     }
     if (query.timestampBefore && !moment(query.timestampBefore, 'YYYYMMDDHH24MISS').isValid()) {
@@ -110,7 +112,10 @@ router.get('/', requiredSignin, async(req, res) => {
 router.post('/', requiredSignin, async(req, res) => {
     let message = {...req.body };
     //parameter safe check
-    if ((typeof message.chatId !== 'string' && typeof message.chatId !== 'number') || message.chatId === '') {
+    if (typeof message.chatId === 'string') {
+        message.chatId = parseInt(message.chatId);
+    }
+    if (!Number.isInteger(message.chatId)) {
         return res.status(400).json({ target: 'chatId', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
     } else if (typeof message.contents !== 'string' || message.contents === '') {
         return res.status(400).json({ target: 'contents', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
@@ -135,16 +140,15 @@ router.post('/', requiredSignin, async(req, res) => {
 
 router.delete('/:chatId([0-9]+)', requiredSignin, async(req, res) => {
     let chatId = req.params.chatId;
-    if (typeof chatId !== 'string') {
-        return res.status(400).json({ target: 'chatId', message: '잘못된 접근입니다.' });
+    if (typeof chatId === 'string') {
+        chatId = parseInt(chatId);
     }
-    chatId = parseInt(chatId);
-    if (isNaN(chatId)) {
-        return res.status(400).json({ target: 'chatId', message: '잘못된 접근입니다.' });
+    if (!Number.isInteger(chatId)) {
+        return res.status(400).json({ target: 'chatId', message: '삭제할 채팅을 찾을 수 없습니다.' });
     }
     let result = await messageModel.getChat(chatId);
     if (!Array.isArray(result) || result.length < 1 || (result[0].user1Id !== req.userObject.userId && result[0].user2Id !== req.userObject.userId)) {
-        return res.status(403).json({ target: 'chatId', message: '잘못된 접근입니다.' });
+        return res.status(403).json({ target: 'chatId', message: '채팅을 삭제할 수 있는 권한이 없습니다.' });
     }
     if (result[0].user1Id === req.userObject.userId) { //user1
         if (result[0].user1Status === 'NORMAL') {

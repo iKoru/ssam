@@ -51,7 +51,7 @@ router.post('/', adminOnly, async(req, res) => { //create new group
         return res.status(400).json({ target: 'groupIconPath', message: 'Icon Path 값이 너무 깁니다. 관리자에게 문의해주세요.' });
     } else if (!['N', 'M', 'G', 'R'].includes(group.groupType)) {
         return res.status(400).json({ target: 'groupType', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
-    } else if (group.parentGroupId && typeof group.parentGroupId !== 'number' || group.parentGroupId < 1) {
+    } else if (group.parentGroupId && !Number.isInteger(group.parentGroupId) || group.parentGroupId < 1) {
         return res.status(400).json({ target: 'parentGroupId', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
     } else if (!Number.isInteger(group.expirePeriod)) {
         return res.status(400).json({ target: 'expirePeriod', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
@@ -86,7 +86,7 @@ router.put('/', adminOnly, async(req, res) => { //update current group
         return res.status(400).json({ target: 'groupIconPath', message: 'Icon Path 값이 너무 깁니다. 관리자에게 문의해주세요.' });
     } else if (group.groupType && !['N', 'M', 'G', 'R'].includes(group.groupType)) {
         return res.status(400).json({ target: 'groupType', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
-    } else if (group.parentGroupId && typeof group.parentGroupId !== 'number' || group.parentGroupId < 1) {
+    } else if (group.parentGroupId && !Number.isInteger(group.parentGroupId) || group.parentGroupId < 1) {
         return res.status(400).json({ target: 'parentGroupId', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
     } else if (group.expirePeriod && !Number.isInteger(group.expirePeriod)) {
         return res.status(400).json({ target: 'expirePeriod', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
@@ -112,7 +112,10 @@ router.put('/', adminOnly, async(req, res) => { //update current group
 
 router.delete('/:groupId([0-9]+)', adminOnly, async(req, res) => { //delete existing group
     let groupId = req.params.groupId;
-    if (typeof groupId !== 'string') {
+    if (typeof groupId === 'string') {
+        groupId = parseInt(groupId);
+    }
+    if (!Number.isInteger(groupId)) {
         return res.status(400).json({ target: 'groupId', message: '잘못된 접근입니다.' });
     }
     let result = await groupModel.deleteGroup(parseInt(groupId));
