@@ -231,6 +231,12 @@ exports.updateDocument = async(document) => {
     if (document.isDeleted !== undefined) {
         query.set('IS_DELETED', document.isDeleted)
     }
+    if (document.hasSurvey !== undefined) {
+        query.set('HAS_SURVEY', document.hasSurvey)
+    }
+    if (document.hasAttach !== undefined) {
+        query.set('HAS_ATTACH', document.hasAttach)
+    }
     if (document.bestDateTime !== undefined) {
         query.set('BEST_DATETIME', document.bestDateTime)
     }
@@ -292,9 +298,10 @@ exports.createDocument = async(document) => {
             'WRITE_DATETIME': util.getYYYYMMDDHH24MISS(),
             'TITLE': document.title,
             'CONTENTS': document.contents,
-            'SURVEY_CONTENTS': document.surveyContents,
             'ALLOW_ANONYMOUS': document.allowAnonymous,
             'RESTRICTION': document.restriction,
+            'HAS_SURVEY': !!document.survey,
+            'HAS_ATTACH': !!document.attach,
             'RESERVED1': document.reserved1,
             'RESERVED2': document.reserved2,
             'RESERVED3': document.reserved3,
@@ -321,8 +328,9 @@ const getDocument = async(documentId) => {
             'WRITE_DATETIME': '"writeDateTime"',
             'BEST_DATETIME': '"bestDateTime"',
             'TITLE': '"title"',
-            'SURVEY_CONTENTS': '"surveyContents"',
             'RESTRICTION': '"restriction"',
+            'HAS_SURVEY': '"hasSurvey"',
+            'HAS_ATTACH': '"hasAttach"',
             'RESERVED1': '"reserved1"',
             'RESERVED2': '"reserved2"',
             'RESERVED3': '"reserved3"',
@@ -352,8 +360,9 @@ exports.getUserDocument = async(userId, isAdmin, page = 1) => {
             'BEST_DATETIME': '"bestDateTime"',
             'TITLE': '"title"',
             'CONTENTS': '"contents"',
-            'SURVEY_CONTENTS': '"surveyContents"',
             'RESTRICTION': '"restriction"',
+            'HAS_SURVEY': '"hasSurvey"',
+            'HAS_ATTACH': '"hasAttach"',
             'RESERVED1': '"reserved1"',
             'RESERVED2': '"reserved2"',
             'RESERVED3': '"reserved3"',
@@ -394,6 +403,8 @@ exports.getNickNameDocument = async(nickName, boardType, page = 1) => {
             'TITLE': '"title"',
             'CONTENTS': '"contents"',
             'RESTRICTION': '"restriction"',
+            'HAS_SURVEY': '"hasSurvey"',
+            'HAS_ATTACH': '"hasAttach"',
             'RESERVED1': '"reserved1"',
             'RESERVED2': '"reserved2"',
             'RESERVED3': '"reserved3"',
@@ -444,6 +455,13 @@ exports.updateDocumentReport = async(documentId) => {
 
 exports.getDocumentAttach = async(documentId, attachId) => {
     let query = builder.select()
+        .fields({
+            'DOCUMENT_ID': '"documentId"',
+            'ATTACH_ID': '"attachId"',
+            'ATTACH_TYPE': '"attachType"',
+            'ATTACH_NAME': '"attachName"',
+            'ATTACH_PATH': '"attachPath"'
+        })
         .from('SS_MST_DOCUMENT_ATTACH')
         .where('DOCUMENT_ID = ?', documentId);
     if (attachId) {
@@ -470,11 +488,85 @@ exports.createDocumentAttach = async(documentId, attachId, attachName, attachTyp
 }
 
 exports.deleteDocumentAttach = async(documentId, attachId) => {
-    return await pool.executeQuery('deleteDocumentAttach',
-        builder.delete()
+    let query = builder.delete()
         .from('SS_MST_DOCUMENT_ATTACH')
-        .where('DOCUMENT_ID = ?', documentId)
-        .where('ATTACH_ID = ?', attachId)
+        .where('DOCUMENT_ID = ?', documentId);
+    if (attachId) {
+        query.where('ATTACH_ID = ?', attachId)
+    }
+    return await pool.executeQuery('deleteDocumentAttach' + (attachId ? 'one' : 'all'),
+        query.toParam()
+    )
+}
+
+exports.createDocumentSurvey = async(documentId, surveyContents) => {
+    return await pool.executeQuery('createDocumentSurvey',
+        builder.insert()
+        .into('SS_MST_DOCUMENT_SURVEY')
+        .setFields({
+            'DOCUMENT_ID': documentId,
+            'SURVEY_CONTENTS': JSON.stringify(surveyContents),
+            'SURVEY_ANSWERS': JSON.stringify({})
+        })
         .toParam()
+    )
+}
+
+exports.getDocumentSurvey = async(documentId) => {
+    return await pool.executeQuery('getDocumentSurvey',
+        builder.select()
+        .fields({
+            'DOCUMENT_ID': '"documentId"',
+            'SURVEY_CONTENTS': '"surveyContents"',
+            'SURVEY_ANSWERS': '"surveyAnswers"'
+        })
+        .from('SS_MST_DOCUMENT_SURVEY')
+        .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
+    )
+}
+
+exports.updateDocumentSurvey = async(documentId, answers) => {
+    return await pool.executeQuery('updateDocumentSurvey',
+        builder.update()
+        .table('SS_MST_DOCUMENT_SURVEY')
+        .set('SURVEY_ANSWERS', JSON.stringify(answers))
+        .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
+    )
+}
+
+exports.createDocumentSurveyHistory = async(documentId, userId, response) => {
+    return await pool.executeQuery('createDocumentSurveyHistory',
+        builder.insert()
+        .into('SS_HST_DOCUMENT_SURVEY')
+        .setFields({
+            'DOCUMENT_ID': documentId,
+            'USER_ID': userId,
+            'SURVEY_RESPONSE': JSON.stringify(response),
+            'SURVEY_DATETIME': util.getYYYYMMDDHH24MISS()
+        })
+        .toParam()
+    )
+}
+
+exports.deleteDocumentSurvey = async(documentId) => {
+    return await pool.executeQuery('deleteDocumentSurvey',
+        builder.delete()
+        .from('SS_MST_DOCUMENT_SURVEY')
+        .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
+    )
+}
+
+exports.deleteDocumentSurveyHistory = async(documentId, userId) => {
+    let query = builder.delete()
+        .from('SS_HST_DOCUMENT_SURVEY')
+        .where('DOCUMENT_ID = ?', documentId)
+    if (userId) {
+        query.where('USER_ID = ?', userId)
+    }
+    return await pool.executeQuery('deleteDocumentSurveyHistory' + (userId ? 'user' : 'all'),
+        query.toParam()
     )
 }
