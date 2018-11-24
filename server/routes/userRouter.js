@@ -391,21 +391,18 @@ router.put('/board', requiredSignin, async(req, res) => {
         while (i < boards.length) {
             if ((currentBoard.filter(x => x.boardId === boards[i])).length < 1) { //new board
                 result = await boardModel.getBoard(boards[i]);
-                if (result && result[0] && (result[0].allGroupAuth !== 'NONE' || req.userObject.isAdmin)) {
-                    result = await boardModel.createUserBoard(req.userObject.userId, boards[i], req.userObject.isAdmin)
-                    if (typeof result === 'object') {
-                        failedBoard.push(boards[i]);
-                    }
-                } else {
-                    result = await boardModel.getUserBoardAuth(req.userObject.userId, boards[i]);
-                    if (result && result.length > 0) {
+                if (Array.isArray(result) && result[0] && result[0].boardType === 'T') {
+                    result = await boardModel.checkUserBoardSubscribable(req.userObject.userId, boards[i]);
+                    if (result && result.length > 0 && result[0].count > 0) {
                         result = await boardModel.createUserBoard(req.userObject.userId, boards[i], req.userObject.isAdmin);
-                        if (typeof result === 'object') {
+                        if (typeof result === 'object' || result === 0) {
                             failedBoard.push(boards[i]);
                         }
                     } else {
                         failedBoard.push(boards[i]);
                     }
+                } else { //라운지, 아카이브는 구독(취소) 대상 아님
+                    failedBoard.push(boards[i]);
                 }
             }
             i++;
@@ -413,11 +410,17 @@ router.put('/board', requiredSignin, async(req, res) => {
         i = 0;
         while (i < currentBoard.length) {
             if ((boards.filter(x => x === currentBoard[i].boardId)).length < 1) { //deleted board
-                result = await boardModel.deleteUserBoard(req.userObject.userId, currentBoard[i].boardId);
-                if (typeof result === 'object' || result === 0) {
+                result = await boardModel.getBoard(boards[i]);
+                if (Array.isArray(result) && result.length > 0 && result[0].boardType === 'T') {
+                    if (result[0].ownerId === req.userObject.userId) {
+                        failedBoard.push(-1);
+                    }
+                    result = await boardModel.deleteUserBoard(req.userObject.userId, currentBoard[i].boardId);
+                    if (typeof result === 'object' || result === 0) {
+                        failedBoard.push(currentBoard[i].boardId);
+                    }
+                } else { //라운지, 아카이브는 구독(취소) 대상 아님
                     failedBoard.push(currentBoard[i].boardId);
-                } else if (result < 0) {
-                    failedBoard.push(-1);
                 }
             }
             i++;
@@ -429,10 +432,10 @@ router.put('/board', requiredSignin, async(req, res) => {
         if (failedBoard.indexOf(-1) >= 0) {
             return res.status(400).json({ message: '토픽지기는 토픽을 구독 취소할 수 없습니다. 먼저 토픽을 다른 사람에게 양도하시거나, 토픽 자체를 삭제해주세요.' });
         } else {
-            return res.status(200).json({ message: `게시판을 구독할 권한이 없거나, 구독(취소) 과정에서 오류가 ${failedBoard.length}건 발생하였습니다.`, boardId: failedBoard })
+            return res.status(200).json({ message: `토픽을 구독할 권한이 없거나, 구독(취소) 과정에서 오류가 ${failedBoard.length}건 발생하였습니다.`, boardId: failedBoard })
         }
     } else {
-        return res.status(200).json({ message: '구독하는 게시판을 변경하였습니다.' });
+        return res.status(200).json({ message: '구독하는 토픽을 변경하였습니다.' });
     }
 });
 

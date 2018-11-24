@@ -187,12 +187,6 @@ exports.deleteBoardAuth = async(boardId, groupId) => {
 }
 
 const deleteUserBoard = async(userId, boardId) => {
-    const board = (await getBoard(boardId))[0];
-    if (!board) {
-        return 0;
-    } else if (board.ownerId === userId) { //소유자 이전 후 삭제 가능
-        return -1;
-    }
     let query = builder.delete()
         .from('SS_MST_USER_BOARD')
         .where('BOARD_ID = ?', boardId);
@@ -297,10 +291,10 @@ exports.updateBoard = async(board) => {
     );
 }
 
-exports.getUserBoardAuth = async(userId, boardId) => {
-    return await pool.executeQuery('getUserBoardAuth',
+exports.checkUserBoardSubscribable = async(userId, boardId) => {
+    return await pool.executeQuery('checkUserBoardSubscribable',
         builder.select()
-        .field('AUTH_TYPE', '"authType"')
+        .field('COUNT(*)', 'count')
         .from(builder.select().field('GROUP_ID').from('SS_MST_USER_GROUP').where('USER_ID = ?', userId), 'GROUPS')
         .join(builder.select().fields(['ALLOWED_GROUP_ID', 'BOARD_ID', 'AUTH_TYPE']).from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId), 'AUTH', 'AUTH.ALLOWED_GROUP_ID = GROUPS.GROUP_ID')
     )
