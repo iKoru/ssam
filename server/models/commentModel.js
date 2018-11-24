@@ -39,7 +39,7 @@ const getCommentAnimalName = async(documentId, userId) => {
     if (document && document.length > 0) {
         document = document[0];
         if (document.userId === userId) {
-            return { animalName: '글쓴이', needInsert: false };
+            return { animalName: '글쓴이' };
         } else {
             let names;
             names = await pool.executeQuery('getCommentAnimalName',
@@ -54,7 +54,7 @@ const getCommentAnimalName = async(documentId, userId) => {
                 .toParam()
             )
             if (!names.code && names.length > 0) {
-                return { animalName: names[0].animalName, generation: names[0].generation, needInsert: false };
+                return { animalName: names[0].animalName, generation: names[0].generation };
             } else {
                 let generation = 0;
                 while (1) {
@@ -66,9 +66,14 @@ const getCommentAnimalName = async(documentId, userId) => {
                         .toParam()
                     )
                     if (names.code) {
-                        return { animalName: null, needInsert: false };
+                        return names;
                     } else if (names.length > 0) {
-                        return { animalName: names[Math.floor(Math.random() * names.length)].animalName, generation: generation, needInsert: true };
+                        const animalName = names[Math.floor(Math.random() * names.length)].animalName;
+                        let result = await createCommentAnimalName(documentId, userId, animalName);
+                        if (!Number.isInteger(result) || result === 0) {
+                            return result;
+                        }
+                        return { animalName: animalName, generation: generation };
                     } else {
                         generation += 1;
                     }
@@ -76,11 +81,9 @@ const getCommentAnimalName = async(documentId, userId) => {
             }
         }
     } else {
-        return { animalName: null, needInsert: false };
+        return { animalName: null };
     }
-
 }
-
 
 exports.getChildComments = getChildComments;
 
@@ -166,10 +169,6 @@ const deleteChildComment = async(parentCommentId, documentId) => {
 }
 
 exports.deleteComment = async(commentId) => {
-    const comment = (await getComment(commentId))[0];
-    if (!comment) {
-        return 0;
-    }
     const result = await pool.executeQuery('deleteComment',
         builder.delete()
         .from('SS_MST_COMMENT')
@@ -183,17 +182,11 @@ exports.deleteComment = async(commentId) => {
 }
 
 exports.createComment = async(comment) => {
-    const document = await documentModel.getDocument(comment.documentId);
-    if (!document || !document[0]) {
-        return 0;
-    }
-    if (!comment.isAnonymous) {
-        const board = await boardModel.getBoard(document[0].boardId);
-        const user = await userModel.getUser(comment.userId);
-        comment.userNickName = board[0].boardType === 'T' ? user[0].topicNickName : user[0].loungeNickName;
-    }
     const animalName = await getCommentAnimalName(comment.documentId, comment.userId);
-    const result = await pool.executeQuery('createComments',
+    if (animalName.animalName === null) {
+        return animalName;
+    }
+    let result = await pool.executeQuery('createComments',
         builder.insert()
         .into('SS_MST_COMMENT')
         .setFields({
@@ -215,15 +208,13 @@ exports.createComment = async(comment) => {
         .returning('COMMENT_ID', '"commentId"')
         .toParam()
     )
-    if (result.rowCount > 0 && comment.parentCommentId) {
-        await updateComment({
-            commentId: comment.parentCommentId,
-            child: true
-        });
-    }
+
     if (result.rowCount > 0) {
-        if (animalName.needInsert) {
-            await createCommentAnimalName(comment.documentId, comment.userId, animalName);
+        if (comment.parentCommentId) {
+            await updateComment({
+                commentId: comment.parentCommentId,
+                child: true
+            });
         }
         await documentModel.updateDocumentCommentCount(comment.documentId);
     }
@@ -265,7 +256,7 @@ exports.getUserComment = async(userId, isAdmin, page = 1) => {
             'COMMENT_ID': '"commentId"',
             'DOCUMENT_ID': '"documentId"',
             'CONTENTS': '"contents"',
-            'IS_DELETED':'"isDeleted"',
+            'IS_DELETED': '"isDeleted"',
             'VOTE_UP_COUNT': '"voteUpCount"',
             'VOTE_DOWN_COUNT': '"voteDownCount"',
             'REPORT_COUNT': '"reportCount"',
@@ -280,11 +271,11 @@ exports.getUserComment = async(userId, isAdmin, page = 1) => {
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_COMMENT')
         .where('USER_ID = ?', userId);
-    if(!isAdmin){
+    if (!isAdmin) {
         query.where('IS_DELETED = false')
     }
     return await pool.executeQuery('getUserComment',
-        query        
+        query
         .order('COMMENT_ID', false)
         .limit(10)
         .offset((page - 1) * 10)
@@ -315,6 +306,7 @@ exports.updateCommentReport = async(commentId) => {
 exports.getAnimalNames = async() => {
     return await pool.executeQuery('getAnimalName',
         builder.select()
+        .field('ANIMAL_NAME', '"animalName"')
         .from('SS_MST_ANIMAL_NAME')
         .toParam()
     );
@@ -330,9 +322,6 @@ exports.deleteAnimalNames = async(animalNames) => {
 }
 
 exports.createAnimalNames = async(animalNames) => {
-    if (typeof animalNames === "string") {
-        animalNames = [animalNames];
-    }
     return await pool.executeQuery('createAnimalName' + animalNames.length,
         builder.insert()
         .into('SS_MST_ANIMAL_NAME')
