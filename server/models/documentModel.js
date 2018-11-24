@@ -284,8 +284,6 @@ exports.deleteDocument = async(documentId) => {
 }
 
 exports.createDocument = async(document) => {
-    const user = await userModel.getUser(document.userId);
-    const board = await boardModel.getBoard(document.boardId);
     return await pool.executeQuery('createDocument',
         builder.insert()
         .into('SS_MST_DOCUMENT')
@@ -293,13 +291,13 @@ exports.createDocument = async(document) => {
             'DOCUMENT_ID': builder.rstr('nextval(\'SEQ_SS_MST_DOCUMENT\')'),
             'BOARD_ID': document.boardId,
             'USER_ID': document.userId,
-            'USER_NICKNAME': board[0].boardType === 'T' ? user[0].topicNickName : user[0].loungeNickName,
-            'IS_ANONYMOUS': board[0].isAnonymousable ? document.isAnonymous : false,
+            'USER_NICKNAME': document.userNickName,
+            'IS_ANONYMOUS': document.isAnonymous,
             'WRITE_DATETIME': util.getYYYYMMDDHH24MISS(),
             'TITLE': document.title,
             'CONTENTS': document.contents,
             'ALLOW_ANONYMOUS': document.allowAnonymous,
-            'RESTRICTION': document.restriction,
+            'RESTRICTION': JSON.stringify(document.restriction),
             'HAS_SURVEY': !!document.survey,
             'HAS_ATTACH': !!document.attach,
             'RESERVED1': document.reserved1,
@@ -313,7 +311,7 @@ exports.createDocument = async(document) => {
 }
 
 const getDocument = async(documentId) => {
-    return await pool.executeQuery('getDocument',
+    return await pool.executeQuery('getDocument2',
         builder.select()
         .fields({
             'DOCUMENT_ID': '"documentId"',
@@ -329,6 +327,7 @@ const getDocument = async(documentId) => {
             'BEST_DATETIME': '"bestDateTime"',
             'TITLE': '"title"',
             'RESTRICTION': '"restriction"',
+            'ALLOW_ANONYMOUS': '"allowAnonymous"',
             'HAS_SURVEY': '"hasSurvey"',
             'HAS_ATTACH': '"hasAttach"',
             'RESERVED1': '"reserved1"',
