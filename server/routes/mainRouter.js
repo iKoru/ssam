@@ -2,7 +2,7 @@ const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
-    { reserved } = require('../constants');
+    { reserved, boardTypeDomain } = require('../constants');
 const documentModel = require('../models/documentModel'),
     boardModel = require('../models/boardModel');
 
@@ -40,17 +40,26 @@ const getDocument = async(req, res) => {
         if (Array.isArray(board) && board.length > 0 && board[0].status === 'NORMAL') {
             if (board[0].allGroupAuth === 'NONE') {
                 const check = await boardModel.checkUserBoardReadable(req.userObject.userId, result[0].boardId);
-                if (!Array.isArray(check) || check[0] || check[0].count === 0) {
+                if (!Array.isArray(check) || check.length === 0 || check[0].count === 0) {
                     return res.status(403).json({ target: 'documentId', message: '게시물을 읽을 수 있는 권한이 없습니다.' })
                 }
             }
-            if (result[0].survey) {
-                //let survey = await documentModel.getDocumentSurvey(documentId);
-                //TODO : survey handling. get survey status && the current user has taken part of this survey or not
+            if (result[0].hasSurvey) {
+                let survey = await documentModel.getDocumentSurvey(documentId);
+                if (Array.isArray(survey) && survey.length > 0) {
+                    delete survey[0].documentId;
+                    result[0].survey = survey[0];
+                    let check = await documentModel.getDocumentSurveyHistory(documentId, req.userObject.userId);
+                    if (Array.isArray(check) && check.length > 0 && check[0].count > 0) {
+                        result[0].participatedSurvey = true;
+                    }
+                }
             }
-            const attach = await documentModel.getDocumentAttach(documentId);
-            if (Array.isArray(attach) && attach.length > 0) {
-                result[0].attach = attach;
+            if (result[0].hasAttach) {
+                const attach = await documentModel.getDocumentAttach(documentId);
+                if (Array.isArray(attach) && attach.length > 0) {
+                    result[0].attach = attach;
+                }
             }
             if ((result[0].userId === req.userObject.userId) || req.userObject.isAdmin) {
                 result[0].isWriter = true;
@@ -58,7 +67,7 @@ const getDocument = async(req, res) => {
             delete result[0].userId;
             return res.status(200).json(result[0]);
         } else {
-            return res.status(404).json({ target: 'documentId', message: '삭제된 라운지/토픽입니다.' });
+            return res.status(404).json({ target: 'documentId', message: `삭제된 ${boardTypeDomain[baord[0].boardType]}입니다.` });
         }
     } else {
         return res.status(404).json({ target: 'documentId', message: '존재하지 않는 게시물입니다.' })
