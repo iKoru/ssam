@@ -300,25 +300,33 @@ exports.checkUserBoardSubscribable = async(userId, boardId) => {
     )
 }
 
-exports.checkUserBoardReadable = async(userId, boardId) => {
-    return pool.executeQuery('checkUserBoardReadable',
+const checkUserBoard = async(userId, boardId) => {
+    return pool.executeQuery('checkUserBoard',
         builder.select()
         .field('COUNT(*)', 'count')
-        .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId), 'AUTH')
-        .where('ALLOWED_GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_USER_GROUP WHERE USER_ID = ?)', userId)
+        .from('SS_MST_USER_BOARD')
+        .where('USER_ID = ?', userId)
+        .where('BOARD_ID = ?', boardId)
         .limit(1)
         .toParam()
     );
 }
+exports.checkUserBoardReadable = async(userId, boardId) => {
+    const board = await getBoard(boardId);
+    if (!Array.isArray(board) || board.length === 0) {
+        return [{ count: 0 }];
+    } else if (board[0].boardType !== 'T' || board[0].allGroupAuth !== 'NONE') {
+        return [{ count: 1 }];
+    }
+    return checkUserBoard(userId, boardId);
+}
 
 exports.checkUserBoardWritable = async(userId, boardId) => {
     const board = await getBoard(boardId);
-    if (!board || !board[0]) {
+    if (!Array.isArray(board) || board.length === 0) {
         return [{ count: 0 }];
-    } else if (board[0].allGroupAuth === 'READWRITE') {
-        return [{ count: 1 }];
-    } else {
-        return pool.executeQuery('checkUserBoardReadable',
+    } else if (board[0].boardType !== 'T') { //lounge, archive
+        return pool.executeQuery('checkUserLoungeWritable',
             builder.select()
             .field('COUNT(*)', 'count')
             .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId).where('AUTH_TYPE = \'READWRITE\''), 'AUTH')
@@ -326,6 +334,8 @@ exports.checkUserBoardWritable = async(userId, boardId) => {
             .limit(1)
             .toParam()
         );
+    } else {
+        return checkUserBoard(userId, boardId);
     }
 }
 
