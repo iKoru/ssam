@@ -581,3 +581,30 @@ exports.deleteDocumentSurveyHistory = async(documentId, userId) => {
         query.toParam()
     )
 }
+
+exports.createDocumentViewLog = async(documentId, userId) => {
+    let result = await pool.executeQuery('updateDocumentViewCount',
+        builder.update()
+        .table('SS_MST_DOCUMENT')
+        .set('VIEW_COUNT', builder.str('VIEW_COUNT + 1'))
+        .where('DOCUMENT_ID = ?', documentId)
+        .returning('VIEW_COUNT', '"viewCount"')
+        .toParam()
+    );
+    if (result.rowCount === 1 && result.rows[0].viewCount > 0) {
+        return await pool.executeQuery('createDocumentViewLog',
+            builder.insert()
+            .into('SS_HST_DOCUMENT_VIEW')
+            .setFields({
+                'DOCUMENT_ID': documentId,
+                'USER_ID': userId,
+                'VIEW_ORDER': result.rows[0].viewCount,
+                'VIEW_TIMESTAMP': builder.rstr('current_timestamp')
+            })
+            .returning('VIEW_ORDER', '"viewCount"')
+            .toParam()
+        )
+    } else {
+        return result;
+    }
+}

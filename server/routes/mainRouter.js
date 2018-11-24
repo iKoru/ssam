@@ -44,6 +44,10 @@ const getDocument = async(req, res) => {
                     return res.status(403).json({ target: 'documentId', message: '게시물을 읽을 수 있는 권한이 없습니다.' })
                 }
             }
+            let view = await documentModel.createDocumentViewLog(documentId, userId);
+            if (view && view.rows && view.rows.length > 0 && view.rows[0].viewCount > 0) {
+                result[0].viewCount = view.rows[0].viewCount;
+            }
             if (result[0].hasSurvey) {
                 let survey = await documentModel.getDocumentSurvey(documentId);
                 if (Array.isArray(survey) && survey.length > 0) {
