@@ -21,7 +21,6 @@ module.exports = function(router) {
     router.use('/scrap', scrapRouter);
     router.use('/auth', authRouter);
     router.use('/user', userRouter);
-    router.use('/event', eventRouter);
     router.use('/group', groupRouter);
     router.use('/message', messageRouter);
     router.use('/', signRouter);
