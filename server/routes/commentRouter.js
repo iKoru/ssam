@@ -45,24 +45,25 @@ router.get('/', requiredAuth, async(req, res) => {
             delete y.reserved2;
             delete y.reserved3;
             delete y.reserved4;
-            if (y.childCount > 0) {
-                let child = await commentModel.getChildComments(y.commentId, documentId);
-                if (Array.isArray(child)) {
-                    y.children = child.map(x=>{
-                        if (!req.userObject.isAdmin) {
-                            delete x.userId;
-                        }
-                        delete x.reserved1;
-                        delete x.reserved2;
-                        delete x.reserved3;
-                        delete x.reserved4;
-                        delete x.documentId;
-                        delete x.childCount;
-                    });
-                } else {
-                    logger.error('대댓글 가져오기 실패 : ', child, documentId, y.commentId);
-                }
-            }
+            // if (y.childCount > 0) {
+            //     let child = await commentModel.getChildComments(y.commentId, documentId);
+            //     if (Array.isArray(child)) {
+            //         y.children = child//.map(x=>{
+            //         //     if (!req.userObject.isAdmin) {
+            //         //         delete x.userId;
+            //         //     }
+            //         //     delete x.reserved1;
+            //         //     delete x.reserved2;
+            //         //     delete x.reserved3;
+            //         //     delete x.reserved4;
+            //         //     delete x.documentId;
+            //         //     delete x.childCount;
+            //         //     return x;
+            //         // });
+            //     } else {
+            //         logger.error('대댓글 가져오기 실패 : ', child, documentId, y.commentId);
+            //     }
+            // }
             return y
         }));
         return res.status(200).json(result);
@@ -162,13 +163,13 @@ router.put('/', requiredAuth, async(req, res) => {
         } else if (result[0].userId !== req.userObject.userId && !req.userObject.isAdmin) {
             return res.status(403).json({ target: 'commentId', message: '댓글을 수정할 수 있는 권한이 없습니다.' })
         } 
-        if(comment.contents !== undefined && comment.contents === result[0].contents){
+        if(comment.contents === result[0].contents){
             delete comment.contents;
         }
-        if(comment.isDeleted !== undefined && comment.isDeleted === result[0].isDeleted){
+        if(comment.isDeleted === result[0].isDeleted){
             delete comment.isDeleted;
         }
-        if(comment.contents === undefined && comment.isDeleted === undefined){
+        if((comment.contents === undefined) && (comment.isDeleted === undefined)){
             return res.status(400).json({message:'수정할 내역이 없습니다.'});
         }
     } else {
@@ -183,7 +184,7 @@ router.put('/', requiredAuth, async(req, res) => {
     }
 });
 
-router.delete('/:commentId(^[\\d]+$)', requiredAuth, async(req, res) => {
+router.delete('/:commentId([0-9]+)', adminOnly, async(req, res) => {
     let commentId = req.params.commentId;
     if (typeof commentId === 'string') {
         commentId = parseInt(commentId);
@@ -191,19 +192,23 @@ router.delete('/:commentId(^[\\d]+$)', requiredAuth, async(req, res) => {
     if (!Number.isInteger(commentId)) {
         return res.status(400).json({ target: 'commentId', message: '삭제할 댓글을 찾을 수 없습니다.' });
     }
-    let result = await commentModel.getComment(commentId);
-    if (Array.isArray(result) && result.length > 0) {
-        if ((result[0].userId !== req.userObject.userId) && !req.userObject.isAdmin) {
+    const comment = await commentModel.getComment(commentId);
+    if (Array.isArray(comment) && comment.length > 0) {
+        if ((comment[0].userId !== req.userObject.userId) && !req.userObject.isAdmin) {
             return res.status(403).json({ target: 'commentId', message: '댓글을 삭제할 수 있는 권한이 없습니다.' })
         }
-        if (result[0].childCount > 0) {
+        if (comment[0].childCount > 0) {
             return res.status(403).json({ target: 'childCount', message: '대댓글이 있는 댓글은 삭제할 수 없습니다.' })
         }
-        result = await commentModel.deleteComment(commentId);
+        let result = await commentModel.deleteComment(commentId);
         if (typeof result === 'object' || result === 0) {
             logger.error('댓글 삭제 중 에러 : ', result, commentId);
             return res.status(500).json({ message: `댓글을 삭제하는 중에 오류가 발생했습니다.[${result.code || ''}]` });
         } else {
+            if(comment[0].parentCommentId){
+                await commentModel.updateComment({commentId:comment[0].parentCommentId, child:-1});
+            }
+            await documentModel.updateDocumentCommentCount(comment[0].documentId, -1);
             return res.status(200).json({ message: '댓글을 삭제하였습니다.' });
         }
     } else {

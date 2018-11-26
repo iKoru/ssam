@@ -129,7 +129,11 @@ const updateComment = async(comment) => {
         query.set('CONTENTS', comment.contents)
     }
     if (comment.child !== undefined) {
-        query.set('CHILD_COUNT', builder.str('CHILD_COUNT + 1'))
+        if(comment.child > 0){
+            query.set('CHILD_COUNT', builder.str('CHILD_COUNT + 1'))
+        }else if(comment.child < 0){
+            query.set('CHILD_COUNT', builder.str('CHILD_COUNT - 1'))
+        }
     }
     if (comment.restrictionStatus !== undefined) {
         query.set('RESTRICTION_STATUS', comment.restrictionStatus)
@@ -149,7 +153,7 @@ const updateComment = async(comment) => {
     if (comment.reserved4 !== undefined) {
         query.set('RESERVED4', comment.reserved4)
     }
-    return await pool.executeQuery('updateComment' + (comment.contents ? 'contents' : '') + (comment.child ? 'child' : '') + (comment.restrictionStatus ? 'rest' : '') + (comment.isDeleted !== undefined ? 'delete' : '') + (comment.reserved1 ? '1' : '') + (comment.reserved2 ? '2' : '') + (comment.reserved3 ? '3' : '') + (comment.reserved4 ? '4' : ''),
+    return await pool.executeQuery('updateComment' + (comment.contents ? 'contents' : '') + (comment.child ? (comment.child>0?'c1':'c0') : '') + (comment.restrictionStatus ? 'rest' : '') + (comment.isDeleted !== undefined ? 'delete' : '') + (comment.reserved1 ? '1' : '') + (comment.reserved2 ? '2' : '') + (comment.reserved3 ? '3' : '') + (comment.reserved4 ? '4' : ''),
         query.where('COMMENT_ID = ?', comment.commentId)
         .toParam()
     )
@@ -220,10 +224,10 @@ exports.createComment = async(comment) => {
         if (comment.parentCommentId) {
             await updateComment({
                 commentId: comment.parentCommentId,
-                child: true
+                child: 1
             });
         }
-        await documentModel.updateDocumentCommentCount(comment.documentId);
+        await documentModel.updateDocumentCommentCount(comment.documentId, 1);
     }
     return result;
 }
@@ -241,6 +245,8 @@ const getComment = async(commentId) => {
             'RESTRICTION_STATUS': '"restrictionStatus"',
             'CHILD_COUNT': '"childCount"',
             'WRITE_DATETIME': '"writeDateTime"',
+            'IS_DELETED':'"isDeleted"',
+            'PARENT_COMMENT_ID':'"parentCommentId"',
             'ANIMAL_NAME': '"animalName"',
             'RESERVED1': '"reserved1"',
             'RESERVED2': '"reserved2"',
