@@ -2,7 +2,7 @@ const router = require('express').Router();
 const requiredAuth = require('../middlewares/requiredAuth'),
     adminOnly = require('../middlewares/adminOnly'),
     logger = require('../logger'),
-    {dbErrorCode} = require('../constants');
+    { dbErrorCode } = require('../constants');
 const commentModel = require('../models/commentModel'),
     documentModel = require('../models/documentModel'),
     boardModel = require('../models/boardModel')
@@ -36,21 +36,21 @@ router.get('/', requiredAuth, async(req, res) => {
     }
     result = await commentModel.getComments(documentId, page);
     if (Array.isArray(result)) {
-        result = await Promise.all(result.map(async (y) => {
+        let i = 0;
+        while (i < result.length) {
             if (!req.userObject.isAdmin) {
-                delete y.userId;
+                delete result[i].userId;
             }
-            delete y.documentId;
-            delete y.reserved1;
-            delete y.reserved2;
-            delete y.reserved3;
-            delete y.reserved4;
-            if (y.childCount > 0) {
-                logger.warn("start to take childComment", y)
-                y.children = await commentModel.getChildComments(y.commentId, documentId);
-                if(Array.isArray(y.children)){
-                    logger.info('대댓글 가져옴 : ', y.children);
-                    y.children = y.children.map(x=>{
+            delete result[i].documentId;
+            delete result[i].reserved1;
+            delete result[i].reserved2;
+            delete result[i].reserved3;
+            delete result[i].reserved4;
+            if (result[i].childCount > 0) {
+                logger.warn("start to take childComment", result[i])
+                result[i].children = await commentModel.getChildComments(result[i].commentId, documentId);
+                if (Array.isArray(result[i].children)) {
+                    result[i].children.forEach(x => {
                         if (!req.userObject.isAdmin) {
                             delete x.userId;
                         }
@@ -62,23 +62,23 @@ router.get('/', requiredAuth, async(req, res) => {
                         delete x.childCount;
                         return x;
                     });
-                }else{
-                    logger.error('대댓글 가져오기 실패 : ', y.children, documentId, y.commentId);
-                    delete y.children;
+                } else {
+                    logger.error('대댓글 가져오기 중 에러 : ', result[i].children, documentId, result[i].commentId);
+                    delete result[i].children;
                 }
             }
-            return y
-        }));
+            i++;
+        }
         return res.status(200).json(result);
     } else {
-        logger.error('댓글 가져오기 실패 : ', result, documentId, page)
+        logger.error('댓글 가져오기 에러 : ', result, documentId, page)
         return res.status(500).json({ message: `댓글을 가져오지 못했습니다.[${result.code || ''}]` });
     }
 });
 
 router.post('/', requiredAuth, async(req, res) => {
     let comment = {
-        documentId : req.body.documentId,
+        documentId: req.body.documentId,
         parentCommentId: req.body.parentCommentId,
         contents: req.body.contents,
         isAnonymous: req.body.isAnonymous,
@@ -99,8 +99,8 @@ router.post('/', requiredAuth, async(req, res) => {
     if (typeof comment.isAnonymous !== 'boolean') {
         return res.status(400).json({ target: 'isAnonymous', message: '익명여부 값을 입력해주세요.' });
     }
-    if (!comment.contents){
-        return res.status(400).json({target:'contents', message:'댓글 내용을 입력해주세요.'})
+    if (!comment.contents) {
+        return res.status(400).json({ target: 'contents', message: '댓글 내용을 입력해주세요.' })
     }
 
     const document = await documentModel.getDocument(comment.documentId);
@@ -122,17 +122,17 @@ router.post('/', requiredAuth, async(req, res) => {
         }
         comment.userNickName = result[0].boardType === 'T' ? req.userObject.topicNickName : req.userObject.loungeNickName
     }
-    if(comment.parentCommentId){
+    if (comment.parentCommentId) {
         result = await commentModel.getComment(comment.parentCommentId);
-        if(Array.isArray(result) && result.length > 0 ){
-            if(result[0].isDeleted){
-                return res.status(400).json({target:'parentCommentId', message:'삭제된 댓글에는 대댓글을 작성할 수 없습니다.'})
+        if (Array.isArray(result) && result.length > 0) {
+            if (result[0].isDeleted) {
+                return res.status(400).json({ target: 'parentCommentId', message: '삭제된 댓글에는 대댓글을 작성할 수 없습니다.' })
             }
-        }else{
-            return res.status(404).json({target:'parentCommentId', message:'대댓글을 작성할 댓글을 찾을 수 없습니다.'})
+        } else {
+            return res.status(404).json({ target: 'parentCommentId', message: '대댓글을 작성할 댓글을 찾을 수 없습니다.' })
         }
     }
-    
+
     result = await commentModel.createComment(comment);
     if (result.rowCount > 0 && result.rows && result.rows.length > 0 && result.rows[0].commentId > 0) {
         return res.status(200).json({ message: '댓글을 등록하였습니다.', commentId: result.rows[0].commentId })
@@ -144,7 +144,7 @@ router.post('/', requiredAuth, async(req, res) => {
 
 router.put('/', requiredAuth, async(req, res) => {
     let comment = {
-        commentId : req.body.commentId,
+        commentId: req.body.commentId,
         contents: req.body.contents,
         isDeleted: req.body.isDeleted,
         userId: req.userObject.userId
@@ -158,27 +158,27 @@ router.put('/', requiredAuth, async(req, res) => {
     if (comment.isDeleted !== undefined && typeof comment.isDeleted !== 'boolean') {
         return res.status(400).json({ target: 'isDeleted', message: '삭제여부 값이 올바르지 않습니다.' });
     }
-    
+
     let result = await commentModel.getComment(comment.commentId);
     if (Array.isArray(result) && result.length > 0) {
         if (result[0].isDeleted && !req.userObject.isAdmin) {
             return res.status(400).json({ target: 'commentId', message: '삭제된 댓글입니다.' })
         } else if (result[0].userId !== req.userObject.userId && !req.userObject.isAdmin) {
             return res.status(403).json({ target: 'commentId', message: '댓글을 수정할 수 있는 권한이 없습니다.' })
-        } 
-        if(comment.contents === result[0].contents){
+        }
+        if (comment.contents === result[0].contents) {
             delete comment.contents;
         }
-        if(comment.isDeleted === result[0].isDeleted){
+        if (comment.isDeleted === result[0].isDeleted) {
             delete comment.isDeleted;
         }
-        if((comment.contents === undefined) && (comment.isDeleted === undefined)){
-            return res.status(400).json({message:'수정할 내역이 없습니다.'});
+        if ((comment.contents === undefined) && (comment.isDeleted === undefined)) {
+            return res.status(400).json({ message: '수정할 내역이 없습니다.' });
         }
     } else {
         return res.status(404).json({ target: 'commentId', message: '수정할 댓글이 존재하지 않습니다.' })
     }
-    
+
     result = await commentModel.updateComment(comment);
     if (result > 0) {
         return res.status(200).json({ message: `댓글을 ${comment.isDeleted?'삭제':'수정'}하였습니다.` })
@@ -208,8 +208,8 @@ router.delete('/:commentId([0-9]+)', adminOnly, async(req, res) => {
             logger.error('댓글 삭제 중 에러 : ', result, commentId);
             return res.status(500).json({ message: `댓글을 삭제하는 중에 오류가 발생했습니다.[${result.code || ''}]` });
         } else {
-            if(comment[0].parentCommentId){
-                await commentModel.updateComment({commentId:comment[0].parentCommentId, child:-1});
+            if (comment[0].parentCommentId) {
+                await commentModel.updateComment({ commentId: comment[0].parentCommentId, child: -1 });
             }
             await documentModel.updateDocumentCommentCount(comment[0].documentId, -1);
             return res.status(200).json({ message: '댓글을 삭제하였습니다.' });
@@ -222,8 +222,7 @@ router.delete('/:commentId([0-9]+)', adminOnly, async(req, res) => {
 router.get('/animal', adminOnly, async(req, res) => {
     let result = await commentModel.getAnimalNames();
     if (Array.isArray(result)) {
-        result = result.map(x=>{return x.animalName});
-        return res.status(200).json(result);
+        return res.status(200).json(result.map(x => x.animalName));
     } else {
         logger.error('동물 이름 불러오기 에러 : ', result);
         return res.status(500).json({ message: `동물이름을 불러오는 데 실패하였습니다.[${result.code || ''}]` })
@@ -241,8 +240,8 @@ router.post('/animal', adminOnly, async(req, res) => {
     let result = await commentModel.createAnimalNames(animalNames);
     if (result > 0) {
         return res.status(200).json({ message: '동물이름을 등록하였습니다.' })
-    } else if(typeof result === 'object' && result.code === dbErrorCode.PKDUPLICATION){
-        return res.status(400).json({ target:'animalNames', message: `이미 존재하는 동물 이름은 입력할 수 없습니다.[${result.detail || ''}]` })
+    } else if (typeof result === 'object' && result.code === dbErrorCode.PKDUPLICATION) {
+        return res.status(400).json({ target: 'animalNames', message: `이미 존재하는 동물 이름은 입력할 수 없습니다.[${result.detail || ''}]` })
     } else {
         logger.error('동물 이름 입력 중 에러 : ', result, animalNames);
         return res.status(500).json({ message: `동물 이름을 입력하지 못했습니다.[${result.code || ''}]` })

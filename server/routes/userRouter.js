@@ -248,7 +248,7 @@ router.post('/', async(req, res) => { //회원가입
         if (Array.isArray(result) && result.length > 0 && result[0].count === 0) {
             break;
         } else if (trial > 10) { //max 10 times trial
-            logger.error('닉네임 생성 시도 횟수 초과...')
+            logger.error('닉네임 생성 시도 횟수 초과... 에러')
             return res.status(500).json({ message: '닉네임 생성에 실패하였습니다. 관리자에게 문의해주세요.' });
         }
         trial++;

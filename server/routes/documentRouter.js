@@ -166,7 +166,7 @@ router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async(req, res) => {
             while (i < result.length) {
                 err = await util.unlink(result[i].attachPath)
                 if (err) {
-                    logger.error('게시물 삭제에 따른 첨부파일 삭제 실패 : ', result[i].attachPath, err);
+                    logger.error('게시물 삭제에 따른 첨부파일 삭제 에러 : ', result[i].attachPath, err);
                 } else {
                     await documentModel.deleteDocumentAttach(documentId, result[i].attachId);
                 }

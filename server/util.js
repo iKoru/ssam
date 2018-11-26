@@ -107,7 +107,7 @@ exports.uploadFile = async(files, targetPath, targetDirectory, saveFunction) => 
             i++;
         }
         if (errors.length > 0) {
-            logger.error('파일 업로드 실패 : ', errors);
+            logger.error('파일 업로드 에러 : ', errors);
         }
         return { status: errors.length === files.length ? 500 : 200, message: errors.length > 0 ? `총 ${files.length}건 중 ${errors.length}건의 업로드는 실패하였습니다.` : '성공적으로 첨부파일을 업로드하였습니다.' }
     } else {
