@@ -8,8 +8,10 @@ const headers = { 'Accept': 'application/json' };
 
 describe('Test the document path', async() => {
     // test('create test user for document (init)', async(done) => {
-    //     response = await request.post('/user').set(headers).send({ userId: 'grey', password: 'xptmxm1!', email: 'grey@sen.go.kr' });
+    //     let response = await request.post('/user').set(headers).send({ userId: 'grey', password: 'xptmxm1!', email: 'grey@sen.go.kr' });
     //     expect(response.statusCode).toEqual(200);
+    //        let response = await boardModel.createUserBoard('grey', 'nofree');
+    //        expect(response).toEqual(1);
     //     done();
     // })
     test('document get test', async(done) => {
