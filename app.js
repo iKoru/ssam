@@ -1,6 +1,6 @@
 const path = require('path');
 const express = require('express');
-
+require('express-async-errors');//error handling
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const logger = require('./server/logger');
@@ -21,5 +21,9 @@ app.use(cookieParser());
 app.use(compression());
 
 router(app); //take over to router
-
+//at last, take error to error handler
+app.use((err, req, res, next) => {
+    logger.error('예상하지 못한 에러!! : ', err, req.route, req.userObject);
+    res.status(500).json({message:`예상하지 못한 에러입니다. 관리자에게 문의 부탁드립니다.`})
+});
 module.exports = app;

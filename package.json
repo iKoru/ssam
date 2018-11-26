@@ -15,6 +15,7 @@
         "compression": "^1.7.3",
         "cookie-parser": "^1.4.3",
         "express": "^4.16.4",
+        "express-async-errors": "^3.1.1",
         "fs": "^0.0.1-security",
         "jsonwebtoken": "^8.3.0",
         "jwt-decode": "^2.2.0",
