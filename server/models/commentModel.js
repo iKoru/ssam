@@ -323,12 +323,13 @@ exports.getUserComment = async(userId, isAdmin, page = 1) => {
     )
 }
 
-exports.updateCommentVote = async(commentId, isUp, isCancel) => {
+exports.updateCommentVote = async(commentId, isUp) => {
     return await pool.executeQuery('updateCommentVote' + (isUp ? 'up' : 'down'),
         builder.update()
         .table('SS_MST_COMMENT')
-        .set(isUp ? 'VOTE_UP_COUNT' : 'VOTE_DOWN_COUNT', builder.str(isUp ? `VOTE_UP_COUNT ${isCancel?'-':'+'} 1` : `VOTE_DOWN_COUNT ${isCancel?'-':'+'} 1`))
+        .set(isUp ? 'VOTE_UP_COUNT' : 'VOTE_DOWN_COUNT', builder.str(isUp ? 'VOTE_UP_COUNT + 1' : 'VOTE_DOWN_COUNT + 1'))
         .where('COMMENT_ID = ?', commentId)
+        .returning('VOTE_UP_COUNT', '"voteUpCount"')
         .toParam()
     )
 }

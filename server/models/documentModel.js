@@ -423,7 +423,7 @@ exports.getNickNameDocument = async(nickName, boardType, page = 1) => {
 }
 
 exports.updateDocumentCommentCount = async(documentId, count) => {
-    return await pool.executeQuery('updateDocumentCommentCount' + (count>0?'':'-'),
+    return await pool.executeQuery('updateDocumentCommentCount' + (count > 0 ? '' : '-'),
         builder.update()
         .table('SS_MST_DOCUMENT')
         .set('COMMENT_COUNT', builder.str(`COMMENT_COUNT ${count>0?'+':'-'} 1`))
@@ -438,6 +438,8 @@ exports.updateDocumentVote = async(documentId, isUp, isCancel) => {
         .table('SS_MST_DOCUMENT')
         .set(isUp ? 'VOTE_UP_COUNT' : 'VOTE_DOWN_COUNT', builder.str(isUp ? `VOTE_UP_COUNT ${isCancel ? '-' : '+'} 1` : `VOTE_DOWN_COUNT ${isCancel ? '-' : '+'} 1`))
         .where('DOCUMENT_ID = ?', documentId)
+        .returning('VOTE_UP_COUNT', '"voteUpCount"')
+        .returning('VOTE_DOWN_COUNT', '"voteDownCount"')
         .toParam()
     )
 }
