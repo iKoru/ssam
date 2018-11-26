@@ -83,7 +83,7 @@ router.put('/', requiredAuth, async(req, res) => {
         hasSurvey: req.body.hasSurvey !== undefined ? !!req.body.hasSurvey : undefined
     };
     if (typeof document.documentId === 'string') {
-        document.documentId = parseInt(document.documentId);
+        document.documentId = Number(document.documentId);
     }
     if (!Number.isInteger(document.documentId)) {
         return res.status(400).json({ target: 'documentId', message: '변경할 게시물을 찾을 수 없습니다.' })
@@ -145,7 +145,7 @@ router.put('/', requiredAuth, async(req, res) => {
 router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async(req, res) => {
     let documentId = req.params[0];
     if (typeof documentId === 'string') {
-        documentId = parseInt(documentId);
+        documentId = Number(documentId);
     }
     if (!Number.isInteger(documentId)) {
         return res.status(400).json({ target: 'documentId', message: '삭제할 게시물을 찾을 수 없습니다.' });
@@ -188,7 +188,7 @@ router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async(req, res) => {
 router.post('/attach', requiredAuth, multer.array('attach'), async(req, res) => {
     let documentId = req.body.documentId;
     if (typeof documentId === 'string') {
-        documentId = parseInt(documentId)
+        documentId = Number(documentId)
         if (!Number.isInteger(documentId)) {
             return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
         }
@@ -219,7 +219,7 @@ router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredAuth, async(req
     let documentId = req.params.documentId;
     let attachId = req.params.attachId;
     if (typeof documentId === 'string') {
-        documentId = parseInt(documentId)
+        documentId = Number(documentId)
     }
     if (!Number.isInteger(documentId)) {
         return res.status(400).json({ target: 'documentId', message: '대상 게시물을 찾을 수 없습니다.' })

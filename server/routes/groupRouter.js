@@ -116,12 +116,12 @@ router.put('/', adminOnly, async(req, res) => { //update current group
 router.delete('/:groupId([0-9]+)', adminOnly, async(req, res) => { //delete existing group
     let groupId = req.params.groupId;
     if (typeof groupId === 'string') {
-        groupId = parseInt(groupId);
+        groupId = Number(groupId);
     }
     if (!Number.isInteger(groupId)) {
         return res.status(400).json({ target: 'groupId', message: '잘못된 접근입니다.' });
     }
-    let result = await groupModel.deleteGroup(parseInt(groupId));
+    let result = await groupModel.deleteGroup(groupId);
     if (typeof result === 'object' || result === 0) {
         logger.error('그룹 삭제 중 에러 : ', result, req.userObject.userId, groupId)
         return res.status(500).json({ message: `그룹을 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });

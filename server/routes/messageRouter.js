@@ -15,7 +15,7 @@ router.get('/list', requiredSignin, async(req, res) => {
         }
     }
     if (req.query.page) {
-        req.query.page = parseInt(req.query.page);
+        req.query.page = Number(req.query.page);
         if (isNaN(req.query.page) || req.query.page < 1) {
             return res.status(400).json({ target: 'page', message: '잘못된 요청입니다.' });
         }
@@ -83,7 +83,7 @@ router.get('/', requiredSignin, async(req, res) => {
         return res.status(400).json({ target: 'chatId', message: '잘못된 접근입니다.' });
     }
     if (typeof query.chatId === 'string') {
-        query.chatId = parseInt(query.chatId);
+        query.chatId = Number(query.chatId);
     }
     if (!Number.isInteger(query.chatId)) {
         return res.status(400).json({ target: 'chatId', message: '잘못된 접근입니다.' });
@@ -118,7 +118,7 @@ router.post('/', requiredSignin, async(req, res) => {
     let message = {...req.body };
     //parameter safe check
     if (typeof message.chatId === 'string') {
-        message.chatId = parseInt(message.chatId);
+        message.chatId = Number(message.chatId);
     }
     if (!Number.isInteger(message.chatId)) {
         return res.status(400).json({ target: 'chatId', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
@@ -147,7 +147,7 @@ router.post('/', requiredSignin, async(req, res) => {
 router.delete('/:chatId([0-9]+)', requiredSignin, async(req, res) => {
     let chatId = req.params.chatId;
     if (typeof chatId === 'string') {
-        chatId = parseInt(chatId);
+        chatId = Number(chatId);
     }
     if (!Number.isInteger(chatId)) {
         return res.status(400).json({ target: 'chatId', message: '삭제할 채팅을 찾을 수 없습니다.' });

@@ -12,13 +12,13 @@ router.get('/', requiredAuth, async(req, res) => {
     let documentId = req.query.documentId,
         page = req.query.page;
     if (typeof documentId === 'string') {
-        documentId = parseInt(documentId)
+        documentId = Number(documentId)
     }
     if (!Number.isInteger(documentId)) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
     if (typeof page === 'string') {
-        page = parseInt(page)
+        page = Number(page)
     }
     if (page !== undefined && !Number.isInteger(page)) {
         return res.status(400).json({ target: 'page', message: '게시물을 찾을 수 없습니다.' });
@@ -68,13 +68,13 @@ router.post('/', requiredAuth, async(req, res) => {
         userId: req.userObject.userId
     }
     if (typeof comment.documentId === 'string') {
-        comment.documentId = parseInt(comment.documentId)
+        comment.documentId = Number(comment.documentId)
     }
     if (!Number.isInteger(comment.documentId)) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
     if (typeof comment.parentCommentId === 'string') {
-        comment.parentCommentId = parseInt(comment.parentCommentId)
+        comment.parentCommentId = Number(comment.parentCommentId)
     }
     if (comment.parentCommentId !== undefined && !Number.isInteger(comment.parentCommentId)) {
         return res.status(400).json({ target: 'parentCommentId', message: '상위 댓글을 찾을 수 없습니다.' });
@@ -133,7 +133,7 @@ router.put('/', requiredAuth, async(req, res) => {
         userId: req.userObject.userId
     }
     if (typeof comment.commentId === 'string') {
-        comment.commentId = parseInt(comment.commentId)
+        comment.commentId = Number(comment.commentId)
     }
     if (!Number.isInteger(comment.commentId)) {
         return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
@@ -174,7 +174,7 @@ router.put('/', requiredAuth, async(req, res) => {
 router.delete('/:commentId([0-9]+)', adminOnly, async(req, res) => {
     let commentId = req.params.commentId;
     if (typeof commentId === 'string') {
-        commentId = parseInt(commentId);
+        commentId = Number(commentId);
     }
     if (!Number.isInteger(commentId)) {
         return res.status(400).json({ target: 'commentId', message: '삭제할 댓글을 찾을 수 없습니다.' });
