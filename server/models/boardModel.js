@@ -284,6 +284,7 @@ exports.checkUserBoardSubscribable = async(userId, boardId) => {
         .field('COUNT(*)', 'count')
         .from(builder.select().field('GROUP_ID').from('SS_MST_USER_GROUP').where('USER_ID = ?', userId), 'GROUPS')
         .join(builder.select().fields(['ALLOWED_GROUP_ID', 'BOARD_ID', 'AUTH_TYPE']).from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId), 'AUTH', 'AUTH.ALLOWED_GROUP_ID = GROUPS.GROUP_ID')
+        .toParam()
     )
 }
 
