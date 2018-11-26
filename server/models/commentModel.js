@@ -41,8 +41,7 @@ const getCommentAnimalName = async(documentId, userId) => {
         if (document.userId === userId) {
             return { animalName: '글쓴이' };
         } else {
-            let names;
-            names = await pool.executeQuery('getCommentAnimalName',
+            let names = await pool.executeQuery('getCommentAnimalName',
                 builder.select()
                 .fields({
                     'ANIMAL_NAME': '"animalName"',
@@ -53,10 +52,10 @@ const getCommentAnimalName = async(documentId, userId) => {
                 .where('USER_ID = ?', userId)
                 .toParam()
             )
-            if (!names.code && names.length > 0) {
+            if (Array.isArray(names) && names.length > 0 && names[0].animalName) {
                 return { animalName: names[0].animalName, generation: names[0].generation };
             } else {
-                let generation = 0;
+                let generation = 1;
                 while (1) {
                     names = await pool.executeQuery('getNewCommentAnimalName',
                         builder.select()
@@ -69,7 +68,7 @@ const getCommentAnimalName = async(documentId, userId) => {
                         return names;
                     } else if (names.length > 0) {
                         const animalName = names[Math.floor(Math.random() * names.length)].animalName;
-                        let result = await createCommentAnimalName(documentId, userId, animalName);
+                        let result = await createCommentAnimalName(documentId, userId, animalName, generation);
                         if (!Number.isInteger(result) || result === 0) {
                             return result;
                         }
@@ -169,6 +168,14 @@ const deleteChildComment = async(parentCommentId, documentId) => {
 }
 
 exports.deleteComment = async(commentId) => {
+    let comment = await getComment(commentId);
+    if(!Array.isArray(comment)){
+        return comment;
+    }else if(comment.length > 0){    
+        comment = comment[0];
+    }else{
+        return 1;//already deleted
+    }
     const result = await pool.executeQuery('deleteComment',
         builder.delete()
         .from('SS_MST_COMMENT')
@@ -198,8 +205,8 @@ exports.createComment = async(comment) => {
             'PARENT_COMMENT_ID': comment.parentCommentId,
             'DEPTH': comment.parentCommentId ? 1 : 0,
             'WRITE_DATETIME': util.getYYYYMMDDHH24MISS(),
-            'IS_ANONYMOUS': document[0].allowAnonymous ? comment.isAnonymous : false,
-            'ANIMAL_NAME': animalName.animalName + (animalName.generation > 0 ? ` ${animalName.generation}세` : ''),
+            'IS_ANONYMOUS': comment.isAnonymous,
+            'ANIMAL_NAME': animalName.animalName + (animalName.generation > 1 ? ` ${animalName.generation}세` : ''),
             'RESERVED1': comment.reserved1,
             'RESERVED2': comment.reserved2,
             'RESERVED3': comment.reserved3,
@@ -330,15 +337,15 @@ exports.createAnimalNames = async(animalNames) => {
     )
 }
 
-const createCommentAnimalName = async(documentId, userId, animalName) => {
+const createCommentAnimalName = async(documentId, userId, animalName, generation) => {
     return await pool.executeQuery('createCommentAnimalName',
         builder.insert()
         .into('SS_HST_DOCUMENT_ANIMAL')
         .setFields({
             'DOCUMENT_ID': documentId,
             'USER_ID': userId,
-            'ANIMAL_NAME': animalName.animalName,
-            'GENERATION': animalName.generation
+            'ANIMAL_NAME': animalName,
+            'GENERATION': generation
         })
         .toParam()
     )
