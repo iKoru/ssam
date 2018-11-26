@@ -34,14 +34,14 @@ describe('Test the scrap path', async() => {
         expect(response.body).toHaveProperty('target', 'scrapGroupId');
         response = await request.post('/scrap').set(headers_local).send({ scrapGroupId: 0 })
         expect(response.statusCode).toEqual(400);
-        expect(response.body).toHaveProperty('target', 'documentId');
+        expect(response.body).toHaveProperty('target', 'scrapGroupId');
         response = await request.post('/scrap').set(headers_local).send({ scrapGroupId: scrapGroup[0].scrapGroupId })
         expect(response.statusCode).toEqual(400);
         expect(response.body).toHaveProperty('target', 'documentId');
         response = await request.post('/scrap').set(headers_local).send({ scrapGroupId: scrapGroup[0].scrapGroupId, documentId: 'asdfasdf' })
         expect(response.statusCode).toEqual(400);
         expect(response.body).toHaveProperty('target', 'documentId');
-        response = await request.post('/scrap').set(headers_local).send({ scrapGroupId: 0, documentId: 9999999 })
+        response = await request.post('/scrap').set(headers_local).send({ scrapGroupId: 999, documentId: 9999999 })
         expect(response.statusCode).toEqual(404);
         expect(response.body).toHaveProperty('target', 'scrapGroupId');
         response = await request.post('/scrap').set(headers_local).send({ scrapGroupId: scrapGroup[0].scrapGroupId, documentId: 9999999 })
@@ -70,9 +70,9 @@ describe('Test the scrap path', async() => {
 
         //delete scrap
         response = await request.delete('/scrap/0/0').set(headers_local)
-        expect(response.statusCode).toEqual(404)
+        expect(response.statusCode).toEqual(400)
         response = await request.delete('/scrap/1/0').set(headers_local)
-        expect(response.statusCode).toEqual(404)
+        expect(response.statusCode).toEqual(400)
         response = await request.delete('/scrap/' + scrapGroup[0].scrapGroupId + '/' + document[0].documentId).set(headers_local)
         expect(response.statusCode).toEqual(200)
 
@@ -118,7 +118,7 @@ describe('Test the scrap path', async() => {
         expect(response.statusCode).toEqual(400)
         expect(response.body).toHaveProperty('target', 'scrapGroupId');
         response = await request.put('/scrap/group').set(headers_local).send({ scrapGroupName: 'changed group name!', scrapGroupId: 0 })
-        expect(response.statusCode).toEqual(404)
+        expect(response.statusCode).toEqual(400)
         expect(response.body).toHaveProperty('target', 'scrapGroupId');
         response = await request.put('/scrap/group').set(headers_local).send({ scrapGroupName: 'changed group name!', scrapGroupId: 999 })
         expect(response.statusCode).toEqual(404)
@@ -133,7 +133,7 @@ describe('Test the scrap path', async() => {
 
         //delete scrap group
         response = await request.delete('/scrap/group/0').set(headers_local);
-        expect(response.statusCode).toEqual(404)
+        expect(response.statusCode).toEqual(400)
         expect(response.body).toHaveProperty('target', 'scrapGroupId');
         response = await request.delete('/scrap/group/1233').set(headers_local);
         expect(response.statusCode).toEqual(404)

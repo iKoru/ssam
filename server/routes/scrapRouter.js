@@ -39,7 +39,7 @@ router.delete(/\/group\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) =
     if (typeof scrapGroupId === 'string') {
         scrapGroupId = Number(scrapGroupId);
     }
-    if (typeof scrapGroupId !== 'number' || scrapGroupId > 32767) {
+    if (typeof scrapGroupId !== 'number' || scrapGroupId > 32767 || scrapGroupId === 0) {
         return res.status(400).json({ target: 'scrapGroupId', message: '스크랩 그룹이 올바르지 않습니다.' });
     }
 
@@ -61,7 +61,7 @@ router.put('/group', requiredSignin, async(req, res) => {
         return res.status(400).json({ target: 'scrapGroupName', message: '스크랩 그룹 이름을 입력해주세요.' });
     } else if (scrapGroupName.length > 50) {
         return res.status(400).json({ target: 'scrapGroupName', message: '스크랩 그룹 이름은 50자 이내로 해주세요.' });
-    } else if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767) {
+    } else if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {
         return res.status(400).json({ target: 'scrapGroupId', message: '변경할 스크랩 그룹을 선택해주세요.' })
     }
 
@@ -81,17 +81,14 @@ router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) => { //scra
     if (typeof scrapGroupId === 'string') {
         scrapGroupId = Number(scrapGroupId);
     }
-    if (typeof scrapGroupId !== 'number' || scrapGroupId > 32767) {
+    if (typeof scrapGroupId !== 'number' || scrapGroupId > 32767 || scrapGroupId === 0) {
         return res.status(400).json({ target: 'scrapGroupId', message: '스크랩 그룹이 올바르지 않습니다.' });
     }
     let page = req.query.page;
     if (typeof page === 'string') {
         page = Number(page)
-        if (isNaN(page)) {
-            return res.status(400).json({ target: 'page', message: '페이지 값이 올바르지 않습니다.' });
-        }
     }
-    if ((page !== undefined && typeof page !== 'number') || page < 1) {
+    if (page !== undefined && (!Number.isInteger(page) || page < 1)) {
         return res.status(400).json({ target: 'page', message: '페이지 값이 올바르지 않습니다.' });
     }
 
@@ -107,7 +104,7 @@ router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) => { //scra
 router.post('/', requiredAuth, async(req, res) => { //add document into scrap group
     let scrapGroupId = req.body.scrapGroupId,
         documentId = req.body.documentId;
-    if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767) {
+    if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {
         return res.status(400).json({ target: 'scrapGroupId', message: '저장할 스크랩 그룹을 선택해주세요.' })
     } else if (!Number.isInteger(documentId)) {
         return res.status(400).json({ target: 'documentId', message: '저장할 게시물을 선택해주세요.' });
@@ -147,9 +144,9 @@ router.delete(/\/(\d+)\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) =
         documentId = Number(documentId);
     }
 
-    if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767) {
+    if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {
         return res.status(400).json({ target: 'scrapGroupId', message: '삭제할 스크랩 그룹을 선택해주세요.' })
-    } else if (!Number.isInteger(documentId)) {
+    } else if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '삭제할 게시물을 선택해주세요.' });
     }
 

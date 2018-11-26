@@ -85,7 +85,7 @@ router.put('/', requiredAuth, async(req, res) => {
     if (typeof document.documentId === 'string') {
         document.documentId = Number(document.documentId);
     }
-    if (!Number.isInteger(document.documentId)) {
+    if (!Number.isInteger(document.documentId) || document.documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '변경할 게시물을 찾을 수 없습니다.' })
     } else if (typeof document.isDeleted !== 'boolean' && document.isDeleted !== undefined) {
         return res.status(400).json({ target: 'isDeleted', message: '삭제여부 값이 올바르지 않습니다.' })
@@ -147,7 +147,7 @@ router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async(req, res) => {
     if (typeof documentId === 'string') {
         documentId = Number(documentId);
     }
-    if (!Number.isInteger(documentId)) {
+    if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '삭제할 게시물을 찾을 수 없습니다.' });
     }
     let result = await documentModel.getDocument(documentId);
@@ -189,9 +189,9 @@ router.post('/attach', requiredAuth, multer.array('attach'), async(req, res) => 
     let documentId = req.body.documentId;
     if (typeof documentId === 'string') {
         documentId = Number(documentId)
-        if (!Number.isInteger(documentId)) {
-            return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
-        }
+    }
+    if (!Number.isInteger(documentId) || documentId === 0) {
+        return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
     }
     let document = await documentModel.getDocument(documentId);
     if (!Array.isArray(req.files) || req.files.length < 1) {
@@ -221,7 +221,7 @@ router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredAuth, async(req
     if (typeof documentId === 'string') {
         documentId = Number(documentId)
     }
-    if (!Number.isInteger(documentId)) {
+    if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '대상 게시물을 찾을 수 없습니다.' })
     } else if (typeof attachId !== 'string') {
         return res.status(400).json({ target: 'attachId', message: '삭제할 첨부파일이 올바르지 않습니다.' })

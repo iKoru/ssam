@@ -89,7 +89,7 @@ router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async(req
     let documentId = req.params.documentId;
     if (!Number.isInteger(documentId)) {
         documentId = Number(documentId);
-        if (isNaN(documentId)) {
+        if (isNaN(documentId) || documentId === 0) {
             next();
             return;
         }
@@ -102,7 +102,7 @@ router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredAuth, async(req, res, next) => {
     console.log('/:documentId targeted', documentId);
     if (!Number.isInteger(documentId)) {
         documentId = Number(documentId);
-        if (isNaN(documentId)) {
+        if (isNaN(documentId) || documentId === 0) {
             next();
             return;
         }
@@ -116,7 +116,7 @@ router.post('/survey', requiredAuth, async(req, res) => {
     if (typeof survey.documentId === 'string') {
         survey.documentId = Number(survey.documentId)
     }
-    if (!Number.isInteger(survey.documentId)) {
+    if (!Number.isInteger(survey.documentId) || survey.documentId === 0) {
         return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
     let document = await documentModel.getDocument(survey.documentId);

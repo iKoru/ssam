@@ -16,9 +16,9 @@ router.get('/list', requiredSignin, async(req, res) => {
     }
     if (req.query.page) {
         req.query.page = Number(req.query.page);
-        if (isNaN(req.query.page) || req.query.page < 1) {
-            return res.status(400).json({ target: 'page', message: '잘못된 요청입니다.' });
-        }
+    }
+    if (req.query.page !== undefined && (!Number.isInteger(req.query.page) || req.query.page < 1)) {
+        return res.status(400).json({ target: 'page', message: '잘못된 요청입니다.' });
     }
     let result = await messageModel.getChats(req.userObject.userId, null, req.query.chatType, req.query.page)
     let other;
@@ -79,27 +79,24 @@ router.post('/list', requiredSignin, async(req, res) => {
 
 router.get('/', requiredSignin, async(req, res) => {
     let query = {...req.query };
-    if (!query.chatId) {
-        return res.status(400).json({ target: 'chatId', message: '잘못된 접근입니다.' });
-    }
     if (typeof query.chatId === 'string') {
         query.chatId = Number(query.chatId);
     }
-    if (!Number.isInteger(query.chatId)) {
-        return res.status(400).json({ target: 'chatId', message: '잘못된 접근입니다.' });
+    if (!Number.isInteger(query.chatId) || query.chatId === 0) {
+        return res.status(400).json({ target: 'chatId', message: '채팅을 찾을 수 없습니다.' });
     }
     if (query.timestampBefore && !moment(query.timestampBefore, 'YYYYMMDDHH24MISS').isValid()) {
-        return res.status(400).json({ target: 'timestampBefore', message: '잘못된 접근입니다.' });
+        return res.status(400).json({ target: 'timestampBefore', message: '조회 조건이 올바르지 않습니다.' });
     }
     if (query.timestampAfter && !moment(query.timestampAfter, 'YYYYMMDDHH24MISS').isValid()) {
-        return res.status(400).json({ target: 'timestampAfter', message: '잘못된 접근입니다.' });
+        return res.status(400).json({ target: 'timestampAfter', message: '조회 조건이 올바르지 않습니다.' });
     }
     if (!query.timestampAfter && !query.timestampBefore) {
         query.timestampBefore = moment().format('YYYYMMDDHH24MISS');
     }
     let result = await messageModel.getChat(query.chatId);
     if (!Array.isArray(result) || result.length < 1 || (result[0].user1Id !== req.userObject.userId && result[0].user2Id !== req.userObject.userId)) {
-        return res.status(403).json({ target: 'chatId', message: '잘못된 접근입니다.' });
+        return res.status(403).json({ target: 'chatId', message: '조회할 수 없는 채팅입니다.' });
     }
     result = await messageModel.getMessages(query.chatId, query.timestampBefore, query.timestampAfter);
     if (!Array.isArray(result)) {
@@ -120,7 +117,7 @@ router.post('/', requiredSignin, async(req, res) => {
     if (typeof message.chatId === 'string') {
         message.chatId = Number(message.chatId);
     }
-    if (!Number.isInteger(message.chatId)) {
+    if (!Number.isInteger(message.chatId) || message.chatId === 0) {
         return res.status(400).json({ target: 'chatId', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
     } else if (typeof message.contents !== 'string' || message.contents === '') {
         return res.status(400).json({ target: 'contents', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
@@ -129,7 +126,7 @@ router.post('/', requiredSignin, async(req, res) => {
     if (!Array.isArray(result) || result.length < 1) {
         return res.status(404).json({ target: 'chatId', message: '존재하지 않는 채팅입니다.' });
     } else if (result[0].user1Id !== req.userObject.userId && result[0].user2Id !== req.userObject.userId) {
-        return res.status(403).json({ target: 'chatId', message: '잘못된 접근입니다.' });
+        return res.status(403).json({ target: 'chatId', message: '메시지를 보낼 수 있는 채팅이 아닙니다.' });
     } else if ((result[0].user1Status !== 'NORMAL') || (result[0].user2Status !== 'NORMAL')) {
         return res.status(400).json({ target: 'chatId', message: '상대방이 채팅을 종료하였습니다.' });
     }
@@ -149,7 +146,7 @@ router.delete('/:chatId([0-9]+)', requiredSignin, async(req, res) => {
     if (typeof chatId === 'string') {
         chatId = Number(chatId);
     }
-    if (!Number.isInteger(chatId)) {
+    if (!Number.isInteger(chatId) || chatId === 0) {
         return res.status(400).json({ target: 'chatId', message: '삭제할 채팅을 찾을 수 없습니다.' });
     }
     let result = await messageModel.getChat(chatId);

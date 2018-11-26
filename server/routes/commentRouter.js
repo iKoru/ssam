@@ -14,13 +14,13 @@ router.get('/', requiredAuth, async(req, res) => {
     if (typeof documentId === 'string') {
         documentId = Number(documentId)
     }
-    if (!Number.isInteger(documentId)) {
+    if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
     if (typeof page === 'string') {
         page = Number(page)
     }
-    if (page !== undefined && !Number.isInteger(page)) {
+    if (page !== undefined && !Number.isInteger(page) || page === 0) {
         return res.status(400).json({ target: 'page', message: '게시물을 찾을 수 없습니다.' });
     } else if (page < 1) {
         page = 1;
@@ -70,13 +70,13 @@ router.post('/', requiredAuth, async(req, res) => {
     if (typeof comment.documentId === 'string') {
         comment.documentId = Number(comment.documentId)
     }
-    if (!Number.isInteger(comment.documentId)) {
+    if (!Number.isInteger(comment.documentId) || comment.documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
     if (typeof comment.parentCommentId === 'string') {
         comment.parentCommentId = Number(comment.parentCommentId)
     }
-    if (comment.parentCommentId !== undefined && !Number.isInteger(comment.parentCommentId)) {
+    if (comment.parentCommentId !== undefined && (!Number.isInteger(comment.parentCommentId) || comment.parentCommentId === 0)) {
         return res.status(400).json({ target: 'parentCommentId', message: '상위 댓글을 찾을 수 없습니다.' });
     }
     if (typeof comment.isAnonymous !== 'boolean') {
@@ -135,7 +135,7 @@ router.put('/', requiredAuth, async(req, res) => {
     if (typeof comment.commentId === 'string') {
         comment.commentId = Number(comment.commentId)
     }
-    if (!Number.isInteger(comment.commentId)) {
+    if (!Number.isInteger(comment.commentId) || comment.commentId === 0) {
         return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
     }
     if (comment.isDeleted !== undefined && typeof comment.isDeleted !== 'boolean') {
@@ -176,7 +176,7 @@ router.delete('/:commentId([0-9]+)', adminOnly, async(req, res) => {
     if (typeof commentId === 'string') {
         commentId = Number(commentId);
     }
-    if (!Number.isInteger(commentId)) {
+    if (!Number.isInteger(commentId) || commentId === 0) {
         return res.status(400).json({ target: 'commentId', message: '삭제할 댓글을 찾을 수 없습니다.' });
     }
     const comment = await commentModel.getComment(commentId);

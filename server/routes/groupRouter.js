@@ -118,7 +118,7 @@ router.delete('/:groupId([0-9]+)', adminOnly, async(req, res) => { //delete exis
     if (typeof groupId === 'string') {
         groupId = Number(groupId);
     }
-    if (!Number.isInteger(groupId)) {
+    if (!Number.isInteger(groupId) || groupId === 0) {
         return res.status(400).json({ target: 'groupId', message: '잘못된 접근입니다.' });
     }
     let result = await groupModel.deleteGroup(groupId);
