@@ -93,10 +93,11 @@ describe('Test the comment path', async () => {
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toBeGreaterThan(0);
         console.log(response.body);
-        //let children = [];
-        //response.body.filter(x=>x.childCount > 0).map(x=>{console.log(x.children);children.concat(x.children)});
-        //console.log(children);
-        //expect(children.filter(x=>x.commentId === childCommentId).length).toBeGreaterThan(0);
+        let children = [];
+        response.body.filter(x=>x.childCount > 0).map(x=>{children.concat(x.children)});
+        console.log(children);
+        console.log(childCommentId);
+        expect(children.filter(x=>x.commentId === childCommentId).length).toBeGreaterThan(0);
         
         response = await commentModel.getComment(commentId);
         expect(response.length).toEqual(1);

@@ -45,25 +45,28 @@ router.get('/', requiredAuth, async(req, res) => {
             delete y.reserved2;
             delete y.reserved3;
             delete y.reserved4;
-            // if (y.childCount > 0) {
-            //     let child = await commentModel.getChildComments(y.commentId, documentId);
-            //     if (Array.isArray(child)) {
-            //         y.children = child//.map(x=>{
-            //         //     if (!req.userObject.isAdmin) {
-            //         //         delete x.userId;
-            //         //     }
-            //         //     delete x.reserved1;
-            //         //     delete x.reserved2;
-            //         //     delete x.reserved3;
-            //         //     delete x.reserved4;
-            //         //     delete x.documentId;
-            //         //     delete x.childCount;
-            //         //     return x;
-            //         // });
-            //     } else {
-            //         logger.error('대댓글 가져오기 실패 : ', child, documentId, y.commentId);
-            //     }
-            // }
+            if (y.childCount > 0) {
+                logger.warn("start to take childComment", y)
+                y.children = await commentModel.getChildComments(y.commentId, documentId);
+                if(Array.isArray(y.children)){
+                    logger.info('대댓글 가져옴 : ', y.children);
+                    y.children = y.children.map(x=>{
+                        if (!req.userObject.isAdmin) {
+                            delete x.userId;
+                        }
+                        delete x.reserved1;
+                        delete x.reserved2;
+                        delete x.reserved3;
+                        delete x.reserved4;
+                        delete x.documentId;
+                        delete x.childCount;
+                        return x;
+                    });
+                }else{
+                    logger.error('대댓글 가져오기 실패 : ', y.children, documentId, y.commentId);
+                    delete y.children;
+                }
+            }
             return y
         }));
         return res.status(200).json(result);

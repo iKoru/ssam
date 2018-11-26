@@ -1,8 +1,6 @@
 const pool = require('./db').instance,
     builder = require('./db').builder;
 const documentModel = require('./documentModel'),
-    userModel = require('./userModel'),
-    boardModel = require('./boardModel'),
     util = require('../util');
 
 const getChildComments = async(parentCommentId, documentId) => {
