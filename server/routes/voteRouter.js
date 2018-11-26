@@ -53,7 +53,7 @@ router.post('/comment', requiredAuth, (req, res) => {
     }
     const document = await documentModel.getDocument(comment[0].documentId);
     if (!Array.isArray(document) || document.length === 0) {
-        return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
+        return res.status(404).json({ target: 'documentId', message: '댓글의 게시물을 찾을 수 없습니다.' });
     } else if (document[0].isDeleted) {
         return res.status(403).json({ target: 'documentId', message: '삭제된 게시물에는 추천을 할 수 없습니다.' })
     }
