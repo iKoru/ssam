@@ -422,11 +422,11 @@ exports.getNickNameDocument = async(nickName, boardType, page = 1) => {
     )
 }
 
-exports.updateDocumentCommentCount = async(documentId) => {
-    return await pool.executeQuery('updateDocumentCommentCount',
+exports.updateDocumentCommentCount = async(documentId, count) => {
+    return await pool.executeQuery('updateDocumentCommentCount' + (count>0?'':'-'),
         builder.update()
         .table('SS_MST_DOCUMENT')
-        .set('COMMENT_COUNT', builder.str('COMMENT_COUNT + 1'))
+        .set('COMMENT_COUNT', builder.str(`COMMENT_COUNT ${count>0?'+':'-'} 1`))
         .where('DOCUMENT_ID = ?', documentId)
         .toParam()
     )
