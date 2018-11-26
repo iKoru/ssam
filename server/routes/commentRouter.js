@@ -37,6 +37,7 @@ router.get('/', requiredAuth, async(req, res) => {
     result = await commentModel.getComments(documentId, page);
     if (Array.isArray(result)) {
         let i = 0;
+        let child = await commentModel.getChildCommentsByDocumentId(documentId);
         while (i < result.length) {
             if (!req.userObject.isAdmin) {
                 delete result[i].userId;
@@ -47,25 +48,7 @@ router.get('/', requiredAuth, async(req, res) => {
             delete result[i].reserved3;
             delete result[i].reserved4;
             if (result[i].childCount > 0) {
-                logger.warn("start to take childComment", result[i])
-                result[i].children = await commentModel.getChildComments(result[i].commentId, documentId);
-                if (Array.isArray(result[i].children)) {
-                    result[i].children.forEach(x => {
-                        if (!req.userObject.isAdmin) {
-                            delete x.userId;
-                        }
-                        delete x.reserved1;
-                        delete x.reserved2;
-                        delete x.reserved3;
-                        delete x.reserved4;
-                        delete x.documentId;
-                        delete x.childCount;
-                        return x;
-                    });
-                } else {
-                    logger.error('대댓글 가져오기 중 에러 : ', result[i].children, documentId, result[i].commentId);
-                    delete result[i].children;
-                }
+                result[i].children = child.filter(x => x.parentCommentId === result[i].commentId);
             }
             i++;
         }
@@ -183,6 +166,7 @@ router.put('/', requiredAuth, async(req, res) => {
     if (result > 0) {
         return res.status(200).json({ message: `댓글을 ${comment.isDeleted?'삭제':'수정'}하였습니다.` })
     } else {
+        logger.error('댓글 수정 중 에러 : ', result, req.userObject.userId, comment)
         return res.status(500).json({ message: `댓글을 수정하지 못했습니다.[${result.code || ''}]` })
     }
 });

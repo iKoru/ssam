@@ -31,6 +31,35 @@ const getChildComments = async(parentCommentId, documentId) => {
     );
 }
 
+exports.getChildCommentsByDocumentId = async(documentId) => {
+    return await pool.executeQuery('getChildCommentsByDocumentId',
+        builder.select()
+        .fields({
+            'USER_ID': '"userId"',
+            'COMMENT_ID': '"commentId"',
+            'PARENT_COMMENT_ID': '"parentCommentId"',
+            'DOCUMENT_ID': '"documentId"',
+            'VOTE_UP_COUNT': '"voteUpCount"',
+            'VOTE_DOWN_COUNT': '"voteDownCount"',
+            'RESTRICTION_STATUS': '"restrictionStatus"',
+            'CHILD_COUNT': '"childCount"',
+            'WRITE_DATETIME': '"writeDateTime"',
+            'ANIMAL_NAME': '"animalName"',
+            'RESERVED1': '"reserved1"',
+            'RESERVED2': '"reserved2"',
+            'RESERVED3': '"reserved3"',
+            'RESERVED4': '"reserved4"'
+        })
+        .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+        .field(builder.case().when('IS_DELETED = true').then('삭제된 댓글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
+        .from('SS_MST_COMMENT')
+        .where('DOCUMENT_ID = ?', documentId)
+        .where('DEPTH = 1')
+        .order('COMMENT_ID')
+        .toParam()
+    );
+}
+
 
 const getCommentAnimalName = async(documentId, userId) => {
     let document = await documentModel.getDocument(documentId);
@@ -127,9 +156,9 @@ const updateComment = async(comment) => {
         query.set('CONTENTS', comment.contents)
     }
     if (comment.child !== undefined) {
-        if(comment.child > 0){
+        if (comment.child > 0) {
             query.set('CHILD_COUNT', builder.str('CHILD_COUNT + 1'))
-        }else if(comment.child < 0){
+        } else if (comment.child < 0) {
             query.set('CHILD_COUNT', builder.str('CHILD_COUNT - 1'))
         }
     }
@@ -151,7 +180,7 @@ const updateComment = async(comment) => {
     if (comment.reserved4 !== undefined) {
         query.set('RESERVED4', comment.reserved4)
     }
-    return await pool.executeQuery('updateComment' + (comment.contents ? 'contents' : '') + (comment.child ? (comment.child>0?'c1':'c0') : '') + (comment.restrictionStatus ? 'rest' : '') + (comment.isDeleted !== undefined ? 'delete' : '') + (comment.reserved1 ? '1' : '') + (comment.reserved2 ? '2' : '') + (comment.reserved3 ? '3' : '') + (comment.reserved4 ? '4' : ''),
+    return await pool.executeQuery('updateComment' + (comment.contents ? 'contents' : '') + (comment.child ? (comment.child > 0 ? 'c1' : 'c0') : '') + (comment.restrictionStatus ? 'rest' : '') + (comment.isDeleted !== undefined ? 'delete' : '') + (comment.reserved1 ? '1' : '') + (comment.reserved2 ? '2' : '') + (comment.reserved3 ? '3' : '') + (comment.reserved4 ? '4' : ''),
         query.where('COMMENT_ID = ?', comment.commentId)
         .toParam()
     )
@@ -171,12 +200,12 @@ const deleteChildComment = async(parentCommentId, documentId) => {
 
 exports.deleteComment = async(commentId) => {
     let comment = await getComment(commentId);
-    if(!Array.isArray(comment)){
+    if (!Array.isArray(comment)) {
         return comment;
-    }else if(comment.length > 0){    
+    } else if (comment.length > 0) {
         comment = comment[0];
-    }else{
-        return 1;//already deleted
+    } else {
+        return 1; //already deleted
     }
     const result = await pool.executeQuery('deleteComment',
         builder.delete()
@@ -243,8 +272,8 @@ const getComment = async(commentId) => {
             'RESTRICTION_STATUS': '"restrictionStatus"',
             'CHILD_COUNT': '"childCount"',
             'WRITE_DATETIME': '"writeDateTime"',
-            'IS_DELETED':'"isDeleted"',
-            'PARENT_COMMENT_ID':'"parentCommentId"',
+            'IS_DELETED': '"isDeleted"',
+            'PARENT_COMMENT_ID': '"parentCommentId"',
             'ANIMAL_NAME': '"animalName"',
             'RESERVED1': '"reserved1"',
             'RESERVED2': '"reserved2"',
