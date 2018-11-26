@@ -32,6 +32,7 @@ router.get('/', checkSignin, async(req, res) => { //get group list
     }
     let result = await groupModel.getGroups(req.userObject ? req.userObject.isAdmin : false, groupType, req.query.page)
     if (!Array.isArray(result)) {
+        logger.error('그룹정보 조회 중 에러 : ', result, req.userObject.userId, groupType)
         return res.status(500).json({ message: `그룹 정보를 받아오는 중에 오류가 발생했습니다.[${result.code || ''}]` });
     } else {
         return res.status(200).json(result);
@@ -65,6 +66,7 @@ router.post('/', adminOnly, async(req, res) => { //create new group
 
     let result = await groupModel.createGroup(group)
     if ((typeof result === 'object' && result.code) || result.rowCount === 0) {
+        logger.error('그룹 생성 중 에러 : ', result, req.userObject.userId, group)
         return res.status(500).json({ message: `그룹을 추가하던 중 오류가 발생했습니다.[${result.code || ''}]` });
     } else {
         return res.status(200).json({ message: `${group.groupName} 그룹을 추가하였습니다.`, groupId: result.rows[0].groupId });
@@ -102,6 +104,7 @@ router.put('/', adminOnly, async(req, res) => { //update current group
 
     let result = await groupModel.updateGroup(group)
     if (typeof result === 'object') {
+        logger.error('그룹 변경 중 에러 : ', result, req.userObject.userId, group)
         return res.status(500).json({ message: `그룹을 변경하던 중 오류가 발생했습니다.[${result.code || ''}]` });
     } else if (result === 0) {
         return res.status(404).json({ message: '존재하지 않는 그룹ID입니다.' });
@@ -120,6 +123,7 @@ router.delete('/:groupId([0-9]+)', adminOnly, async(req, res) => { //delete exis
     }
     let result = await groupModel.deleteGroup(parseInt(groupId));
     if (typeof result === 'object' || result === 0) {
+        logger.error('그룹 삭제 중 에러 : ', result, req.userObject.userId, groupId)
         return res.status(500).json({ message: `그룹을 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });
     } else {
         return res.status(200).json({ message: '그룹을 삭제하였습니다.' });

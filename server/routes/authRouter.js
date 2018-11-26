@@ -31,6 +31,7 @@ router.post('/', requiredSignin, async(req, res) => {
     if (typeof result === 'number' && result > 0) {
         return res.status(200).json({ message: '등록된 이메일로 인증메일을 보내드렸습니다. 이메일을 확인해주세요.' });
     } else {
+        logger.error('인증메일 보내기 요청 처리 중 에러 : ', result, req.userObject.userId, req.userObject.email)
         return res.status(500).json({ message: `인증 메일을 생성하는 도중에 오류가 발생했습니다.[${result.code || ''}]` })
     }
 
@@ -61,6 +62,7 @@ router.get('/submit', async(req, res) => { // get /auth/submit
                     if (await userModel.updateUserAuth(userId) === 1 && await userModel.updateUserInfo({ userId: userId, status: 'AUTHORIZED' }) === 1) {
                         return res.status(200).json({ message: '정상적으로 인증되었습니다!' }); //TODO : show success page
                     } else {
+                        logger.error('인증메일 응답으로 인증 처리 중 에러 : ', result, req.userObject.userId, req.userObject.email, erq.query.authKey)
                         return res.status(500).json({ message: '인증사항을 저장하는 데 실패하였습니다. 관리자에게 문의해주세요.' }); //TODO : show failed page
                     }
                 }

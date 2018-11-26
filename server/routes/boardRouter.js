@@ -120,6 +120,7 @@ router.put('/', requiredAuth, async(req, res) => {
     } else {
         let result = await boardModel.updateBoard({ boardId: boardId, reservedDate: moment().add(1, 'months').format('YYYYMMDD'), reservedContents: reservedContents });
         if (typeof result === 'object' || result === 0) {
+            logger.error('게시판 설정 변경 처리 중 에러 : ', result, req.userObject.userId, reservedContents)
             return res.status(500).json({ message: `변경될 내용을 저장하는 데 실패하였습니다.[${result.code || ''}] 다시 시도해주세요.` });
         } else {
             if (process.env.NODE_ENV === 'development') {
@@ -193,6 +194,7 @@ router.post('/', requiredAuth, async(req, res) => {
         }
         return res.status(200).json({ message: `${constants.boardTypeDomain[board.boardType]}을 만들었습니다.` })
     } else {
+        logger.error('게시판 생성 중 에러 : ', result, req.userObject.userId, board)
         return res.status(500).json({ message: `${constants.boardTypeDomain[board.boardType]} 생성에 실패하였습니다.[${check.code}] 잠시 후 다시 시도해주세요.` })
     }
 });
@@ -204,6 +206,7 @@ router.delete('/:boardId([a-zA-z]+)', adminOnly, async(req, res) => {
     }
     let result = await boardModel.deleteBoard(boardId);
     if (typeof result === 'object' || result === 0) {
+        logger.error('게시판 삭제 중 에러 : ', result, req.userObject.userId, boardId)
         return res.status(500).json({ message: '게시판을 삭제하는 중에 오류가 발생했습니다.' });
     } else {
         return res.status(200).json({ message: '게시판을 삭제하였습니다.' });
@@ -233,13 +236,14 @@ router.get('/list', requiredAuth, async(req, res) => {
     let result = await boardModel.getBoards(searchQuery, boardType, page, searchTarget, sortTarget, isAscending, req.userObject.isAdmin);
     if (Array.isArray(result)) {
         if (!req.userObject.isAdmin) {
-            result.map(x => {
+            result.forEach(x => {
                 delete x.status;
                 delete x.ownerId;
             })
         }
         return res.status(200).json(result);
     } else {
+        logger.error('게시판 리스트 조회 중 에러 : ', result, req.userObject.userId, req.query)
         return res.status(500).json({ message: `정보를 가져오는 도중에 오류가 발생했습니다.[${result.code || ''}]` })
     }
 });

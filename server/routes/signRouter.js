@@ -6,7 +6,7 @@ const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly');
 const signModel = require('../models/signModel'),
     userModel = require('../models/userModel'),
-util = require('../util');
+    util = require('../util');
 
 //based on /
 router.get('/signin', visitorOnly('/'), (req, res) => {
@@ -21,10 +21,11 @@ router.post('/signin', async(req, res) => {
         return;
     } else {
         const user = await userModel.getUser(userId);
-        if (!user || user.length < 1) {
+        if (!user || user.length === 0) {
             res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
             return;
         } else if (user.length > 1) {
+            logger.error('로그인 중 중복아이디 에러 : ', user);
             res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
             return;
         } else {
@@ -39,8 +40,8 @@ router.post('/signin', async(req, res) => {
             } else if (await bcrypt.compare(password, user[0].password)) {
                 jwt.sign({ userId: userId }, config.jwtKey, { expiresIn: (req.body.rememberMe ? "7d" : "3h"), ...config.jwtOptions }, (err, token) => {
                     if (err) {
-                        console.log(err);
                         signModel.createSigninLog(userId, req.ip, false);
+                        logger.error('로그인 진행 중 에러 : ', err, userId)
                         res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
                     } else {
                         signModel.createSigninLog(userId, req.ip, true);
@@ -75,9 +76,10 @@ router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
         res.status(400).json({ message: '잘못된 접근입니다.' });
     } else {
         const user = await userModel.getUser(userId);
-        if (!user || user.length < 1) {
+        if (!Array.isArray(user) || user.length === 0) {
             res.status(404).json({ message: '존재하지 않는 아이디입니다.' });
         } else if (user.length > 1) {
+            logger.error('패스워드 리셋 중 중복아이디 에러 : ', user);
             res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
         } else if (user[0].email === email) {
             let newPassword = util.partialUUID() + util.partialUUID();
@@ -85,7 +87,8 @@ router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
                 userId: userId,
                 password: await bcrypt.hash(newPassword, config.bcryptSalt)
             });
-            if (result !== 1) {
+            if (typeof result !== 'number' || result === 0) {
+                logger.error('새로운 리셋 패스워드 저장 에러 : ', user, result);
                 res.status(500).json({ message: '새로운 패스워드를 저장하는 데 실패하였습니다. 관리자에게 문의 부탁드립니다.' });
             } else {
                 //send email

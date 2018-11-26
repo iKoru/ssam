@@ -142,6 +142,7 @@ router.post('/survey', requiredAuth, async(req, res) => {
         check = await documentModel.updateDocumentSurvey(survey.documentId, original.surveyAnswers);
         if (typeof check === 'object' || check === 0) {
             await documentModel.deleteDocumentSurveyHistory(survey.documentId, req.userObject.userId)
+            logger.error('설문 내용 제출 중 에러 : ', check, req.userObject.userId, survey.answer)
             return res.status(500).json({ message: `설문 응답을 저장하는 데 실패하였습니다.[${check.code}]` })
         } else {
             return res.status(200).json({ message: '설문 내용을 저장하였습니다.' });
