@@ -34,24 +34,37 @@ exports.getDocumentReports = async(documentId, status, page = 1) => {
     )
 }
 
-exports.getDocumentReportsByNickName = async(nickName, boardType, page = 1) => {
-    const user = await userModel.getUserIdByNickName(nickName, boardType);
-    if (!user || !user[0]) {
-        return [];
+exports.getDocumentReportsAdmin = async(documentId, userId, status, page = 1) => {
+    let from = builder.select().fields(['USER_NICKNAME', 'DOCUMENT_ID', 'REPORT_TYPE_ID', 'REPORT_DATETIME', 'STATUS']).from('SS_HST_DOCUMENT_REPORT')
+    if(userId){
+        from.where('USER_ID = ?', userId);
     }
-    return await pool.executeQuery('getDocumentReportsByNickName',
-        builder.select()
+    if(status){
+        from.where('STATUS = ?', status)
+    }
+    let document;
+    if(documentId){
+        document = builder.select().from('SS_MST_DOCUMENT').where('DOCUMENT_ID = ?', documentId)
+    }else{
+        document = 'SS_MST_DOCUMENT';
+    }
+    
+    let query = builder.select()
         .fields({
-            'DOCUMENT_ID': '"documentId"',
-            'USER_NICKNAME': '"nickName"',
+            'RUSER.DOCUMENT_ID': '"documentId"',
+            'DOCUMENT.TITLE':'"title"',
+            'DOCUMENT.BOARD_ID':'"boardId"',
+            'RUSER.USER_NICKNAME': '"nickName"',
             'REPORT_TYPE_NAME': '"reportTypeName"',
             'REPORT_TYPE_DESCRIPTION': '"reportTypeDescription"',
-            'REPORT_DATETIME': '"reportDate"',
-            'STATUS': '"status"'
+            'REPORT_DATETIME': '"reportDateTime"',
+            'RUSER.STATUS': '"status"'
         })
-        .from(builder.select().fields(['USER_NICKNAME', 'DOCUMENT_ID', 'REPORT_TYPE_ID', 'REPORT_DATETIME', 'STATUS']).from('SS_HST_DOCUMENT_REPORT').where('USER_ID = ?', user[0].userId), 'RUSER')
+        .from(from, 'RUSER')
         .join('SS_MST_REPORT', 'REPORT', 'REPORT.REPORT_TYPE_ID = RUSER.REPORT_TYPE_ID')
-        .order('REPORT_DATETIME', false)
+        .join(document, 'DOCUMENT', 'RUSER.DOCUMENT_ID = DOCUMENT.DOCUMENT_ID')
+    return await pool.executeQuery('getDocumentReportsAdmin',
+        query.order('REPORT_DATETIME', false)
         .offset((page - 1) * 10)
         .limit(10)
         .toParam()
@@ -86,13 +99,22 @@ exports.getCommentReports = async(commentId, status, page = 1) => {
     )
 }
 
-exports.getCommentReportsByNickName = async(nickName, boardType, page = 1) => {
-    const user = await userModel.getUserIdByNickName(nickName, boardType);
-    if (!user || !user[0]) {
-        return [];
+exports.getCommentReportsAdmin = async(commentId, userId, status, page = 1) => {
+    let from = builder.select().fields(['USER_NICKNAME', 'COMMENT_ID', 'REPORT_TYPE_ID', 'REPORT_DATETIME', 'STATUS']).from('SS_HST_COMMENT_REPORT')
+    if(userId){
+        from.where('USER_ID = ?', userId);
     }
-    return await pool.executeQuery('getCommentReportsByNickName',
-        builder.select()
+    if(status){
+        from.where('STATUS = ?', status)
+    }
+    let comment;
+    if(commentId){
+        comment = builder.select().from('SS_MST_COMMENT').where('COMMENT_ID = ?', commentId)
+    }else{
+        comment = 'SS_MST_COMMENT';
+    }
+    
+    let query = builder.select()
         .fields({
             'DOCUMENT_ID': '"documentId"',
             'RUSER.COMMENT_ID': '"commentId"',
@@ -102,66 +124,75 @@ exports.getCommentReportsByNickName = async(nickName, boardType, page = 1) => {
             'REPORT_DATETIME': '"reportDateTime"',
             'RUSER.STATUS': '"status"'
         })
-        .from(builder.select().fields(['USER_NICKNAME', 'COMMENT_ID', 'REPORT_TYPE_ID', 'REPORT_DATETIME', 'STATUS']).from('SS_HST_COMMENT_REPORT').where('USER_ID = ?', user[0].userId), 'RUSER')
+        .from(from, 'RUSER')
         .join('SS_MST_REPORT', 'REPORT', 'REPORT.REPORT_TYPE_ID = RUSER.REPORT_TYPE_ID')
-        .join('SS_MST_COMMENT', 'COMMENT', 'RUSER.COMMENT_ID = COMMENT.COMMENT_ID')
-        .order('REPORT_DATETIME', false)
+        .join(comment, 'COMMENT', 'RUSER.COMMENT_ID = COMMENT.COMMENT_ID')
+    return await pool.executeQuery('getCommentReportsAdmin',
+        query.order('REPORT_DATETIME', false)
         .offset((page - 1) * 10)
         .limit(10)
         .toParam()
     )
 }
 
-exports.createDocumentReport = async(userId, documentId, reportType) => {
-    const user = await userModel.getUser(userId);
-    if (!user || !user[0]) {
-        return 0;
-    }
-    let result = await documentModel.updateDocumentReport(documentId);
+exports.createDocumentReport = async(userId, documentId, reportType, userNickName) => {
+    let result = await pool.executeQuery('createDocumentReport',
+        builder.insert()
+        .into('SS_HST_DOCUMENT_REPORT')
+        .setFields({
+            'DOCUMENT_ID': documentId,
+            'USER_ID': userId,
+            'USER_NICKNAME': userNickName,
+            'REPORT_TYPE_ID': reportType,
+            'REPORT_DATETIME': util.getYYYYMMDDHH24MISS()
+        })
+        .toParam()
+    )
     if (result > 0) {
-        const board = await boardModel.getBoardByDocument(documentId);
-        result = await pool.executeQuery('createDocumentReport',
-            builder.insert()
-            .into('SS_HST_DOCUMENT_REPORT')
-            .setFields({
-                'DOCUMENT_ID': documentId,
-                'USER_ID': userId,
-                'USER_NICKNAME': board[0].boardType === 'T' ? user[0].topicNickName : user[0].loungeNickName,
-                'REPORT_TYPE_ID': reportType,
-                'REPORT_DATETIME': util.getYYYYMMDDHH24MISS()
-            })
-            .toParam()
-        )
-        if (!util.isNumeric(result) || (result === 0)) { //rollback when error
-            await documentModel.updateDocumentReport(documentId, true);
+        result = await documentModel.updateDocumentReport(documentId);
+        if (typeof result === 'object' || result === 0) { //rollback when error
+            deleteDocumentReport(userId, documentId);
         }
     }
     return result;
 }
 
-exports.createCommentReport = async(userId, commentId, reportType) => {
-    const user = await userModel.getUser(userId);
-    if (!user || !user[0]) {
-        return 0;
-    }
-    let result = await commentModel.updateCommentReport(commentId);
-    if (result > 0) {
-        const comment = await commentModel.getComment(commentId);
-        const board = await boardModel.getBoardByDocument(comment[0].documentId);
-        result = await pool.executeQuery('createCommentReport',
+const deleteDocumentReport = async(userId, documentId) => {
+    return pool.executeQuery('deleteDocumentReport',
+        builder.delete()
+        .from('SS_HST_DOCUMENT_REPORT')
+        .where('USER_ID = ?', userId)
+        .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
+        )
+}
+
+const deleteCommentReport = async(userId, commentId) => {
+    return pool.executeQuery('deleteComumentReport',
+        builder.delete()
+        .from('SS_HST_COMMENT_REPORT')
+        .where('USER_ID = ?', userId)
+        .where('COMMENT_ID = ?', commentId)
+        .toParam()
+        )
+}
+exports.createCommentReport = async(userId, commentId, reportType, userNickName) => {
+    let result = await pool.executeQuery('createCommentReport',
             builder.insert()
             .into('SS_HST_COMMENT_REPORT')
             .setFields({
                 'COMMENT_ID': commentId,
                 'USER_ID': userId,
-                'USER_NICKNAME': board[0].boardType === 'T' ? user[0].topicNickName : user[0].loungeNickName,
+                'USER_NICKNAME': userNickName,
                 'REPORT_TYPE_ID': reportType,
                 'REPORT_DATETIME': util.getYYYYMMDDHH24MISS()
             })
             .toParam()
         )
-        if (!util.isNumeric(result) || (result === 0)) { //rollback when error
-            await commentModel.updateCommentReport(commentId, true);
+    if (result > 0) {
+        result = await commentModel.updateCommentReport(commentId);
+        if(typeof result === 'object' || result === 0){
+            deleteCommentReport(userId, commentId)
         }
     }
     return result;
