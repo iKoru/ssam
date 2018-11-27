@@ -262,25 +262,12 @@ exports.updateDocument = async(document) => {
 }
 
 exports.deleteDocument = async(documentId) => {
-    const document = (await getDocument(documentId))[0];
-    if (!document) {
-        return 0;
-    }
-    const result = await pool.executeQuery('deleteDocument',
+    return await pool.executeQuery('deleteDocument',
             builder.delete()
             .from('SS_MST_DOCUMENT')
             .where('DOCUMENT_ID = ?', documentId)
             .toParam()
         )
-        // if (result > 0 && document.commentCount > 0) {
-        //     await pool.executeQuery('deleteDocumentComment',
-        //         builder.delete()
-        //         .from('SS_MST_COMMENT')
-        //         .where('DOCUMENT_ID = ?', documentId)
-        //         .toParam()
-        //     )
-        // }
-    return result;
 }
 
 exports.createDocument = async(document) => {
