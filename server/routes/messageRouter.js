@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const requiredSignin = require('../middlewares/requiredSignin'),
     messageModel = require('../models/messageModel'),
-    userModel = require('../models/userModel');
+    userModel = require('../models/userModel'),
+    logger = require('../logger');
 const { moment } = require('../util');
 //based on /message
 

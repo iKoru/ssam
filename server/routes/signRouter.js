@@ -6,7 +6,8 @@ const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly');
 const signModel = require('../models/signModel'),
     userModel = require('../models/userModel'),
-    util = require('../util');
+    util = require('../util'),
+    logger = require('../logger');
 
 //based on /
 router.get('/signin', visitorOnly('/'), (req, res) => {

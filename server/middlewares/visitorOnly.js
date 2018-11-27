@@ -7,7 +7,10 @@ module.exports = (redirectPath) => {
         if (token) {
             new Promise((resolve, reject) => {
                 jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
-                    if (err) reject(err)
+                    if (err){
+                        reject(err)
+                        return;
+                    } 
                     resolve(result);
                 });
             }).then((result) => {

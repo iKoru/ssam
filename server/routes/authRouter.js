@@ -2,7 +2,8 @@ const router = require('express').Router();
 const requiredSignin = require('../middlewares/requiredSignin');
 const authModel = require('../models/authModel'),
     userModel = require('../models/userModel'),
-    util = require('../util');
+    util = require('../util'),
+    logger = require('../logger');
 //based on /auth
 router.get('/', requiredSignin, (req, res) => {
     res.status(501).end();
@@ -62,7 +63,7 @@ router.get('/submit', async(req, res) => { // get /auth/submit
                     if (await userModel.updateUserAuth(userId) === 1 && await userModel.updateUserInfo({ userId: userId, status: 'AUTHORIZED' }) === 1) {
                         return res.status(200).json({ message: '정상적으로 인증되었습니다!' }); //TODO : show success page
                     } else {
-                        logger.error('인증메일 응답으로 인증 처리 중 에러 : ', result, req.userObject.userId, req.userObject.email, erq.query.authKey)
+                        logger.error('인증메일 응답으로 인증 처리 중 에러 : ', req.userObject.userId, req.userObject.email, req.query.authKey)
                         return res.status(500).json({ message: '인증사항을 저장하는 데 실패하였습니다. 관리자에게 문의해주세요.' }); //TODO : show failed page
                     }
                 }

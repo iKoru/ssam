@@ -2,7 +2,6 @@ const pool = require('./db').instance,
     builder = require('./db').builder;
 const constants = require('../constants'),
     util = require('../util');
-const groupModel = require('./groupModel');
 
 exports.checkBoardId = async(boardId) => {
     if (constants.reserved.includes(boardId)) {

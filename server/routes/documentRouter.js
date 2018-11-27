@@ -5,7 +5,7 @@ const boardModel = require('../models/boardModel'),
     documentModel = require('../models/documentModel'),
     util = require('../util'),
     path = require('path'),
-    fs = require('fs'),
+    logger = require('../logger'),
     multer = require('multer')({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) //max 4MB
     //based on /document
 
@@ -65,7 +65,7 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
             }
         }
         if (document.attach) {
-            result = await util.uploadFile(req.files, 'attach', documentId, documentModel.createDocumentAttach);
+            result = await util.uploadFile(req.files, 'attach', document.documentId, documentModel.createDocumentAttach);
             return res.status(200).json({ target: 'attach', message: result.status === 200 ? '게시물을 등록하였습니다.' : '게시물을 등록하였으나, 첨부파일을 업로드하지 못했습니다.', documentId: req.body.documentId });
         } else {
             return res.status(200).json({ message: '게시물을 등록하였습니다.', documentId: req.body.documentId })
@@ -121,7 +121,7 @@ router.put('/', requiredAuth, async(req, res) => {
         result = await documentModel.deleteDocumentSurvey(document.documentId);
         if (typeof result !== 'object') {
             result = await documentModel.deleteDocumentSurveyHistory(document.documentId)
-            if (typeof result === object) {
+            if (typeof result === 'object') {
                 logger.error('게시물 변경(설문조사 내역 삭제) 중 에러 : ', result, document);
                 return res.status(500).json({ target: 'hasSurvey', message: `설문조사 내역을 삭제하는 데 실패하였습니다.[${result.code || ''}]` })
             }

@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const config = require('../../config.js');
-const util = require('../util'),
-    logger = require('../logger');
+const logger = require('../logger');
 const userModel = require('../models/userModel')
 
 const auth = (req, res, next) => {

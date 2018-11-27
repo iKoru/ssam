@@ -2,8 +2,6 @@ const pool = require('./db').instance,
     builder = require('./db').builder;
 const documentModel = require('./documentModel'),
     commentModel = require('./commentModel'),
-    boardModel = require('./boardModel'),
-    userModel = require('./userModel'),
     util = require('../util');
 
 exports.getDocumentReports = async(documentId, status, page = 1) => {

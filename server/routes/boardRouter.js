@@ -194,7 +194,7 @@ router.post('/', requiredAuth, async(req, res) => {
         }
         return res.status(200).json({ message: `${constants.boardTypeDomain[board.boardType]}을 만들었습니다.` })
     } else {
-        logger.error('게시판 생성 중 에러 : ', result, req.userObject.userId, board)
+        logger.error('게시판 생성 중 에러 : ', check, req.userObject.userId, board)
         return res.status(500).json({ message: `${constants.boardTypeDomain[board.boardType]} 생성에 실패하였습니다.[${check.code}] 잠시 후 다시 시도해주세요.` })
     }
 });
