@@ -8,7 +8,6 @@ const signRouter = require('./routes/signRouter'),
     commentRouter = require('./routes/commentRouter'),
     reportRouter = require('./routes/reportRouter'),
     voteRouter = require('./routes/voteRouter'),
-    eventRouter = require('./routes/eventRouter'),
     messageRouter = require('./routes/messageRouter'),
     groupRouter = require('./routes/groupRouter');
 
