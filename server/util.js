@@ -1,4 +1,5 @@
 let moment = require('moment-timezone');
+moment.locale('ko');
 moment.tz.setDefault('Asia/Seoul');
 const util = require('util');
 const fs = require('fs');
