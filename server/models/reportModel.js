@@ -133,7 +133,7 @@ exports.getCommentReportsAdmin = async(commentId, userId, status, page = 1) => {
     )
 }
 
-exports.createDocumentReport = async(userId, documentId, reportType, userNickName) => {
+exports.createDocumentReport = async(userId, documentId, reportTypeId, userNickName) => {
     let result = await pool.executeQuery('createDocumentReport',
         builder.insert()
         .into('SS_HST_DOCUMENT_REPORT')
@@ -141,7 +141,7 @@ exports.createDocumentReport = async(userId, documentId, reportType, userNickNam
             'DOCUMENT_ID': documentId,
             'USER_ID': userId,
             'USER_NICKNAME': userNickName,
-            'REPORT_TYPE_ID': reportType,
+            'REPORT_TYPE_ID': reportTypeId,
             'REPORT_DATETIME': util.getYYYYMMDDHH24MISS()
         })
         .toParam()
@@ -174,7 +174,7 @@ const deleteCommentReport = async(userId, commentId) => {
         .toParam()
         )
 }
-exports.createCommentReport = async(userId, commentId, reportType, userNickName) => {
+exports.createCommentReport = async(userId, commentId, reportTypeId, userNickName) => {
     let result = await pool.executeQuery('createCommentReport',
             builder.insert()
             .into('SS_HST_COMMENT_REPORT')
@@ -182,7 +182,7 @@ exports.createCommentReport = async(userId, commentId, reportType, userNickName)
                 'COMMENT_ID': commentId,
                 'USER_ID': userId,
                 'USER_NICKNAME': userNickName,
-                'REPORT_TYPE_ID': reportType,
+                'REPORT_TYPE_ID': reportTypeId,
                 'REPORT_DATETIME': util.getYYYYMMDDHH24MISS()
             })
             .toParam()

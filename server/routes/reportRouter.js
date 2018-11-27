@@ -17,12 +17,12 @@ router.post('/document', requiredAuth, async (req, res) => {
     if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
-    let reportType = req.body.reportType;
-    if(typeof reportType === 'string'){
-        reportType = Number(reportType);
+    let reportTypeId = req.body.reportTypeId;
+    if(typeof reportTypeId === 'string'){
+        reportTypeId = Number(reportTypeId);
     }
-    if(!Number.isInteger(reportType) || reportType === 0){
-        return res.status(400).json({target:'reportType', message:'신고 구분이 적절하지 않습니다.'})
+    if(!Number.isInteger(reportTypeId) || reportTypeId === 0){
+        return res.status(400).json({target:'reportTypeId', message:'신고 구분이 적절하지 않습니다.'})
     }
     const document = await documentModel.getDocument(documentId);
     if (!Array.isArray(document) || document.length === 0) {
@@ -38,12 +38,12 @@ router.post('/document', requiredAuth, async (req, res) => {
     if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
         return res.status(403).json({ target: 'documentId', message: '게시물을 신고할 수 있는 권한이 없습니다.' });
     }
-    const report = await reportModel.getReportType(reportType);
+    const report = await reportModel.getReportType(reportTypeId);
     if(!Array.isArray(report) || report.length === 0){
-        return res.status(404).json({target:'reportType', message:'신고 구분이 올바르지 않습니다.'})
+        return res.status(404).json({target:'reportTypeId', message:'신고 구분이 올바르지 않습니다.'})
     }
 
-    result = await reportModel.createDocumentReport(req.userObject.userId, documentId, reportType, board[0].boardType === 'T'?req.userObject.topicNickName : req.userObject.loungeNickName);
+    result = await reportModel.createDocumentReport(req.userObject.userId, documentId, reportTypeId, board[0].boardType === 'T'?req.userObject.topicNickName : req.userObject.loungeNickName);
     if (result > 0) {
         return res.status(200).json({ message: '신고했습니다.'});
     } else if (typeof result === 'object' && result.code === dbErrorCode.PKDUPLICATION) {
@@ -90,12 +90,12 @@ router.post('/comment', requiredAuth, async (req, res) => {
     if (!Number.isInteger(commentId) || commentId === 0) {
         return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
     }
-    let reportType = req.body.reportType;
-    if(typeof reportType === 'string'){
-        reportType = Number(reportType);
+    let reportTypeId = req.body.reportTypeId;
+    if(typeof reportTypeId === 'string'){
+        reportTypeId = Number(reportTypeId);
     }
-    if(!Number.isInteger(reportType) || reportType === 0){
-        return res.status(400).json({target:'reportType', message:'신고 구분이 적절하지 않습니다.'})
+    if(!Number.isInteger(reportTypeId) || reportTypeId === 0){
+        return res.status(400).json({target:'reportTypeId', message:'신고 구분이 적절하지 않습니다.'})
     }
     const comment = await commentModel.getComment(commentId);
     if (!Array.isArray(comment) || comment.length === 0) {
@@ -117,8 +117,12 @@ router.post('/comment', requiredAuth, async (req, res) => {
     if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
         return res.status(403).json({ target: 'documentId', message: '댓글을 신고할 수 있는 권한이 없습니다.' });
     }
+    const report = await reportModel.getReportType(reportTypeId);
+    if(!Array.isArray(report) || report.length === 0){
+        return res.status(404).json({target:'reportTypeId', message:'신고 구분이 올바르지 않습니다.'})
+    }
     
-    result = await reportModel.createCommentReport(req.userObject.userId, commentId, reportType, board[0].boardType === 'T'?req.userObject.topicNickName:req.userObject.loungeNickName);
+    result = await reportModel.createCommentReport(req.userObject.userId, commentId, reportTypeId, board[0].boardType === 'T'?req.userObject.topicNickName:req.userObject.loungeNickName);
     if (result > 0) {
         return res.status(200).json({ message: '신고했습니다.'});
     } else if (typeof result === 'object' && result.code === dbErrorCode.PKDUPLICATION) {
@@ -294,7 +298,7 @@ router.post('/type', adminOnly, async(req,res)=>{
     }
     
     let result = await reportModel.createReportType(reportType);
-    if(result.rowsCount > 0 && result.rows && result.rows[0] && result.rows[0].reportTypeId > 0){
+    if(result.rowCount > 0 && result.rows && result.rows[0] && result.rows[0].reportTypeId > 0){
         return res.status(200).json({message:'신고 종류를 만들었습니다.', reportTypeId : result.rows[0].reportTypeId})
     }else if(result.code){
         logger.error('신고 종류 생성 시 에러 : ', result, reportType);
@@ -317,11 +321,14 @@ router.put('/type', adminOnly, async(req,res)=>{
     if(!Number.isInteger(reportType.reportTypeId) || reportType.reportTypeId === 0){
         return res.status(400).json({target:'reportTypeId', message:'신고 종류 값이 올바르지 않습니다.'})
     }
-    if(typeof reportType.reportTypeName !== 'string' || reportType.reportTypeName.length > 50){
+    if(reportType.reportTypeName !== undefined && (typeof reportType.reportTypeName !== 'string' || reportType.reportTypeName.length > 50)){
         return res.status(400).json({target:'reportTypeName', message:'신고 종류 이름이 50자를 넘거나 형태가 올바르지 않습니다.'})
     }
-    if(typeof reportType.reportTypeDescription !== 'string' || reportType.reportTypeDescription.length > 100){
+    if(reportType.reportTypeDescription !== undefined && (typeof reportType.reportTypeDescription !== 'string' || reportType.reportTypeDescription.length > 100)){
         return res.status(400).json({target:'reportTypeDescription', message:'신고 종류 설명이 100자를 넘거나 형태가 올바르지 않습니다.'})
+    }
+    if(reportType.reportTypeName === undefined && reportType.reportTypeDescription === undefined){
+        return res.status(400).json({message:'변경될 내용이 없습니다.'});
     }
     
     let result = await reportModel.updateReportType(reportType);
