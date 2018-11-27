@@ -118,12 +118,10 @@ exports.getDocuments = async(boardId, documentId, searchQuery, searchTarget, sor
     )
 }
 
-exports.getBestDocuments = async(boardId, documentId, boardType, searchQuery, searchTarget, page) => {
-    let query = builder.select();
-    if (boardType === 'L' && !boardId) { //lounge best
-        query.with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = \'L\''))
-    }
-    query.fields({
+exports.getBestDocuments = async(documentId, boardType, searchQuery, searchTarget, page) => {
+    let query = builder.select()
+        .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType))
+        .fields({
             'DOCUMENT_ID': '"documentId"',
             'DOCUMENT.BOARD_ID': '"boardId"',
             'COMMENT_COUNT': '"commentCount"',
@@ -132,22 +130,12 @@ exports.getBestDocuments = async(boardId, documentId, boardType, searchQuery, se
             'VIEW_COUNT': '"viewCount"',
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
-            'RESERVED1': '"reserved1"',
-            'RESERVED2': '"reserved2"',
-            'RESERVED3': '"reserved3"',
-            'RESERVED4': '"reserved4"'
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_DOCUMENT', 'DOCUMENT')
         .where('IS_DELETED = false')
-        .where('BEST_DATETIME IS NOT NULL');
-    if (boardType === 'L' && !boardId) { //lounge best
-        query.where('DOCUMENT.BOARD_ID IN (SELECT BOARD_ID FROM BOARDS)')
-    } else if (boardId) { //certain board
-        query.where('BOARD_ID = ?', boardId)
-    } else {
-        return [];
-    }
+        .where('BEST_DATETIME IS NOT NULL')
+        .where('DOCUMENT.BOARD_ID IN (SELECT BOARD_ID FROM BOARDS)')
     if (searchQuery) {
         switch (searchTarget) {
             case 'title':
@@ -165,19 +153,14 @@ exports.getBestDocuments = async(boardId, documentId, boardType, searchQuery, se
     //find page
     if (documentId) {
         //around documentId
-        let withQuery = builder.select();
-        if (boardType === 'L' && !boardId) { //lounge best
-            withQuery.with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = \'L\''))
-        }
-        withQuery.field('DOCUMENT.DOCUMENT_ID')
+        let withQuery = builder.select()
+            .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType))
+            .field('DOCUMENT.DOCUMENT_ID')
             .field(builder.rstr('ROW_NUMBER() OVER (ORDER BY BEST_DATETIME DESC)'), 'NUM')
             .from('SS_MST_DOCUMENT', 'DOCUMENT')
             .where('IS_DELETED = false')
-        if (boardType === 'L' && !boardId) { //lounge best
-            withQuery.where('DOCUMENT.BOARD_ID IN (SELECT BOARD_ID FROM BOARDS)')
-        } else if (boardId) { //certain board
-            withQuery.where('BOARD_ID = ?', boardId)
-        }
+            .where('BEST_DATETIME IS NOT NULL')
+            .where('DOCUMENT.BOARD_ID IN (SELECT BOARD_ID FROM BOARDS)')
         if (searchQuery) {
             switch (searchTarget) {
                 case 'title':
@@ -195,13 +178,11 @@ exports.getBestDocuments = async(boardId, documentId, boardType, searchQuery, se
             builder.select().with('DOCUMENTS', withQuery).field('CEIL(NUM/10.0)', '"page"').from('DOCUMENTS').where('DOCUMENT_ID = ?', documentId)
             .toParam()
         );
-        if (pages && pages.length === 1 && pages[0].page) {
+        if (Array.isArray(pages) && pages.length === 1 && pages[0].page > 0) {
             page = pages[0].page;
         } else { //해당 document가 board에 없을 경우/ 삭제되었을 경우 등등
             page = 1;
         }
-    } else if (!util.isNumeric(page)) {
-        page = 1;
     }
 
     return await pool.executeQuery('getBestDocumenta' + boardType + boardId + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
@@ -263,11 +244,11 @@ exports.updateDocument = async(document) => {
 
 exports.deleteDocument = async(documentId) => {
     return await pool.executeQuery('deleteDocument',
-            builder.delete()
-            .from('SS_MST_DOCUMENT')
-            .where('DOCUMENT_ID = ?', documentId)
-            .toParam()
-        )
+        builder.delete()
+        .from('SS_MST_DOCUMENT')
+        .where('DOCUMENT_ID = ?', documentId)
+        .toParam()
+    )
 }
 
 exports.createDocument = async(document) => {
