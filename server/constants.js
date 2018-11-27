@@ -5,7 +5,8 @@ exports.reserved = ['document', 'documents', 'profile',
     'chats', 'message', 'messages', 'group', 'groups', 'event',
     'events', 'signup', 'signin', 'signout', 'resetPassword',
     'notification', 'notifications', 'survey', 'list', 'admin', 'ADMIN',
-    'ADMINISTRATOR', 'administrator', 'attach', 'profiles', 'animal'
+    'ADMINISTRATOR', 'administrator', 'attach', 'profiles', 'animal', 'loungeBest', 'topicBest',
+    'lounge', 'topic', 'type'
 ];
 
 exports.dbErrorCode = {
