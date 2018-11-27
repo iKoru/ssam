@@ -280,24 +280,40 @@ exports.getProfile = async(nickName) => {
     if (!nickName || nickName.length < 1) {
         return {};
     }
-    const user = (await pool.executeQuery('getProfile',
+    const user = await pool.executeQuery('getProfile',
         builder.select()
-        .fields({ 'USER_ID': '"userId"', 'LOUNGE_NICKNAME': '"nickName"', 'PICTURE_PATH': '"picturePath"', 'IS_OPEN_INFO': '"isOpenInfo"' })
+        .fields({
+            'USER_ID': '"userId"',
+            'LOUNGE_NICKNAME': '"nickName"',
+            'PICTURE_PATH': '"picturePath"',
+            'IS_OPEN_INFO': '"isOpenInfo"'
+        })
         .from('SS_MST_USER')
         .where('LOUNGE_NICKNAME = ?', nickName)
         .limit(1)
         .toParam()
-    ))[0];
-    const groups = (await pool.executeQuery('getProfileGroup',
-        builder.select()
-        .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'M\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'major')
-        .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'G\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'grade')
-        .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'R\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'region')
-        .from(builder.select().from('SS_MST_USER_GROUP').where('USER_ID = ?', user.userId), 'USERGROUP')
-        .left_join(builder.select().fields(['GROUP_ID', 'GROUP_TYPE', 'GROUP_NAME']).from('SS_MST_GROUP').where('GROUP_TYPE IN (\'M\', \'G\', \'R\')'), 'MGROUP', 'USERGROUP.GROUP_ID = MGROUP.GROUP_ID') //major, grade, region
-        .toParam()
-    ))[0];
-    return {...user, ...groups };
+    );
+    if (Array.isArray(user) && user.length > 0) {
+        if (user[0].isOpenInfo) {
+            const groups = await pool.executeQuery('getProfileGroup',
+                builder.select()
+                .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'M\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'major')
+                .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'G\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'grade')
+                .field(builder.str('MAX(?)', builder.case().when('MGROUP.GROUP_TYPE = \'R\'').then('MGROUP.GROUP_NAME').else(builder.rstr('NULL'))), 'region')
+                .from(builder.select().from('SS_MST_USER_GROUP').where('USER_ID = ?', user[0].userId), 'USERGROUP')
+                .left_join(builder.select().fields(['GROUP_ID', 'GROUP_TYPE', 'GROUP_NAME']).from('SS_MST_GROUP').where('GROUP_TYPE IN (\'M\', \'G\', \'R\')'), 'MGROUP', 'USERGROUP.GROUP_ID = MGROUP.GROUP_ID') //major, grade, region
+                .toParam()
+            );
+            if (Array.isArray(groups) && groups.length > 0) {
+                return {...user[0], ...groups[0] };
+            }
+        }
+        return {...user[0] };
+    } else if (Array.isArray(user)) {
+        return {};
+    } else {
+        return user;
+    }
 }
 
 exports.getUserIdByNickName = async(nickName, boardType) => {
