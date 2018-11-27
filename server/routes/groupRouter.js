@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const adminOnly = require('../middlewares/adminOnly'),
     checkSignin = require('../middlewares/checkSignin'),
-    util = require('../util');
+    util = require('../util'),
+    logger = require('../logger');
 const groupModel = require('../models/groupModel')
     //based on /group
 
@@ -119,7 +120,7 @@ router.delete('/:groupId([0-9]+)', adminOnly, async(req, res) => { //delete exis
         groupId = Number(groupId);
     }
     if (!Number.isInteger(groupId) || groupId === 0) {
-        return res.status(400).json({ target: 'groupId', message: '잘못된 접근입니다.' });
+        return res.status(400).json({ target: 'groupId', message: '삭제할 그룹ID가 올바르지 않습니다.' });
     }
     let result = await groupModel.deleteGroup(groupId);
     if (typeof result === 'object' || result === 0) {
