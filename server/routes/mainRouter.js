@@ -3,7 +3,8 @@ const visitorOnly = require('../middlewares/visitorOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
     { reserved, boardTypeDomain } = require('../constants'),
-    logger = require('../logger');
+    logger = require('../logger'),
+    { moment } = require('../util');
 const documentModel = require('../models/documentModel'),
     userModel = require('../models/userModel'),
     boardModel = require('../models/boardModel');
@@ -32,6 +33,88 @@ router.get('/profile', requiredSignin, async(req, res) => {
         return res.status(500).json({ message: `프로필을 조회하지 못했습니다.[${result.code || ''}]` })
     }
 });
+
+router.post('/survey', requiredAuth, async(req, res) => {
+    let survey = { documentId: req.body.documentId, answer: req.body.answer }
+    if (typeof survey.documentId === 'string') {
+        survey.documentId = Number(survey.documentId)
+    }
+    if (!Number.isInteger(survey.documentId) || survey.documentId === 0) {
+        return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
+    }
+    let document = await documentModel.getDocument(survey.documentId);
+    if (!Array.isArray(document) || document.length === 0) {
+        return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
+    } else if (document[0].isDeleted) {
+        return res.status(403).json({ target: 'documentId', message: '삭제된 게시물입니다.' })
+    } else if (!document[0].hasSurvey) {
+        return res.status(400).json({ target: 'documentId', message: '설문조사가 없는 게시물입니다.' })
+    }
+    let check = await boardModel.checkUserBoardReadable(req.userObject.userId, document[0].boardId)
+    if (!Array.isArray(check) || check[0].count === 0) {
+        return res.status(403).json({ target: 'documentId', message: '게시물을 읽을 수 있는 권한이 없습니다.' });
+    }
+    check = await documentModel.createDocumentSurveyHistory(survey.documentId, req.userObject.userId, survey.answer);
+    if (check > 0) {
+        let original = await documentModel.getDocumentSurvey(survey.documentId);
+        if (!Array.isArray(original) || original.length === 0) {
+            await documentModel.deleteDocumentSurveyHistory(survey.documentId, req.userObject.userId)
+            return res.status(404).json({ target: 'documentId', message: '설문조사가 없는 게시물입니다.' })
+        }
+        //TODO : reflect user's answer into survey answer summary
+        check = await documentModel.updateDocumentSurvey(survey.documentId, original.surveyAnswers);
+        if (typeof check === 'object' || check === 0) {
+            await documentModel.deleteDocumentSurveyHistory(survey.documentId, req.userObject.userId)
+            logger.error('설문 내용 제출 중 에러 : ', check, req.userObject.userId, survey.answer)
+            return res.status(500).json({ message: `설문 응답을 저장하는 데 실패하였습니다.[${check.code}]` })
+        } else {
+            return res.status(200).json({ message: '설문 내용을 저장하였습니다.' });
+        }
+    } else {
+        return res.status(409).json({ target: 'answer', message: '이미 참여한 설문입니다.' });
+    }
+});
+
+router.get('/notification', requiredSignin, async(req, res) => {
+
+});
+
+router.get('/best', requiredSignin, async(req, res) => {
+    let boardType = req.query.boardType;
+    if (boardType !== 'L' && boardType !== 'T') {
+        return res.status(400).json({ target: 'boardType', message: '게시판 타입이 올바르지 않습니다.' });
+    }
+
+    let since = moment(),
+        result = {};
+    let today = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
+    if (Array.isArray(today)) {
+        result.today = today
+    } else {
+        logger.error('오늘 베스트 가져오기 에러 : ', today)
+    }
+    since.startOf('week');
+    let week = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
+    if (Array.isArray(week)) {
+        result.week = week
+    } else {
+        logger.error('이번주 베스트 가져오기 에러 : ', week)
+    }
+    since.startOf('month');
+    let month = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
+    if (Array.isArray(month)) {
+        result.month = month
+    } else {
+        logger.error('이번달 베스트 가져오기 에러 : ', month)
+    }
+
+    if (result.today || result.week || result.month) {
+        return res.status(200).json(result);
+    } else {
+        logger.error('기간별 베스트 가져오기 에러 : ', boardType);
+        return res.status(500).json({ message: '기간별 베스트를 가져오지 못했습니다.' });
+    }
+})
 
 router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
     let boardId = req.params.boardId
@@ -195,48 +278,4 @@ router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredAuth, async(req, res, next) => {
     return await getDocument(req, res);
 });
 
-router.post('/survey', requiredAuth, async(req, res) => {
-    let survey = { documentId: req.body.documentId, answer: req.body.answer }
-    if (typeof survey.documentId === 'string') {
-        survey.documentId = Number(survey.documentId)
-    }
-    if (!Number.isInteger(survey.documentId) || survey.documentId === 0) {
-        return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
-    }
-    let document = await documentModel.getDocument(survey.documentId);
-    if (!Array.isArray(document) || document.length === 0) {
-        return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
-    } else if (document[0].isDeleted) {
-        return res.status(403).json({ target: 'documentId', message: '삭제된 게시물입니다.' })
-    } else if (!document[0].hasSurvey) {
-        return res.status(400).json({ target: 'documentId', message: '설문조사가 없는 게시물입니다.' })
-    }
-    let check = await boardModel.checkUserBoardReadable(req.userObject.userId, document[0].boardId)
-    if (!Array.isArray(check) || check[0].count === 0) {
-        return res.status(403).json({ target: 'documentId', message: '게시물을 읽을 수 있는 권한이 없습니다.' });
-    }
-    check = await documentModel.createDocumentSurveyHistory(survey.documentId, req.userObject.userId, survey.answer);
-    if (check > 0) {
-        let original = await documentModel.getDocumentSurvey(survey.documentId);
-        if (!Array.isArray(original) || original.length === 0) {
-            await documentModel.deleteDocumentSurveyHistory(survey.documentId, req.userObject.userId)
-            return res.status(404).json({ target: 'documentId', message: '설문조사가 없는 게시물입니다.' })
-        }
-        //TODO : reflect user's answer into survey answer summary
-        check = await documentModel.updateDocumentSurvey(survey.documentId, original.surveyAnswers);
-        if (typeof check === 'object' || check === 0) {
-            await documentModel.deleteDocumentSurveyHistory(survey.documentId, req.userObject.userId)
-            logger.error('설문 내용 제출 중 에러 : ', check, req.userObject.userId, survey.answer)
-            return res.status(500).json({ message: `설문 응답을 저장하는 데 실패하였습니다.[${check.code}]` })
-        } else {
-            return res.status(200).json({ message: '설문 내용을 저장하였습니다.' });
-        }
-    } else {
-        return res.status(409).json({ target: 'answer', message: '이미 참여한 설문입니다.' });
-    }
-});
-
-router.get('/notification', requiredSignin, async(req, res) => {
-
-});
 module.exports = router;

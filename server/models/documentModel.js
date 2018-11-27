@@ -18,10 +18,6 @@ exports.getDocuments = async(boardId, documentId, searchQuery, searchTarget, sor
             'VIEW_COUNT': '"viewCount"',
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
-            'RESERVED1': '"reserved1"',
-            'RESERVED2': '"reserved2"',
-            'RESERVED3': '"reserved3"',
-            'RESERVED4': '"reserved4"'
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_DOCUMENT')
@@ -120,7 +116,7 @@ exports.getDocuments = async(boardId, documentId, searchQuery, searchTarget, sor
 
 exports.getBestDocuments = async(documentId, boardType, searchQuery, searchTarget, page) => {
     let query = builder.select()
-        .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType))
+        .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType).where('ALL_GROUP_AUTH = \'READONLY\''))
         .fields({
             'DOCUMENT_ID': '"documentId"',
             'DOCUMENT.BOARD_ID': '"boardId"',
@@ -154,7 +150,7 @@ exports.getBestDocuments = async(documentId, boardType, searchQuery, searchTarge
     if (documentId) {
         //around documentId
         let withQuery = builder.select()
-            .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType))
+            .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType).where('ALL_GROUP_AUTH = \'READONLY\''))
             .field('DOCUMENT.DOCUMENT_ID')
             .field(builder.rstr('ROW_NUMBER() OVER (ORDER BY BEST_DATETIME DESC)'), 'NUM')
             .from('SS_MST_DOCUMENT', 'DOCUMENT')
@@ -187,6 +183,27 @@ exports.getBestDocuments = async(documentId, boardType, searchQuery, searchTarge
 
     return await pool.executeQuery('getBestDocumenta' + boardType + boardId + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
         query.order('BEST_DATETIME', false).limit(10).offset((page - 1) * 10)
+        .toParam()
+    )
+}
+
+exports.getPeriodicallyBestDocuments = async(boardType, since) => {
+    return await pool.executeQuery('getPeriodicallyBestDocuments',
+        builder.select()
+        .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType).where('ALL_GROUP_AUTH = \'READONLY\''))
+        .fields({
+            'DOCUMENT_ID': '"documentId"',
+            'BOARD_ID': '"boardId"',
+            'VOTE_UP_COUNT': '"voteUpCount"',
+            'VOTE_DOWN_COUNT': '"voteDownCount"',
+            'WRITE_DATETIME': '"writeDateTime"',
+            'TITLE': '"title"',
+        })
+        .from('SS_MST_DOCUMENT', 'DOCUMENT')
+        .where('WRITE_DATETIME >= ?', since)
+        .where('DOCUMENT.BOARD_ID IN (SELECT BOARD_ID FROM BOARDS)')
+        .order('(VOTE_UP_COUNT - VOTE_DOWN_COUNT)', false)
+        .limit(10)
         .toParam()
     )
 }
