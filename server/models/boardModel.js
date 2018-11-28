@@ -81,7 +81,28 @@ exports.getUserBoard = async(userId, isAdmin) => {
     return await pool.executeQuery('getUserBoard' + (isAdmin ? 'admin' : ''),
         query
         .toParam())
+}
 
+exports.getReservedBoard = async() => {
+    const yesterday = util.getYYYYMMDD(util.moment().add(-1, 'days'));
+    return await pool.executeQuery('getReservedBoard',
+        builder.select()
+        .fields({
+            'BOARD_ID': '"boardId"',
+            'BOARD_NAME': '"boardName"',
+            'BOARD_DESCRIPTION': '"boardDescription"',
+            'BOARD_TYPE': '"boardType"',
+            'OWNER_ID': '"ownerId"',
+            'STATUS': '"status"',
+            'ALL_GROUP_AUTH': '"allGroupAuth"',
+            'ALLOW_ANONYMOUS': '"allowAnonymous"',
+            'RESERVED_DATE': '"reservedDate"',
+            'RESERVED_CONTENTS': '"reservedContents"'
+        })
+        .from('SS_MST_BOARD')
+        .where('RESERVED_DATE = ?', yesterday)
+        .toParam()
+    )
 }
 
 const getBoard = async(boardId) => {

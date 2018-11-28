@@ -155,6 +155,16 @@ exports.deleteUserGroup = async(userId, groupId) => {
     );
 }
 
+exports.deleteExpiredUserGroup = async() => {
+    const yesterday = util.getYYYYMMDD(util.moment().add(-1, 'days'));
+    return await pool.executeQuery('deleteExpiredUserGroup',
+        builder.delete()
+        .from('SS_MST_USER_GROUP')
+        .where('EXPIRE_DATE = ?', yesterday)
+        .toParam()
+    )
+}
+
 exports.getUserGroup = async(userId, groupType) => {
     let query = builder.select()
         .fields({
