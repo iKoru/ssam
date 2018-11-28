@@ -5,7 +5,7 @@ const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const logger = require('./server/logger');
 const compression = require('compression');
-
+require('./server/scheduler');
 
 const app = express()
 
