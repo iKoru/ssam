@@ -34,9 +34,9 @@ describe('Test the main path', async () => {
         expect(response.body).toHaveProperty('target', 'nickName')
         
         response = await userModel.getUser('blue');
-        expect(response).toEqual(1);
+        expect(response.length).toEqual(1);
         
-        response = await request.get('/profile').set(headers_local).query({nickName:response.body.loungeNickName});
+        response = await request.get('/profile').set(headers_local).query({nickName:response[0].loungeNickName});
         expect(response.statusCode).toEqual(200);
         expect(response.body).toHaveProperty('nickName');
         
@@ -128,6 +128,10 @@ describe('Test the main path', async () => {
         let headers_local = {...headers, 'x-auth': response.body.token };
         
         response = await request.get('/best').set(headers_local);
+        expect(response.statusCode).toEqual(400);
+        expect(response.body).toHaveProperty('target', 'boardType');
+        
+        response = await request.get('/best').set(headers_local).query({boardType:'L'});
         expect(response.statusCode).toEqual(200);
         expect(response.body).toHaveProperty('today');
         expect(response.body).toHaveProperty('week');

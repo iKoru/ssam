@@ -197,7 +197,7 @@ describe('Test the document path', async() => {
         expect(response).toEqual(1);
 
         response = await request.get('/free').set(headers_local);
-        expect(response.statusCode).toEqual(501);
+        expect(response.statusCode).toEqual(200);
 
         response = await userModel.updateUserInfo({ userId: 'grey', status: 'NORMAL' });
         expect(response).toEqual(1);
