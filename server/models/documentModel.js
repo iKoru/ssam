@@ -170,7 +170,7 @@ exports.getBestDocuments = async(documentId, boardType, searchQuery, searchTarge
                     break;
             }
         }
-        const pages = await pool.executeQuery('findDocumentPage' + boardType + boardId + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
+        const pages = await pool.executeQuery('findDocumentPage' + boardType + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
             builder.select().with('DOCUMENTS', withQuery).field('CEIL(NUM/10.0)', '"page"').from('DOCUMENTS').where('DOCUMENT_ID = ?', documentId)
             .toParam()
         );
@@ -181,7 +181,7 @@ exports.getBestDocuments = async(documentId, boardType, searchQuery, searchTarge
         }
     }
 
-    return await pool.executeQuery('getBestDocumenta' + boardType + boardId + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
+    return await pool.executeQuery('getBestDocumenta' + boardType + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
         query.order('BEST_DATETIME', false).limit(10).offset((page - 1) * 10)
         .toParam()
     )
@@ -203,6 +203,7 @@ exports.getPeriodicallyBestDocuments = async(boardType, since) => {
         .where('WRITE_DATETIME >= ?', since)
         .where('DOCUMENT.BOARD_ID IN (SELECT BOARD_ID FROM BOARDS)')
         .order('(VOTE_UP_COUNT - VOTE_DOWN_COUNT)', false)
+        .order('WRITE_DATETIME', false)
         .limit(10)
         .toParam()
     )
