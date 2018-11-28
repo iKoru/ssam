@@ -18,45 +18,38 @@ router.post('/signin', async(req, res) => {
     let userId = req.body.userId;
     let password = req.body.password;
     if (!userId || !password) {
-        res.status(400).json({ message: '아이디와 비밀번호를 모두 입력해주세요.' });
-        return;
+        return res.status(400).json({ message: '아이디와 비밀번호를 모두 입력해주세요.' });
     } else {
         const user = await userModel.getUser(userId);
         if (!user || user.length === 0) {
-            res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
-            return;
+            return res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
         } else if (user.length > 1) {
             logger.error('로그인 중 중복아이디 에러 : ', user);
-            res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
-            return;
+            return res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
         } else {
             if (user[0].status === 'DELETED') {
                 signModel.createSigninLog(userId, req.ip, false);
-                res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
-                return;
+                return res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
             } else if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
                 signModel.createSigninLog(userId, req.ip, false);
-                res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
-                return;
+                return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
             } else if (await bcrypt.compare(password, user[0].password)) {
                 jwt.sign({ userId: userId }, config.jwtKey, { expiresIn: (req.body.rememberMe ? "7d" : "3h"), ...config.jwtOptions }, (err, token) => {
                     if (err) {
                         signModel.createSigninLog(userId, req.ip, false);
                         logger.error('로그인 진행 중 에러 : ', err, userId)
-                        res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
+                        return res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
                     } else {
                         signModel.createSigninLog(userId, req.ip, true);
                         if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
-                            res.status(200).json({ token: token, redirectTo: '/auth' });
+                            return res.status(200).json({ token: token, redirectTo: '/auth' });
                         }
-                        res.status(200).json({ token: token });
+                        return res.status(200).json({ token: token });
                     }
                 })
-                return;
             } else {
                 signModel.createSigninLog(userId, req.ip, false);
-                res.status(400).json({ target: 'password', message: '비밀번호가 일치하지 않습니다.' });
-                return;
+                return res.status(400).json({ target: 'password', message: '비밀번호가 일치하지 않습니다.' });
             }
         }
     }
@@ -74,14 +67,14 @@ router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
     let userId = req.body.userId;
     let email = req.body.email;
     if (!userId || !email) {
-        res.status(400).json({ message: '잘못된 접근입니다.' });
+        return res.status(400).json({ message: '잘못된 접근입니다.' });
     } else {
         const user = await userModel.getUser(userId);
         if (!Array.isArray(user) || user.length === 0) {
-            res.status(404).json({ message: '존재하지 않는 아이디입니다.' });
+            return res.status(404).json({ message: '존재하지 않는 아이디입니다.' });
         } else if (user.length > 1) {
             logger.error('패스워드 리셋 중 중복아이디 에러 : ', user);
-            res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
+            return res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
         } else if (user[0].email === email) {
             let newPassword = util.partialUUID() + util.partialUUID();
             const result = await userModel.updateUserPassword({
@@ -90,13 +83,13 @@ router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
             });
             if (typeof result !== 'number' || result === 0) {
                 logger.error('새로운 리셋 패스워드 저장 에러 : ', user, result);
-                res.status(500).json({ message: '새로운 패스워드를 저장하는 데 실패하였습니다. 관리자에게 문의 부탁드립니다.' });
+                return res.status(500).json({ message: '새로운 패스워드를 저장하는 데 실패하였습니다. 관리자에게 문의 부탁드립니다.' });
             } else {
                 //send email
-                res.status(200).json({ message: '새로운 패스워드를 이메일로 발송하였습니다. 메일을 확인해주세요!' });
+                return res.status(200).json({ message: '새로운 패스워드를 이메일로 발송하였습니다. 메일을 확인해주세요!' });
             }
         } else {
-            res.status(400).json({ message: '이메일이 일치하지 않습니다.' });
+            return res.status(400).json({ message: '이메일이 일치하지 않습니다.' });
         }
     }
 });
@@ -105,26 +98,26 @@ router.post('/refresh', (req, res) => {
     const token = req.headers['x-auth'];
     jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
         if (!err) { //아직 유효한 토큰이면 그대로 보낸다.
-            res.status(200).json(token);
+            return res.status(200).json(token);
         } else if (err.name === 'TokenExpiredError') { //token is valid except it's expired
             if ((new Date(err.expiredAt).getTime() + 3600000) >= (new Date().getTime())) { //기한 만료 및 만료시간부터 1시간이 지나지 않았다면 토큰 리프레시
                 const decoded = jwt_decode(token);
                 if (decoded.userId) {
                     jwt.sign({ userId: decoded.userId }, config.jwtKey, { expiresIn: (decoded.exp - decoded.iat), ...config.jwtOptions }, (err, token) => {
                         if (err) {
-                            res.status(500).json({ message: '로그인 연장에 실패하였습니다.' });
+                            return res.status(500).json({ message: '로그인 연장에 실패하였습니다.' });
                         } else {
-                            res.status(200).json({ token: token });
+                            return res.status(200).json({ token: token });
                         }
                     })
                 } else {
                     res.status(400).json({ message: '잘못된 접근입니다.' });
                 }
             } else {
-                res.status(400).end();
+                return res.status(400).end();
             }
         } else { //기한만료가 아닌 기타 오류는 갱신 대상 아님
-            res.status(400).end();
+            return res.status(400).end();
         }
     });
 });

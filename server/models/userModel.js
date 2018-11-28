@@ -239,8 +239,7 @@ exports.getUser = async(userId) => {
 }
 
 exports.getUsers = async(userId, nickName, email, groupId, status, sortTarget = "USER_ID", isAscending = true, page = 1) => {
-    return await pool.executeQuery(null,
-        builder.select()
+    let query = builder.select()
         .fields({
             'USER_ID': '"userId"',
             'LOUNGE_NICKNAME': '"loungeNickName"',
@@ -269,9 +268,14 @@ exports.getUsers = async(userId, nickName, email, groupId, status, sortTarget = 
             .where(`EXPIRE_DATE > '${util.getYYYYMMDD()}'`)
         ) : '')
         .where(status ? builder.str('STATUS = ?', status) : '')
-        .order(sortTarget, isAscending)
+        .order(sortTarget, isAscending);
+    if(page === null || page > 0){
+        query
         .limit(15)
-        .offset((page - 1) * 15)
+        .offset(((page ? page : 1)- 1) * 15)
+    }
+    return await pool.executeQuery('getUsers' + (page? 'page':'all'),
+        query
         .toParam()
     );
 }
