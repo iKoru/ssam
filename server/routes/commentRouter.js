@@ -2,10 +2,11 @@ const router = require('express').Router();
 const requiredAuth = require('../middlewares/requiredAuth'),
     adminOnly = require('../middlewares/adminOnly'),
     logger = require('../logger'),
-    { dbErrorCode } = require('../constants');
+    { dbErrorCode, commentNotificationTemplate, childCommentNotificationTemplate } = require('../constants');
 const commentModel = require('../models/commentModel'),
     documentModel = require('../models/documentModel'),
-    boardModel = require('../models/boardModel')
+    boardModel = require('../models/boardModel'),
+    notificationModel = require('../models/notificationModel')
     //based on /comment
 
 router.get('/', requiredAuth, async(req, res) => {
@@ -105,8 +106,9 @@ router.post('/', requiredAuth, async(req, res) => {
         }
         comment.userNickName = result[0].boardType === 'T' ? req.userObject.topicNickName : req.userObject.loungeNickName
     }
+    let parentComment;
     if (comment.parentCommentId) {
-        result = await commentModel.getComment(comment.parentCommentId);
+        parentComment = await commentModel.getComment(comment.parentCommentId);
         if (Array.isArray(result) && result.length > 0) {
             if (result[0].isDeleted) {
                 return res.status(400).json({ target: 'parentCommentId', message: '삭제된 댓글에는 대댓글을 작성할 수 없습니다.' })
@@ -118,7 +120,61 @@ router.post('/', requiredAuth, async(req, res) => {
 
     result = await commentModel.createComment(comment);
     if (result.rowCount > 0 && result.rows && result.rows.length > 0 && result.rows[0].commentId > 0) {
-        return res.status(200).json({ message: '댓글을 등록하였습니다.', commentId: result.rows[0].commentId })
+        res.status(200).json({ message: '댓글을 등록하였습니다.', commentId: result.rows[0].commentId });
+        if(comment.parentCommentId){//알림 대상 : 대댓글
+            if(parentComment[0].userId !== req.userObject.userId){//자기 댓글에 자기가 대댓글 작성하면 알림 없음
+                let noti = await notificationModel.getNotifications(parentComment[0].userId, null, 'CC', parentComment[0].commentId);
+                if(Array.isArray(noti)){
+                    if(noti.length > 0 && !noti[0].isRead){//update 대상
+                        await notificationModel.updateNotification({
+                            notificationId:noti[0].notificationId,
+                            variable1:noti[0].variable1+1
+                        })
+                    }else{//insert 대상
+                        await notificationModel.createNotification({
+                            userId:parentComment[0].userId,
+                            type:'CC',
+                            template:childCommentNotificationTemplate,
+                            variable1:1,
+                            variable2:null,
+                            variable3:null,
+                            variable4:null,
+                            target:parentComment[0].commentId,
+                            href:'/'+document[0].boardId + '/'+document[0].documentId
+                        })
+                    }
+                }else{
+                    logger.error('대댓글 알림내역 가져오기 중 에러 : ', noti, parentComment[0].commentId);
+                }
+            }
+        }else{//알림 대상 : 댓글
+            if(document[0].userId !== req.userObject.userId){//자기 글에 자기가 댓글 작성하면 알림 없음
+                let noti = await notificationModel.getNotifications(document[0].userId, null, 'DC', document[0].documentId);
+                if(Array.isArray(noti)){
+                    if(noti.length > 0 && !noti[0].isRead){//update 대상
+                        await notificationModel.updateNotification({
+                            notificationId:noti[0].notificationId,
+                            variable1:noti[0].variable1+1
+                        })
+                    }else{//insert 대상
+                        await notificationModel.createNotification({
+                            userId:document[0].userId,
+                            type:'CC',
+                            template:commentNotificationTemplate,
+                            variable1:1,
+                            variable2:null,
+                            variable3:null,
+                            variable4:null,
+                            target:document[0].documentId,
+                            href:'/'+document[0].boardId + '/'+document[0].documentId
+                        })
+                    }
+                }else{
+                    logger.error('댓글 알림내역 가져오기 중 에러 : ', noti, document[0].documentId);
+                }
+            }
+        }
+        return;
     } else {
         logger.error('댓글 등록 중 에러 : ', result, comment);
         return res.status(500).json({ message: `댓글을 등록하지 못했습니다.[${result.code || ''}]` });
