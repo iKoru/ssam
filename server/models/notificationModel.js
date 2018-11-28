@@ -9,6 +9,7 @@ exports.getNotification = async(notificationId) => {
             'NOTIFICATION_ID': '"notificationId"',
             'CREATED_DATETIME': '"createdDatetime"',
             'TYPE': '"type"',
+            'USER_ID':'"userId"',
             'TEMPLATE': '"template"',
             'VARIABLE1': '"variable1"',
             'VARIABLE2': '"variable2"',
@@ -29,6 +30,7 @@ exports.getNotifications = async(userId, datetimeBefore = null, type = null, tar
             'NOTIFICATION_ID': '"notificationId"',
             'CREATED_DATETIME': '"createdDatetime"',
             'TYPE': '"type"',
+            'USER_ID':'"userId"',
             'TEMPLATE': '"template"',
             'VARIABLE1': '"variable1"',
             'VARIABLE2': '"variable2"',
@@ -48,7 +50,7 @@ exports.getNotifications = async(userId, datetimeBefore = null, type = null, tar
     if(target){
         query.where('TARGET = ?', target)
     }
-    return await pool.executeQuery('getNotifications' + (datetimeBefore ? 'date' : '') + (type ? 'type' : ''),
+    return await pool.executeQuery('getNotifications' + (datetimeBefore ? 'date' : '') + (type ? 'type' : '') + (target?'target':''),
         query.order('CREATED_DATETIME', false)
         .order('IS_READ', true)
         .limit(10)

@@ -20,10 +20,10 @@ router.get('/', requiredSignin, async(req, res) => {
     let result = await notificationModel.getNotifications(req.userObject.userId, dateTimeBefore, type)
     if(Array.isArray(result)){
         result.forEach(x=>{
-            x.message = x.template.replaceAll('$1', x.variable1);
-            x.message = x.message.replaceAll('$2', x.variable2);
-            x.message = x.message.replaceAll('$3', x.variable3);
-            x.message = x.message.replaceAll('$4', x.variable4);
+            x.message = x.template.replace(/\$1/gi, x.variable1);
+            x.message = x.message.replace(/\$2/gi, x.variable2);
+            x.message = x.message.replace(/\$3/gi, x.variable3);
+            x.message = x.message.replace(/\$4/gi, x.variable4);
             delete x.template;
             delete x.variable1;
             delete x.variable2;
@@ -40,8 +40,8 @@ router.get('/', requiredSignin, async(req, res) => {
 });
 
 router.put('/', requiredSignin, async(req, res)=>{
-    let isAllClear = req.body.isAllClear, result;
-    if(isAllClear !== undefined && isAllClear === true){
+    let clearNotification = req.body.clearNotification, result;
+    if(clearNotification !== undefined && clearNotification === true){
         result = await notificationModel.clearNotification(req.userObject.userId);
     }else{
         let notification = {
@@ -78,7 +78,7 @@ router.put('/', requiredSignin, async(req, res)=>{
     }
     
     if(typeof result === 'object'){
-        logger.error('알림 내역 변경 실패 : ', result, isAllClear);
+        logger.error('알림 내역 변경 실패 : ', result, clearNotification);
         return res.status(500).json({message:`알림 내역을 변경하지 못했습니다.[${result.code || ''}]`})
     }else if(result === 0){
         return res.status(404).json({target:'notificationId', message:'변경할 알림을 찾을 수 없습니다.'})

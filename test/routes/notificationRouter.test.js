@@ -17,6 +17,8 @@ describe('Test the notification path', async () => {
         expect(response.statusCode).toEqual(200);
         let headers_local = {...headers, 'x-auth': response.body.token };
         
+        response = await userModel.updateUserInfo({ userId: 'orange', status: 'AUTHORIZED' });
+        expect(response).toEqual(1);
         response = await request.get('/notification').set(headers_local);
         expect(response.statusCode).toEqual(200);
         const originalLength = response.body.length;
@@ -42,10 +44,13 @@ describe('Test the notification path', async () => {
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
         let headers_local2 = {...headers, 'x-auth': response.body.token };
+        response = await userModel.updateUserInfo({ userId: 'blue', status: 'AUTHORIZED' });
+        expect(response).toEqual(1);
         
         //notification created when other user commented on its document
         response = await request.post('/comment').set(headers_local2).send({documentId:documentId, contents:'notification test commentggg!!!', isAnonymous:true})
         expect(response.statusCode).toEqual(200);
+        let commentIds = [response.body.commentId];
         
         response = await request.get('/notification').set(headers_local);
         expect(response.statusCode).toEqual(200);
@@ -56,6 +61,7 @@ describe('Test the notification path', async () => {
         //update notification when not read
         response = await request.post('/comment').set(headers_local2).send({documentId:documentId, contents:'notification test commentg22gg!!!', isAnonymous:true})
         expect(response.statusCode).toEqual(200);
+        commentIds.push(response.body.commentId);
         
         response = await request.get('/notification').set(headers_local);
         expect(response.statusCode).toEqual(200);
@@ -65,6 +71,7 @@ describe('Test the notification path', async () => {
         
         response = await request.post('/comment').set(headers_local2).send({documentId:documentId, parentCommentId:commentId, contents:'notification test child commentg22gg!!!', isAnonymous:true})
         expect(response.statusCode).toEqual(200);
+        commentIds.push(response.body.commentId);
         
         response = await request.get('/notification').set(headers_local);
         expect(response.statusCode).toEqual(200);
@@ -85,8 +92,22 @@ describe('Test the notification path', async () => {
         while(i<notifications.length){
             response = await request.delete('/notification/'+notifications[i].notificationId).set(headers_local);
             expect(response.statusCode).toEqual(200);
+            i++;
         }
-        
+        response = await request.delete('/comment/'+commentIds[2]).set(headers_local2);
+        expect(response.statusCode).toEqual(200);
+        response = await request.delete('/comment/'+commentIds[1]).set(headers_local2);
+        expect(response.statusCode).toEqual(200);
+        response = await request.delete('/comment/'+commentIds[0]).set(headers_local2);
+        expect(response.statusCode).toEqual(200);
+        response = await request.delete('/comment/'+commentId).set(headers_local2);
+        expect(response.statusCode).toEqual(200);
+        response = await request.delete('/document/'+documentId).set(headers_local2);
+        expect(response.statusCode).toEqual(200);
+        response = await userModel.updateUserInfo({ userId: 'blue', status: 'NORMAL' });
+        expect(response).toEqual(1);
+        response = await userModel.updateUserInfo({ userId: 'orange', status: 'NORMAL' });
+        expect(response).toEqual(1);
         done();
     });
 })
