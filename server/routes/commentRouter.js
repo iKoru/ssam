@@ -95,9 +95,12 @@ router.post('/', requiredAuth, async(req, res) => {
     } else if (!document[0].allowAnonymous) {
         comment.isAnonymous = false;
     }
-    let result = await boardModel.checkUserBoardWritable(req.userObject.userId, document[0].boardId)
-    if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
-        return res.status(403).json({ target: 'documentId', message: '댓글을 등록할 수 있는 권한이 없습니다.' });
+    let result;
+    if(!req.userObject.isAdmin){
+        result = await boardModel.checkUserBoardWritable(req.userObject.userId, document[0].boardId)
+        if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
+            return res.status(403).json({ target: 'documentId', message: '댓글을 등록할 수 있는 권한이 없습니다.' });
+        }
     }
     if (!comment.isAnonymous) {
         result = await boardModel.getBoard(document[0].boardId);
@@ -109,8 +112,8 @@ router.post('/', requiredAuth, async(req, res) => {
     let parentComment;
     if (comment.parentCommentId) {
         parentComment = await commentModel.getComment(comment.parentCommentId);
-        if (Array.isArray(result) && result.length > 0) {
-            if (result[0].isDeleted) {
+        if (Array.isArray(parentComment) && parentComment.length > 0) {
+            if (parentComment[0].isDeleted) {
                 return res.status(400).json({ target: 'parentCommentId', message: '삭제된 댓글에는 대댓글을 작성할 수 없습니다.' })
             }
         } else {
@@ -128,7 +131,7 @@ router.post('/', requiredAuth, async(req, res) => {
                     if(noti.length > 0 && !noti[0].isRead){//update 대상
                         await notificationModel.updateNotification({
                             notificationId:noti[0].notificationId,
-                            variable1:noti[0].variable1+1
+                            variable1:Number(noti[0].variable1)+1
                         })
                     }else{//insert 대상
                         await notificationModel.createNotification({
@@ -154,12 +157,12 @@ router.post('/', requiredAuth, async(req, res) => {
                     if(noti.length > 0 && !noti[0].isRead){//update 대상
                         await notificationModel.updateNotification({
                             notificationId:noti[0].notificationId,
-                            variable1:noti[0].variable1+1
+                            variable1:Number(noti[0].variable1)+1
                         })
                     }else{//insert 대상
                         await notificationModel.createNotification({
                             userId:document[0].userId,
-                            type:'CC',
+                            type:'DC',
                             template:commentNotificationTemplate,
                             variable1:1,
                             variable2:null,
