@@ -26,7 +26,7 @@ router.get('/profile', requiredAuth, async(req, res) => {
     if (result.userId) {
         delete result.userId;
         return res.status(200).json(result);
-    } else if (result === {}) {
+    } else if (Object.keys(result).length === 0) {
         return res.status(404).json({ target: 'nickName', message: '사용자를 찾을 수 없습니다.' })
     } else {
         logger.error('프로필 조회 중 에러 : ', result, nickName);
@@ -150,7 +150,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
         let board = await boardModel.getBoard(boardId);
         if (Array.isArray(board) && board.length > 0) {
             board = board[0];
-            let result = await boardModel.checkUserBoardReadable(req.uesrObject.userId, boardId);
+            let result = await boardModel.checkUserBoardReadable(req.userObject.userId, boardId);
             if (Array.isArray(result) && result.length > 0 && result[0].count > 0) { //readable
                 let page = req.query.page,
                     sortTarget = req.query.sortTarget,
@@ -189,7 +189,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
                     return res.status(500).json({ message: `게시물 목록을 조회하지 못했습니다.[${result.code || ''}]` })
                 }
             } else {
-                return res.status(403).json({ target: 'boardId', message: `${boardTypeDomain[board[0].boardType]}의 게시물을 볼 수 있는 권한이 없습니다.` })
+                return res.status(403).json({ target: 'boardId', message: `${boardTypeDomain[board.boardType]}의 게시물을 볼 수 있는 권한이 없습니다.` })
             }
         }
     }
@@ -244,7 +244,6 @@ const getDocument = async(req, res) => {
 }
 
 router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async(req, res, next) => {
-    console.log('/:boardId/:documentId targeted');
     if (typeof req.params.boardId === 'number' || reserved.includes(req.params.boardId)) {
         next();
         return;
@@ -262,7 +261,6 @@ router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async(req
 
 router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredAuth, async(req, res, next) => {
     let documentId = req.params[0];
-    console.log('/:documentId targeted', documentId);
     if (!Number.isInteger(documentId)) {
         documentId = Number(documentId);
         if (isNaN(documentId) || documentId === 0) {

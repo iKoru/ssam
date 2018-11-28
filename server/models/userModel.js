@@ -274,9 +274,8 @@ exports.getUsers = async(userId, nickName, email, groupId, status, sortTarget = 
         .limit(15)
         .offset(((page ? page : 1)- 1) * 15)
     }
-    return await pool.executeQuery('getUsers' + (page? 'page':'all'),
-        query
-        .toParam()
+    return await pool.executeQuery(null,
+        query.toParam()
     );
 }
 
