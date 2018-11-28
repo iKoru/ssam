@@ -9,6 +9,7 @@ const signRouter = require('./routes/signRouter'),
     reportRouter = require('./routes/reportRouter'),
     voteRouter = require('./routes/voteRouter'),
     messageRouter = require('./routes/messageRouter'),
+    notificationRouter = require('./routes/notificationRouter'),
     groupRouter = require('./routes/groupRouter');
 
 module.exports = function(router) {
@@ -22,6 +23,7 @@ module.exports = function(router) {
     router.use('/user', userRouter);
     router.use('/group', groupRouter);
     router.use('/message', messageRouter);
+    router.use('/notification', notificationRouter);
     router.use('/', signRouter);
     router.use('/', mainRouter); //need to be located at the last of routing '/'
 };

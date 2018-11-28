@@ -17,7 +17,7 @@ router.get('/', requiredSignin, (req, res) => {
     res.status(501).end();
 });
 
-router.get('/profile', requiredSignin, async(req, res) => {
+router.get('/profile', requiredAuth, async(req, res) => {
     let nickName = req.query.nickName;
     if (typeof nickName !== 'string') {
         return res.status(400).json({ target: 'nickName', message: '닉네임이 올바르지 않습니다.' })
@@ -73,10 +73,6 @@ router.post('/survey', requiredAuth, async(req, res) => {
     } else {
         return res.status(409).json({ target: 'answer', message: '이미 참여한 설문입니다.' });
     }
-});
-
-router.get('/notification', requiredSignin, async(req, res) => {
-
 });
 
 router.get('/best', requiredSignin, async(req, res) => {
@@ -144,7 +140,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
         if (Array.isArray(result)) {
             return res.status(200).json(result);
         } else {
-            logger.error('베스트게시물 목록 조회 중 에러 : ', result, boardId, page, sortTarget, documentId, searchTarget)
+            logger.error('베스트게시물 목록 조회 중 에러 : ', result, boardId, page, documentId, searchTarget)
             return res.status(500).json({ message: `게시물 목록을 조회하지 못했습니다.[${result.code || ''}]` })
         }
     } else if (typeof boardId === 'number' || reserved.includes(boardId)) {
@@ -240,7 +236,7 @@ const getDocument = async(req, res) => {
             delete result[0].userId;
             return res.status(200).json(result[0]);
         } else {
-            return res.status(404).json({ target: 'documentId', message: `삭제된 ${boardTypeDomain[baord[0].boardType]}입니다.` });
+            return res.status(404).json({ target: 'documentId', message: `삭제된 ${boardTypeDomain[board[0].boardType]}입니다.` });
         }
     } else {
         return res.status(404).json({ target: 'documentId', message: '존재하지 않는 게시물입니다.' })
