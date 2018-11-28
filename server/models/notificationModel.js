@@ -23,10 +23,7 @@ exports.getNotification = async(notificationId) => {
     );
 }
 
-exports.getNotifications = async(userId, datetimeBefore = null, type = null) => {
-    if (!userId || userId === '') {
-        return [];
-    }
+exports.getNotifications = async(userId, datetimeBefore = null, type = null, target = null) => {
     let query = builder.select()
         .fields({
             'NOTIFICATION_ID': '"notificationId"',
@@ -48,8 +45,13 @@ exports.getNotifications = async(userId, datetimeBefore = null, type = null) => 
     if (type) {
         query.where('TYPE = ?', type);
     }
+    if(target){
+        query.where('TARGET = ?', target)
+    }
     return await pool.executeQuery('getNotifications' + (datetimeBefore ? 'date' : '') + (type ? 'type' : ''),
-        query.order('CREATED_DATETIME', false).limit(10)
+        query.order('CREATED_DATETIME', false)
+        .order('IS_READ', true)
+        .limit(10)
         .toParam()
     );
 }
@@ -58,8 +60,6 @@ exports.updateNotification = async(notification) => {
     return await pool.executeQuery('updateNotification',
         builder.update().table('SS_HST_USER_NOTIFICATION')
         .setFields({
-            'CREATED_DATETIME': (notification.createdDatetime || builder.rstr('CREATED_DATETIME')),
-            'TYPE': (notification.type || builder.rstr('TYPE')),
             'TEMPLATE': (notification.template || builder.rstr('TEMPLATE')),
             'VARIABLE1': (notification.variable1 || builder.rstr('VARIABLE1')),
             'VARIABLE2': (notification.variable2 || builder.rstr('VARIABLE2')),
@@ -87,7 +87,8 @@ exports.createNotification = async(notification) => {
             'VARIABLE3': notification.variable3,
             'VARIABLE4': notification.variable4,
             'IS_READ': false,
-            'HREF': notification.href
+            'HREF': notification.href,
+            'TARGET':notification.target
         })
         .returning('NOTIFICATION_ID', '"notificationId"')
         .toParam()
@@ -101,4 +102,14 @@ exports.deleteNotification = async(notificationId) => {
         .where('NOTIFICATION_ID = ?', notificationId)
         .toParam()
     );
+}
+
+exports.clearNotification = async(userId) => {
+    return await pool.executeQuery('clearNotification',
+        builder.update()
+        .table('SS_HST_USER_NOTIFICATION')
+        .set('IS_READ = true')
+        .where('USER_ID = ?', userId)
+        .toParam()
+    )
 }
