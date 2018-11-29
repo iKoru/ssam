@@ -28,19 +28,19 @@ router.post('/signin', async(req, res) => {
             return res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
         } else {
             if (user[0].status === 'DELETED') {
-                signModel.createSigninLog(userId, req.ip, false);
+                signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
                 return res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
             } else if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
-                signModel.createSigninLog(userId, req.ip, false);
+                signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
                 return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
             } else if (await bcrypt.compare(password, user[0].password)) {
                 jwt.sign({ userId: userId }, config.jwtKey, { expiresIn: (req.body.rememberMe ? "7d" : "3h"), ...config.jwtOptions }, (err, token) => {
                     if (err) {
-                        signModel.createSigninLog(userId, req.ip, false);
+                        signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
                         logger.error('로그인 진행 중 에러 : ', err, userId)
                         return res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
                     } else {
-                        signModel.createSigninLog(userId, req.ip, true);
+                        signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, true);
                         if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
                             return res.status(200).json({ token: token, redirectTo: '/auth' });
                         }
@@ -48,7 +48,7 @@ router.post('/signin', async(req, res) => {
                     }
                 })
             } else {
-                signModel.createSigninLog(userId, req.ip, false);
+                signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
                 return res.status(400).json({ target: 'password', message: '비밀번호가 일치하지 않습니다.' });
             }
         }

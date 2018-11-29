@@ -2,7 +2,7 @@ const pool = require('./db').instance,
     builder = require('./db').builder;
 const util = require('../util');
 
-exports.createSigninLog = async(userId, ip, isSuccess) => {
+exports.createSigninLog = async(userId, lastSigninDate, ip, isSuccess) => {
     let result = await pool.executeQuery('createSigninLog',
         builder.insert()
         .into('SS_HST_USER_SIGNIN')
@@ -12,7 +12,7 @@ exports.createSigninLog = async(userId, ip, isSuccess) => {
         .set('IS_SUCCESS', isSuccess)
         .toParam()
     );
-    if (result > 0) {
+    if (result > 0 && isSuccess && lastSigninDate !== util.getYYYYMMDD()) {
         result = await pool.executeQuery('updateUserSigninDate',
             builder.update()
             .table('SS_MST_USER')
