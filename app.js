@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 const logger = require('./server/logger');
 const compression = require('compression');
 require('./server/scheduler');
+require('./server/cache').flushAll();
 
 const app = express()
 
@@ -24,6 +25,6 @@ router(app); //take over to router
 //at last, take error to error handler
 app.use((err, req, res, next) => {
     logger.error('예상하지 못한 에러!! : ', err, req.route, req.userObject);
-    res.status(500).json({message:`예상하지 못한 에러입니다. 관리자에게 문의 부탁드립니다.`})
+    res.status(500).json({message:'예상하지 못한 에러입니다. 관리자에게 문의 부탁드립니다.'})
 });
 module.exports = app;

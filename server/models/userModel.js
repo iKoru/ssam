@@ -1,7 +1,8 @@
 const pool = require('./db').instance,
-    builder = require('./db').builder;
-const util = require('../util'),
-    logger = require('../logger');
+    builder = require('./db').builder,
+    util = require('../util'),
+    logger = require('../logger'),
+    cache = require('../cache');
 const groupModel = require('./groupModel');
 
 exports.checkUserId = async(userId) => {
@@ -65,19 +66,21 @@ exports.createUser = async(user) => {
     return result;
 }
 
-exports.updateUserInfo = async(user) => {
+exports.updateUserInfo = async(param) => {
     try {
-        if (!user.userId) {
+        if (!param.userId) {
             return 0;
         }
-        let query = builder.update().table('SS_MST_USER')
+        let user = {...param}, query = builder.update().table('SS_MST_USER')
         if (user.loungeNickName) {
+            user.loungeNickNameModifiedDate = util.getYYYYMMDD()
             query.set('LOUNGE_NICKNAME', user.loungeNickName)
-                .set('LOUNGE_NICKNAME_MODIFIED_DATE', util.getYYYYMMDD())
+                .set('LOUNGE_NICKNAME_MODIFIED_DATE', user.loungeNickNameModifiedDate)
         }
         if (user.topicNickName) {
+            user.topicNickNameModifiedDate = util.getYYYYMMDD()
             query.set('TOPIC_NICKNAME', user.topicNickName)
-                .set('TOPIC_NICKNAME_MODIFIED_DATE', util.getYYYYMMDD())
+                .set('TOPIC_NICKNAME_MODIFIED_DATE', user.topicNickNameModifiedDate)
         }
         if (user.picturePath) {
             query.set('PICTURE_PATH', user.picturePath)
@@ -86,7 +89,8 @@ exports.updateUserInfo = async(user) => {
             query.set('IS_OPEN_INFO', user.isOpenInfo)
         }
         if (user.grade || user.major || user.region) {
-            query.set('INFO_MODIFIED_DATE', util.getYYYYMMDD())
+            user.infoModifiedDate = util.getYYYYMMDD()
+            query.set('INFO_MODIFIED_DATE', user.infoModifiedDate)
         }
         if (user.memo) {
             query.set('MEMO', user.memo)
@@ -139,44 +143,103 @@ exports.updateUserInfo = async(user) => {
                     result += await groupModel.createUserGroup(user.userId, user.region);
                 }
             }
+            let cachedData = await cache.getAsync('[user]'+user.userId);
+            if(cachedData){
+                if (user.loungeNickName) {
+                    cachedData.loungeNickName = user.loungeNickName
+                    cachedData.loungeNickNameModifiedDate = user.loungeNickNameModifiedDate
+                }
+                if (user.topicNickName) {
+                    cachedData.topicNickName = user.topicNickName
+                    cachedData.topicNickNameModifiedDate = user.topicNickNameModifiedDate
+                }
+                if (user.picturePath) {
+                    cachedData.picturePath = user.picturePath
+                }
+                if (typeof user.isOpenInfo === 'boolean') {
+                    cachedData.isOpenInfo = user.isOpenInfo
+                }
+                if (user.grade || user.major || user.region) {
+                    cachedData.infoModifiedDate = user.infoModifiedDate
+                }
+                if (user.memo) {
+                    cachedData.memo = user.memo
+                }
+                if (user.email) {
+                    cachedData.email = user.email
+                }
+                if (user.status) {
+                    cachedData.status = user.status
+                }
+                cache.setAsync('[user]'+user.userId, cachedData, 3600);
+            }
         }
         return result;
     } catch (e) {
-        logger.error('update user error!', user, e);
+        logger.error('update user error!', param, e);
     }
 }
 
 exports.updateUserPassword = async(user) => {
-    return await pool.executeQuery(null,
-        builder.update()
-        .table('SS_MST_USER')
-        .setFields({
-            'PASSWORD': user.password || builder.rstr('PASSWORD'),
-            'PASSWORD_CHANGE_DATE': user.password ? util.getYYYYMMDD() : builder.rstr('PASSWORD_CHANGE_DATE')
-        })
-        .where('USER_ID = ?', user.userId)
-        .toParam()
-    );
+    if(user.password){
+        let result = await pool.executeQuery(null,
+            builder.update()
+            .table('SS_MST_USER')
+            .setFields({
+                'PASSWORD': user.password,
+                'PASSWORD_CHANGE_DATE': util.getYYYYMMDD()
+            })
+            .where('USER_ID = ?', user.userId)
+            .toParam()
+        );
+        if(result > 0){
+            let cachedData = await cache.getAsync('[user]'+user.userId);
+            if(cachedData){
+                cachedData.password = user.password
+                cachedData.passwordChangeDate = util.getYYYYMMDD()
+                cache.setAsync('[user]'+user.userId, cachedData, 3600);
+            }
+        }
+        return result;
+    }else{
+        return 0;
+    }
 }
 
 exports.updateUserAdmin = async(user) => {
-    return await pool.executeQuery(null,
+    let result = await pool.executeQuery(null,
         builder.update()
         .table('SS_MST_USER')
         .set('IS_ADMIN', user.isAdmin === undefined ? builder.rstr('IS_ADMIN') : user.isAdmin)
         .where('USER_ID = ?', user.userId)
         .toParam()
     );
+    if(result > 0){
+        let cachedData = await cache.getAsync('[user]'+user.userId);
+        if(cachedData){
+            cachedData.isAdmin = user.isAdmin
+            cache.setAsync('[user]'+user.userId, cachedData, 3600);
+        }
+    }
+    return result;
 }
 
 exports.updateUserAuth = async(userId) => {
-    return await pool.executeQuery('updateUserAuth',
+    let result = await pool.executeQuery('updateUserAuth',
         builder.update()
         .table('SS_MST_USER')
         .set('EMAIL_VERIFIED_DATE', util.getYYYYMMDD())
         .where('USER_ID = ?', userId)
         .toParam()
     )
+    if(result > 0){
+        let cachedData = await cache.getAsync('[user]'+userId);
+        if(cachedData){
+            cachedData.emailVerifiedDate = util.getYYYYMMDD()
+            cache.setAsync('[user]'+userId, cachedData, 3600);
+        }
+    }
+    return result;
 }
 exports.deleteUser = async(userId) => {
     let result = await pool.executeQuery('deleteUser',
@@ -204,12 +267,25 @@ exports.deleteUser = async(userId) => {
             .where('USER_ID = ?', userId)
             .toParam()
         )
+        if(await cache.getAsync('[user]'+userId)){
+            cache.del('[user]'+userId)
+        }
         return result;
     }
 }
 
 exports.getUser = async(userId) => {
-    return await pool.executeQuery('getUser3',
+    let cachedData; 
+    try{
+    cachedData = await cache.getAsync('[user]'+userId);
+    if(cachedData){
+        return [cachedData];
+    }
+    }catch(err){
+        logger.error(err);
+        logger.error('cache 에러 발생!')
+    }
+    cachedData = await pool.executeQuery('getUser3',
         builder.select()
         .fields({
             'USER_ID': '"userId"',
@@ -236,6 +312,10 @@ exports.getUser = async(userId) => {
         .where('USER_ID = ?', userId)
         .toParam()
     );
+    if(Array.isArray(cachedData) && cachedData.length > 0){
+        cache.setAsync('[user]'+userId, cachedData[0], 3600);
+    }
+    return cachedData;
 }
 
 exports.getUsers = async(userId, nickName, email, groupId, status, sortTarget = "USER_ID", isAscending = true, page = 1) => {
@@ -330,7 +410,7 @@ exports.getUserIdByNickName = async(nickName, boardType) => {
 }
 
 exports.updateUserInfoDate = async(userId, infoModifiedDate, loungeNickNameModifiedDate, topicNickNameModifiedDate) => {
-    return await pool.executeQuery(null,
+    let result = await pool.executeQuery(null,
         builder.update()
         .table('SS_MST_USER')
         .setFields({
@@ -341,14 +421,32 @@ exports.updateUserInfoDate = async(userId, infoModifiedDate, loungeNickNameModif
         .where('USER_ID = ?', userId)
         .toParam()
     )
+    if(result > 0){
+        let cachedData = await cache.getAsync('[user]'+userId);
+        if(cachedData){
+            cachedData.infoModifiedDate = infoModifiedDate === undefined ? cachedData.infoModifiedDate : infoModifiedDate
+            cachedData.loungeNickNameModifiedDate = loungeNickNameModifiedDate === undefined ? cachedData.loungeNickNameModifiedDate : loungeNickNameModifiedDate
+            cachedData.topicNickNameModifiedDate = topicNickNameModifiedDate === undefined ? cachedData.topicNickNameModifiedDate : topicNickNameModifiedDate
+            cache.setAsync('[user]'+userId, cachedData, 3600);
+        }
+    }
+    return result;
 }
 
 exports.updateUserPicture = async(userId, uuid, originalFileName, fileType, filePath) => {
-    return await pool.executeQuery('updateUserPicture',
+    let result = await pool.executeQuery('updateUserPicture',
         builder.update()
         .table('SS_MST_USER')
         .set('PICTURE_PATH', filePath)
         .where('USER_ID = ?', userId)
         .toParam()
     )
+    if(result > 0){
+        let cachedData = await cache.getAsync('[user]'+userId);
+        if(cachedData){
+            cachedData.picturePath = filePath === undefined ? cachedData.picturePath : filePath
+            cache.setAsync('[user]'+userId, cachedData, 3600);
+        }
+    }
+    return result;
 }
