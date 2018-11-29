@@ -75,8 +75,8 @@ describe('Test the main path', async () => {
         response = await userModel.updateUserInfo({ userId: 'orange', status: 'AUTHORIZED' });
         expect(response).toEqual(1);
         
-        response = await request.get('/loungeBest').set(headers_local);
-        expect(response.statusCode).toEqual(200);
+        // response = await request.get('/loungeBest').set(headers_local);
+        // expect(response.statusCode).toEqual(200);
         
         //find writable lounge board
         let boards = await boardModel.getBoards(null, 'L');

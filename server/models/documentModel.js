@@ -1,12 +1,19 @@
 const pool = require('./db').instance,
     builder = require('./db').builder;
-const util = require('../util');
+const util = require('../util'),
+    cache = require('../cache');
 const boardModel = require('./boardModel'),
     userModel = require('./userModel');
 
 exports.getDocuments = async(boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending = false, page, isAdmin = false) => {
     if (!boardId) {
         return [];
+    }
+    if(!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending){
+        let cachedData = await cache.getAsync('[document]'+boardId+'@'+(page || ''));
+        if(cachedData){//array itself
+            return cachedData;
+        }
     }
     let query = builder.select()
         .fields({
@@ -108,13 +115,23 @@ exports.getDocuments = async(boardId, documentId, searchQuery, searchTarget, sor
     }
 
     //select documents
-    return await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc'),
+    let result = await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc'),
         query.limit(10).offset((page - 1) * 10)
         .toParam()
     )
+    if(!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending){
+        cache.setAsync('[document]'+boardId+'@'+(page || ''), result, 30);//maintain in 30 sec
+    }
+    return result;
 }
 
 exports.getBestDocuments = async(documentId, boardType, searchQuery, searchTarget, page) => {
+    if(!documentId && !searchQuery && !searchTarget){
+        let cachedData = await cache.getAsync('[best]'+boardType+'@'+(page || ''));
+        if(cachedData){//array itself
+            return cachedData;
+        }
+    }
     let query = builder.select()
         .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType).where('ALL_GROUP_AUTH = \'READONLY\''))
         .fields({
@@ -181,14 +198,22 @@ exports.getBestDocuments = async(documentId, boardType, searchQuery, searchTarge
         }
     }
 
-    return await pool.executeQuery('getBestDocumenta' + boardType + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
+    let result = await pool.executeQuery('getBestDocumenta' + boardType + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
         query.order('BEST_DATETIME', false).limit(10).offset((page - 1) * 10)
         .toParam()
     )
+    if(Array.isArray(result) && !documentId && !searchQuery && !searchTarget){
+        cache.setAsync('[best]'+boardType+'@'+(page || ''), result, 60);//maintain in 60 sec
+    }
+    return result;
 }
 
 exports.getPeriodicallyBestDocuments = async(boardType, since) => {
-    return await pool.executeQuery('getPeriodicallyBestDocuments',
+    let cachedData = await cache.get('[period]'+boardType+since);
+    if(cachedData){//array itself
+        return cachedData;
+    }
+    cachedData = await pool.executeQuery('getPeriodicallyBestDocuments',
         builder.select()
         .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType).where('ALL_GROUP_AUTH = \'READONLY\''))
         .fields({
@@ -207,6 +232,10 @@ exports.getPeriodicallyBestDocuments = async(boardType, since) => {
         .limit(10)
         .toParam()
     )
+    if(Array.isArray(cachedData)){
+        cache.setAsync('[period]'+boardType+since, cachedData, 30*60);//maintain in 30 minutes
+    }
+    return cachedData;
 }
 
 exports.updateDocument = async(document) => {
