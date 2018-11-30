@@ -67,7 +67,7 @@ router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
     let userId = req.body.userId;
     let email = req.body.email;
     if (!userId || !email) {
-        return res.status(400).json({ message: '잘못된 접근입니다.' });
+        return res.status(400).json({ message: '아이디와 이메일을 입력해주세요.' });
     } else {
         const user = await userModel.getUser(userId);
         if (!Array.isArray(user) || user.length === 0) {

@@ -7,16 +7,11 @@ const { moment } = require('../util');
 //based on /message
 
 router.get('/list', requiredSignin, async(req, res) => {
-    if (req.query.chatType) {
-        if (typeof req.query.chatType === 'object') {
-            return res.status(400).json({ target: 'chatType', message: '잘못된 요청입니다.' });
-        }
-        if (req.query.chatType !== 'T' && req.query.chatType !== 'L') {
-            return res.status(400).json({ target: 'chatType', message: '잘못된 요청입니다.' });
-        }
+    if (req.query.chatType && !['T', 'L'].includes(req.query.chatType)) {
+        return res.status(400).json({ target: 'chatType', message: '잘못된 요청입니다.' });
     }
-    if (req.query.page) {
-        req.query.page = Number(req.query.page);
+    if (typeof req.query.page === 'string') {
+        req.query.page = 1*req.query.page;
     }
     if (req.query.page !== undefined && (!Number.isInteger(req.query.page) || req.query.page < 1)) {
         return res.status(400).json({ target: 'page', message: '잘못된 요청입니다.' });
@@ -50,12 +45,12 @@ router.post('/list', requiredSignin, async(req, res) => {
     let chat = {...req.body };
     //parameter safe check
     if (typeof chat.nickName !== 'string' || chat.nickName === '') {
-        return res.status(400).json({ target: 'nickName', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'nickName', message: '채팅을 시작할 대상을 찾을 수 없습니다.' });
     } else if (chat.chatType !== 'T' && chat.chatType !== 'L') {
         return res.status(400).json({ target: 'chatType', message: '잘못된 요청입니다.' });
     }
     const other = await userModel.getUserIdByNickName(chat.nickName, chat.chatType);
-    if (!Array.isArray(other) || other.length < 1) {
+    if (!Array.isArray(other) || other.length < 1 || other[0].status === 'DELETED') {
         return res.status(404).json({ target: 'nickName', message: '채팅을 시작할 대상이 존재하지 않습니다.' })
     }
 
@@ -81,7 +76,7 @@ router.post('/list', requiredSignin, async(req, res) => {
 router.get('/', requiredSignin, async(req, res) => {
     let query = {...req.query };
     if (typeof query.chatId === 'string') {
-        query.chatId = Number(query.chatId);
+        query.chatId = 1*query.chatId;
     }
     if (!Number.isInteger(query.chatId) || query.chatId === 0) {
         return res.status(400).json({ target: 'chatId', message: '채팅을 찾을 수 없습니다.' });
@@ -96,7 +91,9 @@ router.get('/', requiredSignin, async(req, res) => {
         query.timestampBefore = moment().format('YYYYMMDDHH24MISS');
     }
     let result = await messageModel.getChat(query.chatId);
-    if (!Array.isArray(result) || result.length < 1 || (result[0].user1Id !== req.userObject.userId && result[0].user2Id !== req.userObject.userId)) {
+    if(!Array.isArray(result) || result.length < 1){
+        return res.status(404).json({ target: 'chatId', message: '존재하지 않는 채팅입니다.' });
+    }else if (result[0].user1Id !== req.userObject.userId && result[0].user2Id !== req.userObject.userId) {
         return res.status(403).json({ target: 'chatId', message: '조회할 수 없는 채팅입니다.' });
     }
     result = await messageModel.getMessages(query.chatId, query.timestampBefore, query.timestampAfter);
@@ -116,7 +113,7 @@ router.post('/', requiredSignin, async(req, res) => {
     let message = {...req.body };
     //parameter safe check
     if (typeof message.chatId === 'string') {
-        message.chatId = Number(message.chatId);
+        message.chatId = 1*message.chatId;
     }
     if (!Number.isInteger(message.chatId) || message.chatId === 0) {
         return res.status(400).json({ target: 'chatId', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
@@ -145,7 +142,7 @@ router.post('/', requiredSignin, async(req, res) => {
 router.delete('/:chatId([0-9]+)', requiredSignin, async(req, res) => {
     let chatId = req.params.chatId;
     if (typeof chatId === 'string') {
-        chatId = Number(chatId);
+        chatId = 1*chatId;
     }
     if (!Number.isInteger(chatId) || chatId === 0) {
         return res.status(400).json({ target: 'chatId', message: '삭제할 채팅을 찾을 수 없습니다.' });
@@ -161,6 +158,8 @@ router.delete('/:chatId([0-9]+)', requiredSignin, async(req, res) => {
             } else { //delete
                 result = await messageModel.deleteChat(chatId);
             }
+        }else{
+            return res.status(400).json({target:'chatId', message:'이미 삭제된 채팅입니다.'})
         }
     } else { //user2
         if (result[0].user2Status === 'NORMAL') {
@@ -169,6 +168,8 @@ router.delete('/:chatId([0-9]+)', requiredSignin, async(req, res) => {
             } else { //delete
                 result = await messageModel.deleteChat(chatId);
             }
+        }else{
+            return res.status(400).json({target:'chatId', message:'이미 삭제된 채팅입니다.'})
         }
     }
     if (typeof result === 'object') {

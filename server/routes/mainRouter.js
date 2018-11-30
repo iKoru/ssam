@@ -37,7 +37,7 @@ router.get('/profile', requiredAuth, async(req, res) => {
 router.post('/survey', requiredAuth, async(req, res) => {
     let survey = { documentId: req.body.documentId, answer: req.body.answer }
     if (typeof survey.documentId === 'string') {
-        survey.documentId = Number(survey.documentId)
+        survey.documentId = 1*survey.documentId
     }
     if (!Number.isInteger(survey.documentId) || survey.documentId === 0) {
         return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
@@ -120,13 +120,13 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
             searchQuery = req.query.searchQuery,
             searchTarget = req.query.searchTarget;
         if (typeof page === 'string') {
-            page = Number(page)
+            page = 1*page
         }
         if (page === undefined || !Number.isInteger(page) || page < 1) {
             page = 1;
         }
         if (typeof documentId === 'string') {
-            documentId = Number(documentId);
+            documentId = 1*documentId;
         }
         if (documentId !== undefined && (!Number.isInteger(documentId) || documentId === 0)) {
             documentId = undefined;
@@ -159,7 +159,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
                     searchTarget = req.query.searchTarget,
                     isAscending = req.query.isAscending;
                 if (typeof page === 'string') {
-                    page = Number(page)
+                    page = 1*page
                 }
                 if (page === undefined || !Number.isInteger(page) || page < 1) {
                     page = 1;
@@ -168,7 +168,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
                     sortTarget = undefined;
                 }
                 if (typeof documentId === 'string') {
-                    documentId = Number(documentId);
+                    documentId = 1*documentId;
                 }
                 if (documentId !== undefined && (!Number.isInteger(documentId) || documentId === 0)) {
                     documentId = undefined;
@@ -250,7 +250,7 @@ router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async(req
     }
     let documentId = req.params.documentId;
     if (!Number.isInteger(documentId)) {
-        documentId = Number(documentId);
+        documentId = 1*documentId;
         if (isNaN(documentId) || documentId === 0) {
             next();
             return;
@@ -262,7 +262,7 @@ router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async(req
 router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredAuth, async(req, res, next) => {
     let documentId = req.params[0];
     if (!Number.isInteger(documentId)) {
-        documentId = Number(documentId);
+        documentId = 1*documentId;
         if (isNaN(documentId) || documentId === 0) {
             next();
             return;

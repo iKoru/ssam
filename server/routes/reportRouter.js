@@ -12,14 +12,14 @@ const { dbErrorCode } = require('../constants');
 router.post('/document', requiredAuth, async(req, res) => {
     let documentId = req.body.documentId;
     if (typeof documentId === 'string') {
-        documentId = Number(documentId)
+        documentId = 1*documentId
     }
     if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
     let reportTypeId = req.body.reportTypeId;
     if (typeof reportTypeId === 'string') {
-        reportTypeId = Number(reportTypeId);
+        reportTypeId = 1*reportTypeId;
     }
     if (!Number.isInteger(reportTypeId) || reportTypeId === 0) {
         return res.status(400).json({ target: 'reportTypeId', message: '신고 구분이 적절하지 않습니다.' })
@@ -61,7 +61,7 @@ router.put('/document', adminOnly, async(req, res) => {
         status: req.body.status
     }
     if (typeof report.documentId === 'string') {
-        report.documentId = Number(report.documentId)
+        report.documentId = 1*report.documentId
     }
     if (!Number.isInteger(report.documentId) || report.documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
@@ -76,6 +76,8 @@ router.put('/document', adminOnly, async(req, res) => {
     let result = await reportModel.updateDocumentReport(report);
     if (result > 0) {
         return res.status(200).json({ message: '신고 상태를 변경했습니다.' });
+    } else if(result === 0){
+        return res.status(404).json({ message: '변경할 신고를 찾지 못했습니다.' });
     } else {
         logger.error('게시물 신고 상태변경 중 에러 : ', result, report)
         return res.status(500).json({ message: `신고 상태를 변경하지 못했습니다.[${result.code || ''}]` })
@@ -85,14 +87,14 @@ router.put('/document', adminOnly, async(req, res) => {
 router.post('/comment', requiredAuth, async(req, res) => {
     let commentId = req.body.commentId;
     if (typeof commentId === 'string') {
-        commentId = Number(commentId)
+        commentId = 1*commentId
     }
     if (!Number.isInteger(commentId) || commentId === 0) {
         return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
     }
     let reportTypeId = req.body.reportTypeId;
     if (typeof reportTypeId === 'string') {
-        reportTypeId = Number(reportTypeId);
+        reportTypeId = 1*reportTypeId;
     }
     if (!Number.isInteger(reportTypeId) || reportTypeId === 0) {
         return res.status(400).json({ target: 'reportTypeId', message: '신고 구분이 적절하지 않습니다.' })
@@ -140,7 +142,7 @@ router.put('/comment', adminOnly, async(req, res) => {
         status: req.body.status
     }
     if (typeof report.commentId === 'string') {
-        report.commentId = Number(report.commentId)
+        report.commentId = 1*report.commentId
     }
     if (!Number.isInteger(report.commentId) || report.commentId === 0) {
         return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
@@ -155,6 +157,8 @@ router.put('/comment', adminOnly, async(req, res) => {
     let result = await reportModel.updateCommentReport(report);
     if (result > 0) {
         return res.status(200).json({ message: '신고 상태를 변경했습니다.' });
+    } else if(result === 0){
+        return res.status(404).json({ message: '변경할 신고를 찾지 못했습니다.' });
     } else {
         logger.error('댓글 신고 상태 변경 중 에러 : ', result, report)
         return res.status(500).json({ message: `신고 상태를 변경하지 못했습니다.[${result.code || ''}]` })
@@ -164,7 +168,7 @@ router.put('/comment', adminOnly, async(req, res) => {
 router.get('/document', requiredAuth, async(req, res) => {
     let documentId = req.query.documentId;
     if (typeof documentId === 'string') {
-        documentId = Number(documentId)
+        documentId = 1*documentId
     }
     if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
@@ -182,7 +186,7 @@ router.get('/document', requiredAuth, async(req, res) => {
 router.get('/comment', requiredAuth, async(req, res) => {
     let commentId = req.query.commentId;
     if (typeof commentId === 'string') {
-        commentId = Number(commentId)
+        commentId = 1*commentId
     }
     if (!Number.isInteger(commentId) || commentId === 0) {
         return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
@@ -206,7 +210,7 @@ router.get('/comment', requiredAuth, async(req, res) => {
 router.get('/document/list', adminOnly, async(req, res) => {
     let documentId = req.query.documentId;
     if (typeof documentId === 'string') {
-        documentId = Number(documentId)
+        documentId = 1*documentId
     }
     if (documentId !== undefined && (!Number.isInteger(documentId) || documentId === 0)) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
@@ -221,7 +225,7 @@ router.get('/document/list', adminOnly, async(req, res) => {
     }
     let page = req.body.page;
     if (typeof page === 'string') {
-        page = Number(page);
+        page = 1*page;
     }
     if (!Number.isInteger(page) && page < 1) {
         page = 1;
@@ -239,7 +243,7 @@ router.get('/document/list', adminOnly, async(req, res) => {
 router.get('/comment/list', adminOnly, async(req, res) => {
     let commentId = req.query.commentId;
     if (typeof commentId === 'string') {
-        commentId = Number(commentId)
+        commentId = 1*commentId
     }
     if (commentId !== undefined && (!Number.isInteger(commentId) || commentId === 0)) {
         return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
@@ -254,7 +258,7 @@ router.get('/comment/list', adminOnly, async(req, res) => {
     }
     let page = req.body.page;
     if (typeof page === 'string') {
-        page = Number(page);
+        page = 1*page;
     }
     if (!Number.isInteger(page) && page < 1) {
         page = 1;
@@ -272,7 +276,7 @@ router.get('/comment/list', adminOnly, async(req, res) => {
 router.get('/type', requiredSignin, async(req, res) => {
     let reportTypeId = req.query.reportTypeId;
     if (reportTypeId !== undefined && typeof reportTypeId === 'string') {
-        reportTypeId = Number(reportTypeId)
+        reportTypeId = 1*reportTypeId
     }
     if (reportTypeId !== undefined && (!Number.isInteger(reportTypeId) || reportTypeId === 0)) {
         return res.status(400).json({ target: 'reportTypeId', message: '신고 종류 값이 올바르지 않습니다.' })
@@ -316,7 +320,7 @@ router.put('/type', adminOnly, async(req, res) => {
         reportTypeDescription: req.body.reportTypeDescription
     }
     if (typeof reportType.reportTypeId === 'string') {
-        reportType.reportTypeId = Number(reportType.reportTypeId)
+        reportType.reportTypeId = 1*reportType.reportTypeId
     }
     if (!Number.isInteger(reportType.reportTypeId) || reportType.reportTypeId === 0) {
         return res.status(400).json({ target: 'reportTypeId', message: '신고 종류 값이 올바르지 않습니다.' })
@@ -346,15 +350,17 @@ router.put('/type', adminOnly, async(req, res) => {
 router.delete('/type/:reportTypeId([0-9]+)', adminOnly, async(req, res) => {
     let reportTypeId = req.params.reportTypeId;
     if (typeof reportTypeId === 'string') {
-        reportTypeId = Number(reportTypeId);
+        reportTypeId = 1*reportTypeId;
     }
     if (!Number.isInteger(reportTypeId) || reportTypeId === 0) {
         return res.status(400).json({ target: 'reportTypeId', message: '삭제할 신고종류 ID가 올바르지 않습니다.' });
     }
     let result = await reportModel.deleteReportType(reportTypeId);
-    if (typeof result === 'object' || result === 0) {
+    if (typeof result === 'object') {
         logger.error('신고종류 삭제 중 에러 : ', result, req.userObject.userId, reportTypeId)
         return res.status(500).json({ message: `신고 종류를 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });
+    }else if(result === 0){
+        return res.status(404).json({ target:'reportTypeId', message: '삭제할 신고 종류가 없습니다.' });
     } else {
         return res.status(200).json({ message: '신고 종류를 삭제하였습니다.' });
     }

@@ -13,7 +13,7 @@ const { safeStringLength, moment } = require('../util'),
 router.get('/', requiredAuth, async(req, res) => {
     let boardId = req.query.boardId;
     if (!boardId || typeof boardId !== 'string') {
-        return res.status(400).json({ target: 'boardId', message: '요청을 수행하기 위한 필수 정보가 없거나 올바르지 않습니다.' });
+        return res.status(400).json({ target: 'boardId', message: '라운지/토픽을 찾을 수 없습니다.' });
     }
     let board = await boardModel.getBoard(boardId)
     if (Array.isArray(board) && board.length > 0 && board[0].status === 'NORMAL') { //오류, 존재하지 않음, 삭제된 게시판
@@ -39,7 +39,7 @@ router.get('/', requiredAuth, async(req, res) => {
 router.put('/', requiredAuth, async(req, res) => {
     let boardId = req.body.boardId;
     if (typeof boardId !== 'string') {
-        return res.status(400).json({ target: 'boardId', message: '요청을 수행하기 위해 필요한 정보가 없거나 올바르지 않습니다.' })
+        return res.status(400).json({ target: 'boardId', message: '변경할 라운지/토픽을 찾을 수 없습니다.' })
     }
     const board = await boardModel.getBoard(boardId);
     if (!Array.isArray(board) || board.length < 1) {
@@ -202,7 +202,7 @@ router.post('/', requiredAuth, async(req, res) => {
 router.delete('/:boardId([a-zA-z]+)', adminOnly, async(req, res) => {
     let boardId = req.params.boardId;
     if (typeof boardId !== 'string' || boardId === '') {
-        return res.status(400).json({ target: 'boardId', message: '요청을 수행하기 위해 필요한 정보가 없거나 올바르지 않습니다.' });
+        return res.status(400).json({ target: 'boardId', message: '삭제할 토픽 ID값이 없습니다.' });
     }
     let result = await boardModel.deleteBoard(boardId);
     if (typeof result === 'object') {

@@ -55,7 +55,7 @@ router.put('/', requiredSignin, async(req, res)=>{
             href:req.body.href
         }
         if(typeof notification.notificationId === 'string'){
-            notification.notificationId = Number(notification.notificationId);
+            notification.notificationId = 1*notification.notificationId;
         }
         if(!Number.isInteger(notification.notificationId) || notification.notificationId === 0){
             return res.status(400).json({target:'notificationId', message:'변경할 알림을 찾을 수 없습니다.'})
@@ -73,6 +73,9 @@ router.put('/', requiredSignin, async(req, res)=>{
             delete notification.variable3;
             delete notification.variable4;
             delete notification.href;
+            notification.userId = req.userObject.userId
+        }else{
+            notification.userId = req.body.userId
         }
         result = await notificationModel.updateNotification(notification);
     }
@@ -121,7 +124,7 @@ router.post('/', adminOnly, async(req, res) => {
         return res.status(400).json({ target: 'userId', message: '알림을 보낼 사용자 ID가 올바르지 않습니다.' })
     }
     if (typeof notification.groupId === 'string') {
-        notification.groupId = Number(notification.groupId)
+        notification.groupId = 1*notification.groupId
     }
     if(notification.groupId !== undefined && (!Number.isInteger(notification.groupId) || notification.groupId === 0)){
         return res.status(400).json({target:'groupId', message:'알림을 보낼 그룹ID가 올바르지 않습니다.'})
@@ -162,7 +165,7 @@ router.post('/', adminOnly, async(req, res) => {
 router.delete('/:notificationId([0-9]+)', requiredSignin, async(req, res) => {
     let notificationId = req.params.notificationId;
     if (typeof notificationId === 'string') {
-        notificationId = Number(notificationId);
+        notificationId = 1*notificationId;
     }
     if (!Number.isInteger(notificationId) || notificationId === 0) {
         return res.status(400).json({ target: 'notificationId', message: '삭제할 알림을 찾을 수 없습니다.' });

@@ -10,7 +10,7 @@ const { dbErrorCode } = require('../constants');
 router.post('/document', requiredAuth, async(req, res) => {
     let documentId = req.body.documentId;
     if (typeof documentId === 'string') {
-        documentId = Number(documentId)
+        documentId = 1*documentId
     }
     if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
@@ -40,7 +40,7 @@ router.post('/document', requiredAuth, async(req, res) => {
 router.post('/comment', requiredAuth, async(req, res) => {
     let commentId = req.body.commentId;
     if (typeof commentId === 'string') {
-        commentId = Number(commentId)
+        commentId = 1*commentId
     }
     if (!Number.isInteger(commentId) || commentId === 0) {
         return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });

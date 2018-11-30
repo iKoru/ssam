@@ -37,7 +37,7 @@ router.post('/group', requiredSignin, async(req, res) => {
 router.delete(/\/group\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) => {
     let scrapGroupId = req.params[0];
     if (typeof scrapGroupId === 'string') {
-        scrapGroupId = Number(scrapGroupId);
+        scrapGroupId = 1*scrapGroupId;
     }
     if (typeof scrapGroupId !== 'number' || scrapGroupId > 32767 || scrapGroupId === 0) {
         return res.status(400).json({ target: 'scrapGroupId', message: '스크랩 그룹이 올바르지 않습니다.' });
@@ -79,14 +79,14 @@ router.put('/group', requiredSignin, async(req, res) => {
 router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) => { //scrap in scrapgroup
     let scrapGroupId = req.params[0];
     if (typeof scrapGroupId === 'string') {
-        scrapGroupId = Number(scrapGroupId);
+        scrapGroupId = 1*scrapGroupId;
     }
     if (typeof scrapGroupId !== 'number' || scrapGroupId > 32767 || scrapGroupId === 0) {
         return res.status(400).json({ target: 'scrapGroupId', message: '스크랩 그룹이 올바르지 않습니다.' });
     }
     let page = req.query.page;
     if (typeof page === 'string') {
-        page = Number(page)
+        page = 1*page
     }
     if (page !== undefined && (!Number.isInteger(page) || page < 1)) {
         return res.status(400).json({ target: 'page', message: '페이지 값이 올바르지 않습니다.' });
@@ -138,10 +138,10 @@ router.delete(/\/(\d+)\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) =
     let scrapGroupId = req.params[0],
         documentId = req.params[1];
     if (typeof scrapGroupId === 'string') {
-        scrapGroupId = Number(scrapGroupId);
+        scrapGroupId = 1*scrapGroupId;
     }
     if (typeof documentId === 'string') {
-        documentId = Number(documentId);
+        documentId = 1*documentId;
     }
 
     if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {

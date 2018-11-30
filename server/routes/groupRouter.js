@@ -17,7 +17,7 @@ router.get('/', checkSignin, async(req, res) => { //get group list
                 if (Array.isArray(req.query.groupType)) {
                     groupType = req.query.groupType;
                 } else {
-                    return res.status(400).json({ target: 'groupType', message: '잘못된 요청입니다.' });
+                    return res.status(400).json({ target: 'groupType', message: '그룹 종류 값이 올바르지 않습니다.' });
                 }
                 break;
         }
@@ -29,7 +29,7 @@ router.get('/', checkSignin, async(req, res) => { //get group list
         }
     }
     if (req.query.page && (!Number.isInteger(req.query.page) || req.query.page < 1)) {
-        return res.status(400).json({ target: 'page', message: '잘못된 요청입니다.' })
+        return res.status(400).json({ target: 'page', message: '페이지 값이 올바르지 않습니다.' })
     }
     let result = await groupModel.getGroups(req.userObject ? req.userObject.isAdmin : false, groupType, req.query.page)
     if (!Array.isArray(result)) {
@@ -44,21 +44,21 @@ router.post('/', adminOnly, async(req, res) => { //create new group
     let group = {...req.body };
     //parameter safe check
     if (typeof group.groupName !== 'string' || group.groupName === '') {
-        return res.status(400).json({ target: 'groupName', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'groupName', message: '그룹 이름 값이 올바르지 않습니다.' });
     } else if (group.groupDescription && typeof group.groupDescription !== 'string') {
-        return res.status(400).json({ target: 'groupDescription', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'groupDescription', message: '그룹 설명 값이 올바르지 않습니다.' });
     } else if (group.groupIconPath && typeof group.groupIconPath !== 'string') {
-        return res.status(400).json({ target: 'groupIconPath', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 올바르지 않습니다.' });
     } else if (group.groupIconPath && group.groupIconPath.length > 200) {
-        return res.status(400).json({ target: 'groupIconPath', message: 'Icon Path 값이 너무 깁니다. 관리자에게 문의해주세요.' });
+        return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 너무 깁니다. 관리자에게 문의해주세요.' });
     } else if (!['N', 'M', 'G', 'R'].includes(group.groupType)) {
-        return res.status(400).json({ target: 'groupType', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'groupType', message: '그룹 종류 값이 올바르지 않습니다.' });
     } else if (group.parentGroupId && !Number.isInteger(group.parentGroupId) || group.parentGroupId < 1) {
-        return res.status(400).json({ target: 'parentGroupId', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'parentGroupId', message: '상위 그룹 ID가 올바르지 않습니다.' });
     } else if (!Number.isInteger(group.expirePeriod)) {
-        return res.status(400).json({ target: 'expirePeriod', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'expirePeriod', message: '만료기간 값이 올바르지 않습니다.' });
     } else if (typeof group.isOpenToUsers !== 'boolean') {
-        return res.status(400).json({ target: 'isOpenToUsers', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'isOpenToUsers', message: '그룹 공개여부가 올바르지 않습니다.' });
     }
 
     //parameter length check
@@ -78,25 +78,25 @@ router.put('/', adminOnly, async(req, res) => { //update current group
     let group = {...req.body };
     //parameter safe check
     if (!Number.isInteger(group.groupId)) {
-        return res.status(400).json({ target: 'groupId', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'groupId', message: '그룹 ID가 올바르지 않습니다.' });
     } else if (group.groupName && (typeof group.groupName === 'object' || group.groupName === '')) {
-        return res.status(400).json({ target: 'groupName', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'groupName', message: '그룹 이름이 올바르지 않습니다.' });
     } else if (group.groupDescription && typeof group.groupDescription !== 'string') {
-        return res.status(400).json({ target: 'groupDescription', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'groupDescription', message: '그룹 설명이 올바르지 않습니다.' });
     } else if (group.groupIconPath && typeof group.groupIconPath !== 'string') {
-        return res.status(400).json({ target: 'groupIconPath', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 올바르지 않습니다.' });
     } else if (group.groupIconPath && group.groupIconPath.length > 200) {
-        return res.status(400).json({ target: 'groupIconPath', message: 'Icon Path 값이 너무 깁니다. 관리자에게 문의해주세요.' });
+        return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 너무 깁니다. 관리자에게 문의해주세요.' });
     } else if (group.groupType && !['N', 'M', 'G', 'R'].includes(group.groupType)) {
-        return res.status(400).json({ target: 'groupType', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'groupType', message: '그룹 종류 값이 올바르지 않습니다.' });
     } else if (group.parentGroupId && !Number.isInteger(group.parentGroupId) || group.parentGroupId < 1) {
-        return res.status(400).json({ target: 'parentGroupId', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'parentGroupId', message: '상위 그룹 ID가 올바르지 않습니다.' });
     } else if (group.expirePeriod && !Number.isInteger(group.expirePeriod)) {
-        return res.status(400).json({ target: 'expirePeriod', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'expirePeriod', message: '만료기간 값이 올바르지 않습니다.' });
     } else if (group.isOpenToUsers !== undefined && typeof group.isOpenToUsers !== 'boolean') {
-        return res.status(400).json({ target: 'isOpenToUsers', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'isOpenToUsers', message: '그룹 공개여부가 올바르지 않습니다.' });
     } else if (group.orderNumber !== undefined && !Number.isInteger(group.orderNumber)) {
-        return res.status(400).json({ target: 'orderNumber', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'orderNumber', message: '그룹 순서가 올바르지 않습니다.' });
     }
 
     //parameter length check
@@ -117,15 +117,17 @@ router.put('/', adminOnly, async(req, res) => { //update current group
 router.delete('/:groupId([0-9]+)', adminOnly, async(req, res) => { //delete existing group
     let groupId = req.params.groupId;
     if (typeof groupId === 'string') {
-        groupId = Number(groupId);
+        groupId = 1*groupId;
     }
     if (!Number.isInteger(groupId) || groupId === 0) {
         return res.status(400).json({ target: 'groupId', message: '삭제할 그룹ID가 올바르지 않습니다.' });
     }
     let result = await groupModel.deleteGroup(groupId);
-    if (typeof result === 'object' || result === 0) {
+    if (typeof result === 'object') {
         logger.error('그룹 삭제 중 에러 : ', result, req.userObject.userId, groupId)
         return res.status(500).json({ message: `그룹을 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });
+    } else if( result === 0) {
+        return res.status(404).json({ target:'groupId', message: '삭제할 그룹이 존재하지 않습니다.' });
     } else {
         return res.status(200).json({ message: '그룹을 삭제하였습니다.' });
     }

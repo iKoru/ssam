@@ -1,6 +1,6 @@
-const router = require('express').Router();
+const router = require('express').Router(),
+    path = require('path');
 const multer = require('multer')({ dest: 'profiles/', limits: { fileSize: 1024 * 200 }, filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }), //max 200kB
-    fs = require('fs'),
     bcrypt = require('bcrypt');
 const constants = require('../constants'),
     util = require('../util'),
@@ -333,7 +333,7 @@ router.get('/list', adminOnly, async(req, res) => {
 
 router.delete('/:userId', adminOnly, async(req, res) => {
     if (!req.params.userId) {
-        return res.status(400).json({ target: 'userId', message: '요청에 필요한 정보가 없습니다.' });
+        return res.status(400).json({ target: 'userId', message: '삭제할 사용자 ID를 찾을 수 없습니다.' });
     }
     if (req.params.userId === req.userObject.userId) {
         return res.status(400).json({ target: 'userId', message: '로그인 한 아이디는 삭제할 수 없습니다.' });
@@ -452,7 +452,7 @@ router.get('/board', requiredSignin, async(req, res) => {
 router.put('/board', requiredSignin, async(req, res) => {
     let boards = req.body.boards;
     if (!boards) {
-        return res.status(400).json({ target: 'boards', message: '잘못된 접근입니다.' });
+        return res.status(400).json({ target: 'boards', message: '구독할 게시판을 선택해주세요.' });
     } else if (typeof boards === 'string') {
         boards = [boards];
     }
@@ -515,7 +515,7 @@ router.put('/board', requiredSignin, async(req, res) => {
 
 router.get('/group', adminOnly, async(req, res) => {
     if (typeof req.query.userId !== 'string' || req.query.userId === '') {
-        return res.status(400).json({ target: 'userId', message: '잘못된 접근입니다.' });
+        return res.status(400).json({ target: 'userId', message: '사용자를 찾을 수 없습니다.' });
     }
     let result = await groupModel.getUserGroup(req.query.userId);
     if (Array.isArray(result)) {

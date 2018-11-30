@@ -13,13 +13,13 @@ router.get('/', requiredAuth, async(req, res) => {
     let documentId = req.query.documentId,
         page = req.query.page;
     if (typeof documentId === 'string') {
-        documentId = Number(documentId)
+        documentId = 1*documentId
     }
     if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
     if (typeof page === 'string') {
-        page = Number(page)
+        page = 1*page
     }
     if (page !== undefined && !Number.isInteger(page) || page === 0) {
         return res.status(400).json({ target: 'page', message: '게시물을 찾을 수 없습니다.' });
@@ -69,13 +69,13 @@ router.post('/', requiredAuth, async(req, res) => {
         userId: req.userObject.userId
     }
     if (typeof comment.documentId === 'string') {
-        comment.documentId = Number(comment.documentId)
+        comment.documentId = 1*comment.documentId
     }
     if (!Number.isInteger(comment.documentId) || comment.documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
     if (typeof comment.parentCommentId === 'string') {
-        comment.parentCommentId = Number(comment.parentCommentId)
+        comment.parentCommentId = 1*comment.parentCommentId
     }
     if (comment.parentCommentId !== undefined && (!Number.isInteger(comment.parentCommentId) || comment.parentCommentId === 0)) {
         return res.status(400).json({ target: 'parentCommentId', message: '상위 댓글을 찾을 수 없습니다.' });
@@ -131,7 +131,7 @@ router.post('/', requiredAuth, async(req, res) => {
                     if(noti.length > 0 && !noti[0].isRead){//update 대상
                         await notificationModel.updateNotification({
                             notificationId:noti[0].notificationId,
-                            variable1:Number(noti[0].variable1)+1
+                            variable1:(1*noti[0].variable1)+1
                         })
                     }else{//insert 대상
                         await notificationModel.createNotification({
@@ -157,7 +157,7 @@ router.post('/', requiredAuth, async(req, res) => {
                     if(noti.length > 0 && !noti[0].isRead){//update 대상
                         await notificationModel.updateNotification({
                             notificationId:noti[0].notificationId,
-                            variable1:Number(noti[0].variable1)+1
+                            variable1:(1*noti[0].variable1)+1
                         })
                     }else{//insert 대상
                         await notificationModel.createNotification({
@@ -192,7 +192,7 @@ router.put('/', requiredAuth, async(req, res) => {
         userId: req.userObject.userId
     }
     if (typeof comment.commentId === 'string') {
-        comment.commentId = Number(comment.commentId)
+        comment.commentId = 1*comment.commentId
     }
     if (!Number.isInteger(comment.commentId) || comment.commentId === 0) {
         return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
@@ -233,7 +233,7 @@ router.put('/', requiredAuth, async(req, res) => {
 router.delete('/:commentId([0-9]+)', adminOnly, async(req, res) => {
     let commentId = req.params.commentId;
     if (typeof commentId === 'string') {
-        commentId = Number(commentId);
+        commentId = 1*commentId;
     }
     if (!Number.isInteger(commentId) || commentId === 0) {
         return res.status(400).json({ target: 'commentId', message: '삭제할 댓글을 찾을 수 없습니다.' });
