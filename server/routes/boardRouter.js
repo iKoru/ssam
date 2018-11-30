@@ -205,9 +205,11 @@ router.delete('/:boardId([a-zA-z]+)', adminOnly, async(req, res) => {
         return res.status(400).json({ target: 'boardId', message: '요청을 수행하기 위해 필요한 정보가 없거나 올바르지 않습니다.' });
     }
     let result = await boardModel.deleteBoard(boardId);
-    if (typeof result === 'object' || result === 0) {
+    if (typeof result === 'object') {
         logger.error('게시판 삭제 중 에러 : ', result, req.userObject.userId, boardId)
         return res.status(500).json({ message: '게시판을 삭제하는 중에 오류가 발생했습니다.' });
+    } else if(result === 0) {
+        return res.status(404).json({ target:'boardId', message: '존재하지 않는 게시판입니다.' });
     } else {
         return res.status(200).json({ message: '게시판을 삭제하였습니다.' });
     }

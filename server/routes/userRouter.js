@@ -350,17 +350,18 @@ router.delete('/:userId', adminOnly, async(req, res) => {
                 while (j < result.length) {
                     if (result[j].user1Id === req.params.userId) { //user1
                         if (result[j].user2Status === 'NORMAL') { //change flag
-                            result = await messageModel.updateChat(chatId, req.params.userId, 'DELETED')
+                            result = await messageModel.updateChat(result[j].chatId, req.params.userId, 'DELETED')
                         } else { //delete
-                            result = await messageModel.deleteChat(chatId);
+                            result = await messageModel.deleteChat(result[j].chatId);
                         }
                     } else { //user2
                         if (result[j].user1Status === 'NORMAL') { //change flag
-                            result = await messageModel.updateChat(chatId, req.params.userId, 'DELETED')
+                            result = await messageModel.updateChat(result[j].chatId, req.params.userId, 'DELETED')
                         } else { //delete
-                            result = await messageModel.deleteChat(chatId);
+                            result = await messageModel.deleteChat(result[j].chatId);
                         }
                     }
+                    j++;
                 }
                 if (result.length === 10) { //다음 페이지도 있을 수 있으므로 다시 검색한다.
                     continue;
@@ -384,6 +385,14 @@ router.get('/document', requiredSignin, async(req, res) => {
     if (req.query.userId !== req.userObject.userId && !req.userObject.isAdmin) {
         return res.status(400).json({ message: '잘못된 접근입니다.' });
     }
+    if (typeof req.query.page === 'string') {
+        req.query.page = 1*req.query.page
+    }
+    if (req.query.page !== undefined && !Number.isInteger(req.querypage)) {
+        return res.status(400).json({ target: 'page', message: '페이지를 찾을 수 없습니다.' });
+    } else if (req.query.page === undefined || req.query.page < 1) {
+        req.query.page = 1;
+    }
     let result = await documentModel.getUserDocument(req.query.userId, req.userObject.isAdmin, req.query.page);
     if (Array.isArray(result)) {
         if (!req.userObject.isAdmin) {
@@ -405,6 +414,14 @@ router.get('/comment', requiredSignin, async(req, res) => {
     if (req.query.userId !== req.userObject.userId && !req.userObject.isAdmin) {
         return res.status(400).json({ message: '잘못된 접근입니다.' });
     }
+    if (typeof req.query.page === 'string') {
+        req.query.page = 1*req.query.page
+    }
+    if (req.query.page !== undefined && !Number.isInteger(req.querypage)) {
+        return res.status(400).json({ target: 'page', message: '페이지를 찾을 수 없습니다.' });
+    } else if (req.query.page === undefined || req.query.page < 1) {
+        req.query.page = 1;
+    }
     let result = await commentModel.getUserComment(req.query.userId, req.userObject.isAdmin, req.query.page);
     if (Array.isArray(result)) {
         if (!req.userObject.isAdmin) {
@@ -422,11 +439,12 @@ router.get('/comment', requiredSignin, async(req, res) => {
 });
 
 router.get('/board', requiredSignin, async(req, res) => {
-    let result = await boardModel.getUserBoard(req.userObject.userId, req.userObject.isAdmin);
+    let userId = req.userObject.isAdmin?req.query.userId:req.userObject.userId;
+    let result = await boardModel.getUserBoard(userId, req.userObject.isAdmin);
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {
-        logger.error('사용자 게시판 조회 중 에러 : ', result, req.userObject.userId);
+        logger.error('사용자 게시판 조회 중 에러 : ', result, userId);
         return res.status(500).json({ message: '정보를 읽어오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
@@ -509,13 +527,17 @@ router.get('/group', adminOnly, async(req, res) => {
 });
 router.put('/group', adminOnly, async(req, res) => {
     if (!req.body.userId || typeof req.body.userId !== 'string' || req.body.userId === '') {
-        return res.status(400).json({ message: 'userId', message: '잘못된 접근입니다.' });
+        return res.status(400).json({ message: 'userId', message: '사용자를 찾을 수 없습니다.' });
     }
     let groups = req.body.groups;
     if (!groups) {
-        return res.status(400).json({ message: 'groups', message: '잘못된 접근입니다.' });
+        return res.status(400).json({ message: 'groups', message: '그룹 값이 올바르지 않습니다.' });
     } else if (typeof groups === 'string' || typeof groups === 'number') {
         groups = [groups];
+    }
+    let user = await userModel.getUser(req.body.userId);
+    if(!Array.isArray(user) || user.length === 0){
+        return res.status(404).json({message:'userId', message:'사용자를 찾을 수 없습니다.'})
     }
     let currentGroup = await groupModel.getUserGroup(req.body.userId);
     let result;

@@ -59,8 +59,7 @@ exports.getNotifications = async(userId, datetimeBefore = null, type = null, tar
 }
 
 exports.updateNotification = async(notification) => {
-    return await pool.executeQuery('updateNotification',
-        builder.update().table('SS_HST_USER_NOTIFICATION')
+    let query = builder.update().table('SS_HST_USER_NOTIFICATION')
         .setFields({
             'TEMPLATE': (notification.template || builder.rstr('TEMPLATE')),
             'VARIABLE1': (notification.variable1 || builder.rstr('VARIABLE1')),
@@ -69,8 +68,14 @@ exports.updateNotification = async(notification) => {
             'VARIABLE4': (notification.variable4 || builder.rstr('VARIABLE4')),
             'IS_READ': (notification.isRead !== undefined ? notification.isRead : builder.rstr('IS_READ')),
             'HREF': (notification.href || builder.rstr('HREF'))
-        }).where('NOTIFICATION_ID = ?', notification.notificationId)
-        .toParam()
+        })
+        .where('NOTIFICATION_ID = ?', notification.notificationId)
+    if(notification.userId){
+        query
+        .where('USER_ID = ?', notification.userId)
+    }
+    return await pool.executeQuery('updateNotification' + (notification.userId?'user':'all'),
+        query.toParam()
     );
 }
 

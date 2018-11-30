@@ -14,7 +14,7 @@ router.get('/signin', visitorOnly('/'), (req, res) => {
     res.status(501).end();
 });
 
-router.post('/signin', async(req, res) => {
+router.post('/signin', visitorOnly('/'), async(req, res) => {
     let userId = req.body.userId;
     let password = req.body.password;
     if (!userId || !password) {
@@ -96,29 +96,33 @@ router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
 
 router.post('/refresh', (req, res) => {
     const token = req.headers['x-auth'];
-    jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
-        if (!err) { //아직 유효한 토큰이면 그대로 보낸다.
-            return res.status(200).json(token);
-        } else if (err.name === 'TokenExpiredError') { //token is valid except it's expired
-            if ((new Date(err.expiredAt).getTime() + 3600000) >= (new Date().getTime())) { //기한 만료 및 만료시간부터 1시간이 지나지 않았다면 토큰 리프레시
-                const decoded = jwt_decode(token);
-                if (decoded.userId) {
-                    jwt.sign({ userId: decoded.userId }, config.jwtKey, { expiresIn: (decoded.exp - decoded.iat), ...config.jwtOptions }, (err, token) => {
-                        if (err) {
-                            return res.status(500).json({ message: '로그인 연장에 실패하였습니다.' });
-                        } else {
-                            return res.status(200).json({ token: token });
-                        }
-                    })
+    if(token){
+        jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
+            if (!err) { //아직 유효한 토큰이면 그대로 보낸다.
+                return res.status(200).json(token);
+            } else if (err.name === 'TokenExpiredError') { //token is valid except it's expired
+                if ((new Date(err.expiredAt).getTime() + 3600000) >= (new Date().getTime())) { //기한 만료 및 만료시간부터 1시간이 지나지 않았다면 토큰 리프레시
+                    const decoded = jwt_decode(token);
+                    if (decoded.userId) {
+                        jwt.sign({ userId: decoded.userId }, config.jwtKey, { expiresIn: (decoded.exp - decoded.iat), ...config.jwtOptions }, (err, token) => {
+                            if (err) {
+                                return res.status(500).json({ message: '로그인 연장에 실패하였습니다.' });
+                            } else {
+                                return res.status(200).json({ token: token });
+                            }
+                        })
+                    } else {
+                        return res.status(400).json({ message: '잘못된 접근입니다.' });
+                    }
                 } else {
-                    res.status(400).json({ message: '잘못된 접근입니다.' });
+                    return res.status(400).json({message:'세션이 만료되었습니다.'});
                 }
-            } else {
-                return res.status(400).end();
+            } else { //기한만료가 아닌 기타 오류는 갱신 대상 아님
+                return res.status(400).json({message:'유효하지 않은 접근입니다.'});
             }
-        } else { //기한만료가 아닌 기타 오류는 갱신 대상 아님
-            return res.status(400).end();
-        }
-    });
+        });
+    }else{
+        return res.status(400).json({message:'로그인 정보가 없습니다.'});
+    }
 });
 module.exports = router;
