@@ -1,7 +1,8 @@
 const pool = require('./db').instance,
     builder = require('./db').builder;
 const constants = require('../constants'),
-    util = require('../util');
+    util = require('../util'),
+    cache = require('../cache');
 
 exports.checkBoardId = async(boardId) => {
     if (constants.reserved.includes(boardId)) {
@@ -211,14 +212,19 @@ const deleteUserBoard = async(userId, boardId) => {
     if (userId) {
         query.where('USER_ID = ?', userId);
     }
-    return await pool.executeQuery('deleteUserBoard' + (userId ? 'user' : ''),
+    let result = await pool.executeQuery('deleteUserBoard' + (userId ? 'user' : ''),
         query.toParam()
     );
+    if(result > 0 && userId){
+        cache.delAsync('[readUserBoard]'+userId+'@'+boardId);
+        cache.delAsync('[writeUserBoard]'+userId+'@'+boardId);
+    }
+    return result;
 };
 exports.deleteUserBoard = deleteUserBoard;
 
 exports.createUserBoard = async(userId, boardId) => {
-    return await pool.executeQuery('createUserBoard',
+    let result = await pool.executeQuery('createUserBoard',
         builder.insert()
         .into('SS_MST_USER_BOARD')
         .setFields({
@@ -229,6 +235,11 @@ exports.createUserBoard = async(userId, boardId) => {
         })
         .toParam()
     )
+    if(result > 0){
+        cache.delAsync('[readUserBoard]'+userId+'@'+boardId);
+        cache.delAsync('[writeUserBoard]'+userId+'@'+boardId);
+    }
+    return result;
 }
 
 exports.createBoard = async(board) => {
@@ -320,22 +331,34 @@ const checkUserBoard = async(userId, boardId) => {
     );
 }
 exports.checkUserBoardReadable = async(userId, boardId) => {
+    let cachedData = await cache.getAsync('[readUserBoard]'+userId+'@'+boardId);
+    if(cachedData){
+        return cachedData;
+    }
     const board = await getBoard(boardId);
     if (!Array.isArray(board) || board.length === 0) {
         return [{ count: 0 }];
     } else if (board[0].boardType !== 'T' || board[0].allGroupAuth !== 'NONE') { //lounge or open topic
         return [{ count: 1 }];
     } else {
-        return checkUserBoard(userId, boardId);
+        cachedData = await checkUserBoard(userId, boardId);
+        if(Array.isArray(cachedData) && cachedData.length > 0){
+            cache.setAsync('[readUserBoard]'+userId+'@'+boardId, cachedData, 3600);
+        }
+        return cachedData;
     }
 }
 
 exports.checkUserBoardWritable = async(userId, boardId) => {
+    let cachedData = await cache.getAsync('[writeUserBoard]'+userId+'@'+boardId);
+    if(cachedData){
+        return cachedData;
+    }
     const board = await getBoard(boardId);
     if (!Array.isArray(board) || board.length === 0) {
         return [{ count: 0 }];
     } else if (board[0].boardType !== 'T') { //lounge, archive
-        return pool.executeQuery('checkUserLoungeWritable',
+        cachedData = await pool.executeQuery('checkUserLoungeWritable',
             builder.select()
             .field('COUNT(*)', 'count')
             .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId).where('AUTH_TYPE = \'READWRITE\''), 'AUTH')
@@ -343,8 +366,15 @@ exports.checkUserBoardWritable = async(userId, boardId) => {
             .limit(1)
             .toParam()
         );
+        if(Array.isArray(cachedData) && cachedData.length > 0){
+            cache.setAsync('[writeUserBoard]'+userId+'@'+boardId, cachedData, 3600)
+        }
+        return cachedData;
     } else {
-        return checkUserBoard(userId, boardId);
+        cachedData = await checkUserBoard(userId, boardId);
+        if(Array.isArray(cachedData) && cachedData.length > 0){
+            cache.setAsync('[writeUserBoard]'+userId+'@'+boardId, cachedData, 3600)
+        }
     }
 }
 
