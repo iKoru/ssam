@@ -2,7 +2,6 @@
 const app = require('../../app'),
     request = require('supertest')(app),
     boardModel = require('../../server/models/boardModel'),
-    groupModel = require('../../server/models/groupModel'),
     userModel = require('../../server/models/userModel'),
     documentModel = require('../../server/models/documentModel'),
     headers = { 'Accept': 'application/json' };
