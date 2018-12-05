@@ -1,10 +1,14 @@
-const path = require('path');
-const express = require('express');
+const path = require('path'),
+    express = require('express');
 require('express-async-errors');//error handling
-const cookieParser = require('cookie-parser');
-const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser'),
+    bodyParser = require('body-parser'),
+    compression = require('compression'),
+    cors = require('cors'),
+    helmet = require('helmet'),
+    csrf = require('csurf');
 const logger = require('./server/logger');
-const compression = require('compression');
+
 require('./server/scheduler');
 require('./server/cache').flushAll();
 
@@ -15,6 +19,9 @@ const router = require('./server/router');
 process.env.NODE_ENV = (process.env.NODE_ENV && (process.env.NODE_ENV).trim().toLowerCase() == 'production') ? 'production' : 'development';
 logger.info('SSAM SERVER IS RUNNING IN ' + process.env.NODE_ENV + ' ENVIRONMENT!!')
     //app.use(logger(process.env.NODE_ENV));
+app.use(cors());
+app.use(helmet());
+//app.use(csrf());
 app.use('/static', express.static(path.resolve(__dirname, 'client')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
