@@ -4,9 +4,9 @@ const adminOnly = require('../middlewares/adminOnly'),
     util = require('../util'),
     logger = require('../logger');
 const groupModel = require('../models/groupModel')
-    //based on /group
+//based on /group
 
-router.get('/', checkSignin, async(req, res) => { //get group list
+router.get('/', checkSignin, async (req, res) => { //get group list
     let groupType = undefined;
     if (req.query.groupType) {
         switch (typeof req.query.groupType) {
@@ -40,8 +40,8 @@ router.get('/', checkSignin, async(req, res) => { //get group list
     }
 });
 
-router.post('/', adminOnly, async(req, res) => { //create new group
-    let group = {...req.body };
+router.post('/', adminOnly, async (req, res) => { //create new group
+    let group = { ...req.body };
     //parameter safe check
     if (typeof group.groupName !== 'string' || group.groupName === '') {
         return res.status(400).json({ target: 'groupName', message: '그룹 이름 값이 올바르지 않습니다.' });
@@ -74,8 +74,8 @@ router.post('/', adminOnly, async(req, res) => { //create new group
     }
 });
 
-router.put('/', adminOnly, async(req, res) => { //update current group
-    let group = {...req.body };
+router.put('/', adminOnly, async (req, res) => { //update current group
+    let group = { ...req.body };
     //parameter safe check
     if (!Number.isInteger(group.groupId)) {
         return res.status(400).json({ target: 'groupId', message: '그룹 ID가 올바르지 않습니다.' });
@@ -114,10 +114,10 @@ router.put('/', adminOnly, async(req, res) => { //update current group
     }
 });
 
-router.delete('/:groupId([0-9]+)', adminOnly, async(req, res) => { //delete existing group
+router.delete('/:groupId([0-9]+)', adminOnly, async (req, res) => { //delete existing group
     let groupId = req.params.groupId;
     if (typeof groupId === 'string') {
-        groupId = 1*groupId;
+        groupId = 1 * groupId;
     }
     if (!Number.isInteger(groupId) || groupId === 0) {
         return res.status(400).json({ target: 'groupId', message: '삭제할 그룹ID가 올바르지 않습니다.' });
@@ -126,8 +126,8 @@ router.delete('/:groupId([0-9]+)', adminOnly, async(req, res) => { //delete exis
     if (typeof result === 'object') {
         logger.error('그룹 삭제 중 에러 : ', result, req.userObject.userId, groupId)
         return res.status(500).json({ message: `그룹을 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });
-    } else if( result === 0) {
-        return res.status(404).json({ target:'groupId', message: '삭제할 그룹이 존재하지 않습니다.' });
+    } else if (result === 0) {
+        return res.status(404).json({ target: 'groupId', message: '삭제할 그룹이 존재하지 않습니다.' });
     } else {
         return res.status(200).json({ message: '그룹을 삭제하였습니다.' });
     }
