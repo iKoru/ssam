@@ -139,4 +139,8 @@ router.get('/admin', adminOnly, async (req, res)=>{
         return res.status(500).json({ message: `프로필을 조회하지 못했습니다.[${result.code || ''}]` })
     }
 })
+
+router.get('/check', adminOnly, async(req, res) => {
+   return res.status(200).end(); 
+});
 module.exports = router;
