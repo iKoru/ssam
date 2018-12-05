@@ -3,7 +3,8 @@ const jwt = require('jsonwebtoken'),
     bcrypt = require('bcrypt');
 const config = require('../../config');
 const router = require('express').Router();
-const visitorOnly = require('../middlewares/visitorOnly');
+const visitorOnly = require('../middlewares/visitorOnly'),
+    adminOnly = require('../middlewares/adminOnly');
 const signModel = require('../models/signModel'),
     userModel = require('../models/userModel'),
     util = require('../util'),
@@ -99,7 +100,7 @@ router.post('/refresh', (req, res) => {
     if(token){
         jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
             if (!err) { //아직 유효한 토큰이면 그대로 보낸다.
-                return res.status(200).json(token);
+                return res.status(200).json({token:token});
             } else if (err.name === 'TokenExpiredError') { //token is valid except it's expired
                 if ((new Date(err.expiredAt).getTime() + 3600000) >= (new Date().getTime())) { //기한 만료 및 만료시간부터 1시간이 지나지 않았다면 토큰 리프레시
                     const decoded = jwt_decode(token);
@@ -125,4 +126,17 @@ router.post('/refresh', (req, res) => {
         return res.status(400).json({message:'로그인 정보가 없습니다.'});
     }
 });
+
+router.get('/admin', adminOnly, async (req, res)=>{
+    let result = await userModel.getProfile(req.userObject.loungeNickName);
+    if (result.userId) {
+        delete result.userId;
+        return res.status(200).json(result);
+    } else if (Object.keys(result).length === 0) {
+        return res.status(404).json({ target: 'nickName', message: '사용자를 찾을 수 없습니다.' })
+    } else {
+        logger.error('프로필 조회 중 에러 : ', result, req.userObject.loungeNickName);
+        return res.status(500).json({ message: `프로필을 조회하지 못했습니다.[${result.code || ''}]` })
+    }
+})
 module.exports = router;
