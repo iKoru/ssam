@@ -24,10 +24,22 @@ router.put('/', requiredSignin, async(req, res) => {
     if (!req.userObject.isAdmin && (!user.userId || req.userObject.userId !== user.userId)) {
         return res.status(400).json({ messagae: '잘못된 접근입니다.' });
     } else {
+        let original;
+        if(req.userObject.userId === user.userId){
+            original = req.userObject;
+        }else{
+            original = await userModel.getUser(user.userId);
+            if(!Array.isArray(original)){
+                return res.status(500).json({target:'userId', message:`변경할 사용자를 찾지 못했습니다.[${original.code || ''}]`});
+            }else if(original.length === 0){
+                return res.status(404).json({target:'userId', message:'변경할 사용자는 존재하지 않습니다.'})
+            }
+            original = original[0];
+        }
         let result;
-        if (typeof user.loungeNickName === 'string' && user.loungeNickName !== '') {
-            if (req.userObject.loungeNickNameModifiedDate && moment(req.userObject.loungeNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment())) {
-                return res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${moment(req.userObject.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
+        if (typeof user.loungeNickName === 'string' && user.loungeNickName !== original.loungeNickName) {
+            if (original.loungeNickNameModifiedDate && moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment()) && !req.userObject.isAdmin) {
+                return res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
             }
             if (user.loungeNickName.length > 50) {
                 return res.status(400).json({ target: 'loungeNickName', message: '입력된 라운지 필명이 너무 깁니다. 최대 50자로 입력해주세요.' });
@@ -46,9 +58,9 @@ router.put('/', requiredSignin, async(req, res) => {
             }
             parameters.loungeNickName = user.loungeNickName;
         }
-        if (typeof user.topicNickName === 'string' && user.topicNickName !== '') {
-            if (req.userObject.topicNickNameModifiedDate && moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment())) {
-                return res.status(400).json({ target: 'topicNickName', message: `마지막으로 토픽 닉네임을 변경한 날(${moment(req.userObject.topicNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
+        if (typeof user.topicNickName === 'string' && user.topicNickName !== original.topicNickName) {
+            if (original.topicNickNameModifiedDate && moment(original.topicNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment()) && !req.userObject.isAdmin) {
+                return res.status(400).json({ target: 'topicNickName', message: `마지막으로 토픽 닉네임을 변경한 날(${moment(original.topicNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
             }
             if (user.topicNickName.length > 50) {
                 return res.status(400).json({ target: 'topicNickName', message: '입력된 토픽 닉네임이 너무 깁니다. 최대 50자로 입력해주세요.' });
@@ -67,22 +79,22 @@ router.put('/', requiredSignin, async(req, res) => {
             }
             parameters.topicNickName = user.topicNickName;
         }
-        if (user.status) {
+        if (user.status && user.status !== original.status) {
             if (user.status !== 'NORMAL' && user.status !== 'AUTHORIZED' && user.status !== 'BLOCKED' && user.status !== 'DELETED') {
                 return res.status(400).json({ target: 'status', message: '선택된 상태 값이 올바르지 않습니다.' });
             }
             parameters.status = user.status;
         }
-        if ((user.grade && user.grade !== req.userObject.grade) || (user.major && user.major !== req.userObject.major) || (user.email && user.email !== req.userObject.email)) {
-            if (process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && moment().month() !== 2) { //month() === 2 is March
+        if ((user.grade && user.grade !== original.grade) || (user.major && user.major !== original.major) || (user.email && user.email !== original.email)) {
+            if (process.env.NODE_ENV !== 'development' && !original.isAdmin && moment().month() !== 2) { //month() === 2 is March
                 return res.status(400).json({ message: '학년, 전공, 이메일은 매년 3월에만 변경이 가능합니다.' })
             }
-            if (req.userObject.infoModifiedDate && moment(req.userObject.infoModifiedDate, 'YYYYMMDD').isValid()) {
-                if (moment(req.userObject.infoModifiedDate, 'YYYYMMDD').year() >= moment().year()) {
+            if (original.infoModifiedDate && moment(original.infoModifiedDate, 'YYYYMMDD').isValid()) {
+                if (moment(original.infoModifiedDate, 'YYYYMMDD').year() >= moment().year()) {
                     return res.status(400).json({ message: '올해 이미 내역을 변경하셨습니다.' });
                 }
             }
-            if (user.grade && user.grade !== req.userObject.grade) {
+            if (user.grade && user.grade !== original.grade) {
                 if (user.grade !== '') {
                     const grade = await groupModel.getGroup(user.grade);
                     if (!(grade && grade[0] && grade[0].groupType === 'G' && (req.userObject.isAdmin || grade[0].isOpenToUsers))) {
@@ -91,7 +103,7 @@ router.put('/', requiredSignin, async(req, res) => {
                 }
                 parameters.grade = user.grade;
             }
-            if (user.major && user.major !== req.userObject.major) {
+            if (user.major && user.major !== original.major) {
                 if (user.major !== '') {
                     const major = await groupModel.getGroup(user.major);
                     if (!(major && major[0] && major[0].groupType === 'M' && (req.userObject.isAdmin || major[0].isOpenToUsers))) {
@@ -100,7 +112,7 @@ router.put('/', requiredSignin, async(req, res) => {
                 }
                 parameters.major = user.major;
             }
-            if (user.email && user.email !== req.userObject.email) {
+            if (user.email && user.email !== original.email) {
                 const email = constants.emailRegex.exec(user.email);
                 if (email) { //matched email
                     if (email.length > 100) {
@@ -114,7 +126,7 @@ router.put('/', requiredSignin, async(req, res) => {
                     if (region && region[0]) {
                         parameters.region = region[0].groupId;
                         parameters.email = user.email;
-                        if ((parameters.status === 'AUTHORIZED' || req.userObject.status === 'AUTHORIZED') && (parameters.status !== 'DELTED' && parameters.status !== 'BLOCKED')) {
+                        if ((parameters.status === 'AUTHORIZED' || original.status === 'AUTHORIZED') && (parameters.status !== 'DELTED' && parameters.status !== 'BLOCKED')) {
                             parameters.status = 'NORMAL'; //not authorized
                         }
                     } else {
@@ -125,36 +137,38 @@ router.put('/', requiredSignin, async(req, res) => {
                 }
             }
         }
-        if (typeof user.isOpenInfo === 'boolean') {
+        if (typeof user.isOpenInfo === 'boolean' && user.isOpenInfo !== original.isOpenInfo) {
             parameters.isOpenInfo = !!user.isOpenInfo; //make it as boolean
         }
-        if (req.userObject.isAdmin && user.memo) {
+        if (req.userObject.isAdmin && user.memo !== original.memo) {
             parameters.memo = user.memo;
         }
-        if (req.userObject.isAdmin && typeof user.isAdmin === 'boolean') {
+        if (req.userObject.isAdmin && typeof user.isAdmin === 'boolean' && user.isAdmin !== original.isAdmin) {
             parameters.isAdmin = !!user.isAdmin; //make it as boolean
         }
         if (user.password && user.password !== '') {
             result = await userModel.updateUserPassword({ userId: user.userId, password: await bcrypt.hash(user.password, config.bcryptSalt) });
             if (typeof result === 'object' || result < 1) {
-                logger.error('비밀번호 변경 중 에러 : ', result, user.userId, req.userObject.userId);
+                logger.error('비밀번호 변경 중 에러 : ', result, user.userId, original.userId);
                 return res.status(500).json({ message: '비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.' });
             }
         }
-        if (user.picturePath === '' && req.userObject.picturePath) {
-            result = await util.unlink(req.userObject.picturePath);
+        if (user.picturePath === '' && original.picturePath) {
+            result = await util.unlink(original.picturePath);
             if (result !== 'ENOENT') {
-                logger.error('프로필사진 삭제 중 에러 : ', result, user.userId, req.userObject.userId);
+                logger.error('프로필사진 삭제 중 에러 : ', result, user.userId, original.userId);
                 return res.status(500).json({ target: 'picturePath', message: `이미지를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.[${result}]` })
             }
+            parameters.picturePath = user.picturePath;
         }
+
         if (typeof parameters.isAdmin === 'boolean') {
             result = await userModel.updateUserAdmin(parameters);
             if (result > 0 && Object.keys(parameters).length > 2) { //userId, isAdmin
                 result = await userModel.updateUserInfo(parameters);
             }
             if (typeof result === 'object' || result < 1) {
-                logger.error('관리자 정보 저장 중 에러 : ', result, user.userId, req.userObject.userId)
+                logger.error('관리자 정보 저장 중 에러 : ', result, user.userId, original.userId)
                 return res.status(500).json({ message: `입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.[${result.code || ''}]` });
             } else {
                 return res.status(200).json({ message: '정상적으로 저장하였습니다.' });
@@ -163,7 +177,7 @@ router.put('/', requiredSignin, async(req, res) => {
             if (Object.keys(parameters).length > 1) { //userId
                 result = await userModel.updateUserInfo(parameters);
                 if (typeof result === 'object' || result < 1) {
-                    logger.error('사용자 정보 변경 중 에러 : ', result, user.userId, req.userObject.userId);
+                    logger.error('사용자 정보 변경 중 에러 : ', result, user.userId, original.userId);
                     return res.status(500).json({ message: `입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.[${result.code || ''}]` });
                 } else {
                     return res.status(200).json({ message: '정상적으로 저장하였습니다.' });
@@ -262,7 +276,7 @@ router.post('/', async(req, res) => { //회원가입
             result = await groupModel.createUserGroup(user.userId, user.userGroup[trial]);
             if (typeof result !== 'number') {
                 userModel.deleteUser(user.userId);
-                logger.error('사용자 그룹 생성 도중 에러 : ', result, user.userId, req.userObject.userId);
+                logger.error('사용자 그룹 생성 도중 에러 : ', result, user.userId);
                 return res.status(500).json({ message: `회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.[${result.code || ''}]` });
             }
             trial++;
