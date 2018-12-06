@@ -1,6 +1,6 @@
 const router = require('express').Router(),
     path = require('path');
-const multer = require('multer')({ dest: 'profiles/', limits: { fileSize: 1024 * 200 }, filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }), //max 200kB
+const multer = require('multer')({ dest: 'profiles/', limits: { fileSize: 1024 * 200 }, filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }), //max 200kB
     bcrypt = require('bcrypt');
 const constants = require('../constants'),
     util = require('../util'),
@@ -18,25 +18,26 @@ const userModel = require('../models/userModel'),
 let moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Seoul');
 //based on /user
-router.put('/', requiredSignin, async(req, res) => {
-    let user = {...req.body };
+router.put('/', requiredSignin, async (req, res) => {
+    let user = { ...req.body };
     let parameters = { userId: user.userId };
+    let processed = false;
     if (!req.userObject.isAdmin && (!user.userId || req.userObject.userId !== user.userId)) {
         return res.status(400).json({ messagae: '잘못된 접근입니다.' });
     } else {
         let original;
-        if(req.userObject.userId === user.userId){
+        if (req.userObject.userId === user.userId) {
             original = req.userObject;
-        }else{
+        } else {
             original = await userModel.getUser(user.userId);
-            if(!Array.isArray(original)){
-                return res.status(500).json({target:'userId', message:`변경할 사용자를 찾지 못했습니다.[${original.code || ''}]`});
-            }else if(original.length === 0){
-                return res.status(404).json({target:'userId', message:'변경할 사용자는 존재하지 않습니다.'})
+            if (!Array.isArray(original)) {
+                return res.status(500).json({ target: 'userId', message: `변경할 사용자를 찾지 못했습니다.[${original.code || ''}]` });
+            } else if (original.length === 0) {
+                return res.status(404).json({ target: 'userId', message: '변경할 사용자는 존재하지 않습니다.' })
             }
             original = original[0];
         }
-        let result;
+        let result; console.log(user);
         if (typeof user.loungeNickName === 'string' && user.loungeNickName !== original.loungeNickName) {
             if (original.loungeNickNameModifiedDate && moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment()) && !req.userObject.isAdmin) {
                 return res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
@@ -86,33 +87,33 @@ router.put('/', requiredSignin, async(req, res) => {
             parameters.status = user.status;
         }
         if ((user.grade && user.grade !== original.grade) || (user.major && user.major !== original.major) || (user.email && user.email !== original.email)) {
-            if (process.env.NODE_ENV !== 'development' && !original.isAdmin && moment().month() !== 2) { //month() === 2 is March
+            if (process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && moment().month() !== 2) { //month() === 2 is March
                 return res.status(400).json({ message: '학년, 전공, 이메일은 매년 3월에만 변경이 가능합니다.' })
             }
-            if (original.infoModifiedDate && moment(original.infoModifiedDate, 'YYYYMMDD').isValid()) {
+            if (!req.userObject.isAdmin && original.infoModifiedDate && moment(original.infoModifiedDate, 'YYYYMMDD').isValid()) {
                 if (moment(original.infoModifiedDate, 'YYYYMMDD').year() >= moment().year()) {
                     return res.status(400).json({ message: '올해 이미 내역을 변경하셨습니다.' });
                 }
             }
-            if (user.grade && user.grade !== original.grade) {
+            if (user.grade && (user.grade !== original.grade)) {
                 if (user.grade !== '') {
-                    const grade = await groupModel.getGroup(user.grade);
-                    if (!(grade && grade[0] && grade[0].groupType === 'G' && (req.userObject.isAdmin || grade[0].isOpenToUsers))) {
+                    const grade = await groupModel.getGroup(user.grade, ['G']);
+                    if (!(grade && grade[0] && (req.userObject.isAdmin || grade[0].isOpenToUsers))) {
                         return res.status(400).json({ target: 'grade', message: '선택된 학년 값이 올바르지 않습니다.' });
                     }
+                    parameters.grade = user.grade;
                 }
-                parameters.grade = user.grade;
             }
-            if (user.major && user.major !== original.major) {
+            if (user.major && (user.major !== original.major)) {
                 if (user.major !== '') {
-                    const major = await groupModel.getGroup(user.major);
-                    if (!(major && major[0] && major[0].groupType === 'M' && (req.userObject.isAdmin || major[0].isOpenToUsers))) {
+                    const major = await groupModel.getGroup(user.major, ['M']);
+                    if (!(major && major[0] && (req.userObject.isAdmin || major[0].isOpenToUsers))) {
                         return res.status(400).json({ target: 'major', message: '선택된 전공과목 값이 올바르지 않습니다.' });
                     }
+                    parameters.major = user.major;
                 }
-                parameters.major = user.major;
             }
-            if (user.email && user.email !== original.email) {
+            if (user.email && (user.email !== original.email)) {
                 const email = constants.emailRegex.exec(user.email);
                 if (email) { //matched email
                     if (email.length > 100) {
@@ -137,14 +138,18 @@ router.put('/', requiredSignin, async(req, res) => {
                 }
             }
         }
+        if (req.userObject.isAdmin) {
+            if (user.memo !== original.memo) {
+                parameters.memo = user.memo;
+            }
+            if (typeof user.isAdmin === 'boolean' && user.isAdmin !== original.isAdmin) {
+                parameters.isAdmin = !!user.isAdmin; //make it as boolean
+            }
+            delete parameters.major;
+            delete parameters.grade;//관리자는 별도로 처리
+        }
         if (typeof user.isOpenInfo === 'boolean' && user.isOpenInfo !== original.isOpenInfo) {
             parameters.isOpenInfo = !!user.isOpenInfo; //make it as boolean
-        }
-        if (req.userObject.isAdmin && user.memo !== original.memo) {
-            parameters.memo = user.memo;
-        }
-        if (req.userObject.isAdmin && typeof user.isAdmin === 'boolean' && user.isAdmin !== original.isAdmin) {
-            parameters.isAdmin = !!user.isAdmin; //make it as boolean
         }
         if (user.password && user.password !== '') {
             result = await userModel.updateUserPassword({ userId: user.userId, password: await bcrypt.hash(user.password, config.bcryptSalt) });
@@ -152,6 +157,7 @@ router.put('/', requiredSignin, async(req, res) => {
                 logger.error('비밀번호 변경 중 에러 : ', result, user.userId, original.userId);
                 return res.status(500).json({ message: '비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.' });
             }
+            processed = true;
         }
         if (user.picturePath === '' && original.picturePath) {
             result = await util.unlink(original.picturePath);
@@ -171,7 +177,7 @@ router.put('/', requiredSignin, async(req, res) => {
                 logger.error('관리자 정보 저장 중 에러 : ', result, user.userId, original.userId)
                 return res.status(500).json({ message: `입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.[${result.code || ''}]` });
             } else {
-                return res.status(200).json({ message: '정상적으로 저장하였습니다.' });
+                return res.json({ message: '정상적으로 저장하였습니다.' });
             }
         } else {
             if (Object.keys(parameters).length > 1) { //userId
@@ -180,8 +186,10 @@ router.put('/', requiredSignin, async(req, res) => {
                     logger.error('사용자 정보 변경 중 에러 : ', result, user.userId, original.userId);
                     return res.status(500).json({ message: `입력된 내용을 저장하지 못했습니다. 관리자에게 문의해주세요.[${result.code || ''}]` });
                 } else {
-                    return res.status(200).json({ message: '정상적으로 저장하였습니다.' });
+                    return res.json({ message: '정상적으로 저장하였습니다.' });
                 }
+            } else if (processed) {
+                return res.json({ message: '정상적으로 저장하였습니다.' });
             } else {
                 return res.status(400).json({ message: '변경된 내용이 없습니다.' });
             }
@@ -189,8 +197,8 @@ router.put('/', requiredSignin, async(req, res) => {
     }
 });
 
-router.post('/', async(req, res) => { //회원가입
-    let user = {...req.body };
+router.post('/', async (req, res) => { //회원가입
+    let user = { ...req.body };
     if (!user.userId) {
         return res.status(400).json({ target: 'userId', message: '아이디를 입력해주세요.' });
     } else if (typeof user.userId !== 'string' || !constants.userIdRegex.test(user.userId)) {
@@ -209,29 +217,29 @@ router.post('/', async(req, res) => { //회원가입
     if (result && result[0] && result[0].count > 0) {
         return res.status(409).json({ target: 'userId', message: '이미 등록된 아이디입니다.' });
     }
-    if (!user.email) {
-        return res.status(400).json({ target: 'email', message: '이메일을 입력해주세요.' });
-    }
-    const email = constants.emailRegex.exec(user.email);
-    if (email) { //matched email
-        if (email.length > 100) {
-            return res.status(400).json({ target: 'email', message: '입력된 이메일 주소의 길이가 너무 깁니다. 관리자에게 문의해주세요.' });
-        }
-        result = await userModel.checkEmail(user.email);
-        if (result && result[0] && result[0].count > 0) {
-            return res.status(409).json({ target: 'email', message: '이미 사용중인 이메일입니다.' });
-        }
-        const region = await groupModel.getGroupByRegion(constants.regionGroup[email[1]]);
-        if (region && region[0]) {
-            if (!Array.isArray(user.userGroup)) {
-                user.userGroup = [];
+    if (user.email) {
+        //return res.status(400).json({ target: 'email', message: '이메일을 입력해주세요.' });
+        const email = constants.emailRegex.exec(user.email);
+        if (email) { //matched email
+            if (email.length > 100) {
+                return res.status(400).json({ target: 'email', message: '입력된 이메일 주소의 길이가 너무 깁니다. 관리자에게 문의해주세요.' });
             }
-            user.userGroup.push(region[0].groupId);
+            result = await userModel.checkEmail(user.email);
+            if (result && result[0] && result[0].count > 0) {
+                return res.status(409).json({ target: 'email', message: '이미 사용중인 이메일입니다.' });
+            }
+            const region = await groupModel.getGroupByRegion(constants.regionGroup[email[1]]);
+            if (region && region[0]) {
+                if (!Array.isArray(user.userGroup)) {
+                    user.userGroup = [];
+                }
+                user.userGroup.push(region[0].groupId);
+            } else {
+                return res.status(400).json({ target: 'email', message: '해당 이메일 주소에 맞는 지역정보가 없습니다.' });
+            }
         } else {
-            return res.status(400).json({ target: 'email', message: '해당 이메일 주소에 맞는 지역정보가 없습니다.' });
+            return res.status(400).json({ target: 'email', message: '유효한 이메일 주소가 아니거나, 인증에 사용할 수 없는 이메일주소입니다.' });
         }
-    } else {
-        return res.status(400).json({ target: 'email', message: '유효한 이메일 주소가 아니거나, 인증에 사용할 수 없는 이메일주소입니다.' });
     }
     if (user.grade) {
         result = await userModel.getGroup(user.grade, ['G']);
@@ -289,7 +297,7 @@ router.post('/', async(req, res) => { //회원가입
     }
 });
 
-router.post('/picture', requiredSignin, multer.single('picture'), async(req, res) => { //사진 업로드
+router.post('/picture', requiredSignin, multer.single('picture'), async (req, res) => { //사진 업로드
     let userId = req.userObject.userId,
         result;
     if (typeof req.file === 'object' && req.file.filename) {
@@ -307,14 +315,14 @@ router.post('/picture', requiredSignin, multer.single('picture'), async(req, res
     }
 });
 
-router.get('/', requiredSignin, async(req, res) => {
+router.get('/', requiredSignin, async (req, res) => {
     let userId = req.query.userId;
     if (!req.userObject.isAdmin && userId !== req.userObject.userId) {
         return res.status(403).json({ target: 'userId', message: '요청에 대한 권한이 없습니다.' });
     }
     let result;
     if (req.userObject.userId === userId) {
-        result = {...req.userObject };
+        result = { ...req.userObject };
     } else {
         result = await userModel.getUser(req.query.userId);
         if (!Array.isArray(result) || result.length === 0) {
@@ -335,9 +343,9 @@ router.get('/', requiredSignin, async(req, res) => {
     return res.status(200).json(result);
 })
 
-router.get('/list', adminOnly, async(req, res) => {
+router.get('/list', adminOnly, async (req, res) => {
     let sortTarget = req.query.sortTarget;
-    switch(sortTarget){
+    switch (sortTarget) {
         case 'email':
             sortTarget = 'EMAIL';
             break;
@@ -361,7 +369,7 @@ router.get('/list', adminOnly, async(req, res) => {
     }
 });
 
-router.delete('/:userId', adminOnly, async(req, res) => {
+router.delete('/:userId', adminOnly, async (req, res) => {
     if (!req.params.userId) {
         return res.status(400).json({ target: 'userId', message: '삭제할 사용자 ID를 찾을 수 없습니다.' });
     }
@@ -411,12 +419,12 @@ router.delete('/:userId', adminOnly, async(req, res) => {
     }
 });
 
-router.get('/document', requiredSignin, async(req, res) => {
+router.get('/document', requiredSignin, async (req, res) => {
     if (req.query.userId !== req.userObject.userId && !req.userObject.isAdmin) {
         return res.status(400).json({ message: '잘못된 접근입니다.' });
     }
     if (typeof req.query.page === 'string') {
-        req.query.page = 1*req.query.page
+        req.query.page = 1 * req.query.page
     }
     if (req.query.page !== undefined && !Number.isInteger(req.querypage)) {
         return res.status(400).json({ target: 'page', message: '페이지를 찾을 수 없습니다.' });
@@ -440,12 +448,12 @@ router.get('/document', requiredSignin, async(req, res) => {
     }
 });
 
-router.get('/comment', requiredSignin, async(req, res) => {
+router.get('/comment', requiredSignin, async (req, res) => {
     if (req.query.userId !== req.userObject.userId && !req.userObject.isAdmin) {
         return res.status(400).json({ message: '잘못된 접근입니다.' });
     }
     if (typeof req.query.page === 'string') {
-        req.query.page = 1*req.query.page
+        req.query.page = 1 * req.query.page
     }
     if (req.query.page !== undefined && !Number.isInteger(req.querypage)) {
         return res.status(400).json({ target: 'page', message: '페이지를 찾을 수 없습니다.' });
@@ -468,8 +476,8 @@ router.get('/comment', requiredSignin, async(req, res) => {
     }
 });
 
-router.get('/board', requiredSignin, async(req, res) => {
-    let userId = req.userObject.isAdmin?req.query.userId:req.userObject.userId;
+router.get('/board', requiredSignin, async (req, res) => {
+    let userId = req.userObject.isAdmin ? req.query.userId : req.userObject.userId;
     let result = await boardModel.getUserBoard(userId, req.userObject.isAdmin);
     if (Array.isArray(result)) {
         return res.status(200).json(result);
@@ -479,7 +487,7 @@ router.get('/board', requiredSignin, async(req, res) => {
     }
 });
 
-router.put('/board', requiredSignin, async(req, res) => {
+router.put('/board', requiredSignin, async (req, res) => {
     let boards = req.body.boards;
     if (!boards) {
         return res.status(400).json({ target: 'boards', message: '구독할 게시판을 선택해주세요.' });
@@ -543,7 +551,7 @@ router.put('/board', requiredSignin, async(req, res) => {
     }
 });
 
-router.get('/group', adminOnly, async(req, res) => {
+router.get('/group', adminOnly, async (req, res) => {
     if (typeof req.query.userId !== 'string' || req.query.userId === '') {
         return res.status(400).json({ target: 'userId', message: '사용자를 찾을 수 없습니다.' });
     }
@@ -555,7 +563,7 @@ router.get('/group', adminOnly, async(req, res) => {
         return res.status(500).json({ message: '정보를 불러오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
-router.put('/group', adminOnly, async(req, res) => {
+router.put('/group', adminOnly, async (req, res) => {
     if (!req.body.userId || typeof req.body.userId !== 'string' || req.body.userId === '') {
         return res.status(400).json({ message: 'userId', message: '사용자를 찾을 수 없습니다.' });
     }
@@ -566,8 +574,8 @@ router.put('/group', adminOnly, async(req, res) => {
         groups = [groups];
     }
     let user = await userModel.getUser(req.body.userId);
-    if(!Array.isArray(user) || user.length === 0){
-        return res.status(404).json({message:'userId', message:'사용자를 찾을 수 없습니다.'})
+    if (!Array.isArray(user) || user.length === 0) {
+        return res.status(404).json({ message: 'userId', message: '사용자를 찾을 수 없습니다.' })
     }
     let currentGroup = await groupModel.getUserGroup(req.body.userId);
     let result;

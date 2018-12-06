@@ -15,7 +15,7 @@ router.get('/signin', visitorOnly('/'), (req, res) => {
     res.status(501).end();
 });
 
-router.post('/signin', visitorOnly('/'), async(req, res) => {
+router.post('/signin', visitorOnly('/'), async (req, res) => {
     let userId = req.body.userId;
     let password = req.body.password;
     if (!userId || !password) {
@@ -43,9 +43,9 @@ router.post('/signin', visitorOnly('/'), async(req, res) => {
                     } else {
                         signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, true);
                         if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
-                            return res.status(200).json({ token: token, redirectTo: '/auth' });
+                            return res.json({ token: token, redirectTo: '/auth' });
                         }
-                        return res.status(200).json({ token: token });
+                        return res.json({ token: token });
                     }
                 })
             } else {
@@ -64,11 +64,11 @@ router.get('/resetPassword', visitorOnly('/'), (req, res) => {
     res.status(501).end();
 });
 
-router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
+router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
     let userId = req.body.userId;
     let email = req.body.email;
-    if (!userId || !email) {
-        return res.status(400).json({ message: '아이디와 이메일을 입력해주세요.' });
+    if (!userId) {
+        return res.status(400).json({ target: 'userId', message: '아이디를 입력해주세요.' });
     } else {
         const user = await userModel.getUser(userId);
         if (!Array.isArray(user) || user.length === 0) {
@@ -76,6 +76,9 @@ router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
         } else if (user.length > 1) {
             logger.error('패스워드 리셋 중 중복아이디 에러 : ', user);
             return res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
+        } else if (!email && !user[0].email) {
+            //등록된 이메일이 없는 경우
+            return res.statusCode(400).json({ target: 'email', message: '등록된 이메일이 없어 패스워드를 초기화하지 못했습니다. 관리자에게 직접 문의해주세요.' })
         } else if (user[0].email === email) {
             let newPassword = util.partialUUID() + util.partialUUID();
             const result = await userModel.updateUserPassword({
@@ -97,10 +100,10 @@ router.post('/resetPassword', visitorOnly('/'), async(req, res) => {
 
 router.post('/refresh', (req, res) => {
     const token = req.headers['x-auth'];
-    if(token){
+    if (token) {
         jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
             if (!err) { //아직 유효한 토큰이면 그대로 보낸다.
-                return res.status(200).json({token:token});
+                return res.status(200).json({ token: token });
             } else if (err.name === 'TokenExpiredError') { //token is valid except it's expired
                 if ((new Date(err.expiredAt).getTime() + 3600000) >= (new Date().getTime())) { //기한 만료 및 만료시간부터 1시간이 지나지 않았다면 토큰 리프레시
                     const decoded = jwt_decode(token);
@@ -116,18 +119,18 @@ router.post('/refresh', (req, res) => {
                         return res.status(400).json({ message: '잘못된 접근입니다.' });
                     }
                 } else {
-                    return res.status(400).json({message:'세션이 만료되었습니다.'});
+                    return res.status(400).json({ message: '세션이 만료되었습니다.' });
                 }
             } else { //기한만료가 아닌 기타 오류는 갱신 대상 아님
-                return res.status(400).json({message:'유효하지 않은 접근입니다.'});
+                return res.status(400).json({ message: '유효하지 않은 접근입니다.' });
             }
         });
-    }else{
-        return res.status(400).json({message:'로그인 정보가 없습니다.'});
+    } else {
+        return res.status(400).json({ message: '로그인 정보가 없습니다.' });
     }
 });
 
-router.get('/admin', adminOnly, async (req, res)=>{
+router.get('/admin', adminOnly, async (req, res) => {
     let result = await userModel.getProfile(req.userObject.loungeNickName);
     if (result.userId) {
         delete result.userId;
@@ -140,7 +143,7 @@ router.get('/admin', adminOnly, async (req, res)=>{
     }
 })
 
-router.get('/check', adminOnly, async(req, res) => {
-   return res.status(200).end(); 
+router.get('/check', adminOnly, async (req, res) => {
+    return res.status(200).end();
 });
 module.exports = router;
