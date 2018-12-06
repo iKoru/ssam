@@ -325,6 +325,7 @@ exports.getUsers = async (userId, nickName, email, groupId, status, sortTarget =
             'LOUNGE_NICKNAME': '"loungeNickName"',
             'TOPIC_NICKNAME': '"topicNickName"',
             'IS_ADMIN': '"isAdmin"',
+            'EMAIL': '"email"',
             'EMAIL_VERIFIED_DATE': '"emailVerifiedDate"',
             'PICTURE_PATH': '"picturePath"',
             'IS_OPEN_INFO': '"isOpenInfo"',
