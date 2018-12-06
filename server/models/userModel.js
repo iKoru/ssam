@@ -339,9 +339,9 @@ exports.getUsers = async (userId, nickName, email, groupId, status, sortTarget =
         .field('array_agg(UGROUP.GROUP_ID)', '"groups"')
         .from('SS_MST_USER', 'MUSER')
         .left_join('SS_MST_USER_GROUP', 'UGROUP', 'MUSER.USER_ID = UGROUP.USER_ID')
-        .where(userId ? builder.str('MUSER.USER_ID = ?', userId) : '')
-        .where(nickName ? builder.str('LOUNGE_NICKNAME = ? OR TOPIC_NICKNAME = ?', nickName, nickName) : '')
-        .where(email ? builder.str('EMAIL = ?', email) : '')
+        .where(userId ? builder.str('MUSER.USER_ID LIKE \'%\' || ? || \'%\'', userId) : '')
+        .where(nickName ? builder.str('LOUNGE_NICKNAME LIKE \'%\' || ? || \'%\' OR TOPIC_NICKNAME LIKE \'%\' || ? || \'%\'', nickName, nickName) : '')
+        .where(email ? builder.str('EMAIL LIKE \'%\' || ? || \'%\'', email) : '')
         .where(groupId ? builder.str('MUSER.USER_ID IN ?',
             builder.select()
                 .field('TGROUP.USER_ID')
