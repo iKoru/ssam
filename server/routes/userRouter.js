@@ -322,7 +322,23 @@ router.get('/', requiredSignin, async(req, res) => {
 })
 
 router.get('/list', adminOnly, async(req, res) => {
-    let result = await userModel.getUsers(req.query.userId, req.query.nickName, req.query.email, req.query.groupId, req.query.status, req.query.sortTarget, req.query.isAscending, req.query.page);
+    let sortTarget = req.query.sortTarget;
+    switch(sortTarget){
+        case 'email':
+            sortTarget = 'EMAIL';
+            break;
+        case 'loungeNickName':
+            sortTarget = 'LOUNGE_NICKNAME';
+            break;
+        case 'topicNickName':
+            sortTarget = 'TOPIC_NICKNAME';
+            break;
+        case 'userId':
+        default:
+            sortTarget = 'USER_ID';
+            break;
+    }
+    let result = await userModel.getUsers(req.query.userId, req.query.nickName, req.query.email, req.query.groupId, req.query.status, sortTarget, req.query.isAscending && req.query.isAscending === 'true', req.query.page);
     if (Array.isArray(result)) {
         return res.status(200).json(result)
     } else {

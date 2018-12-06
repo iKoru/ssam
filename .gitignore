@@ -10,3 +10,4 @@ redis/*
 dump.rdb
 admin/*
 nuxt
+admin
