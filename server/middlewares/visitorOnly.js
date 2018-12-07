@@ -22,7 +22,8 @@ module.exports = (redirectPath) => {
             }).catch((e) => {
                 next();
             })
+        }else{
+            next();
         }
-        next();
     };
 }
