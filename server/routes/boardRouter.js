@@ -10,7 +10,7 @@ const { safeStringLength, moment } = require('../util'),
 
 //based on /board
 
-router.get('/', requiredAuth, async(req, res) => {
+router.get('/', requiredAuth, async (req, res) => {
     let boardId = req.query.boardId;
     if (!boardId || typeof boardId !== 'string') {
         return res.status(400).json({ target: 'boardId', message: '라운지/토픽을 찾을 수 없습니다.' });
@@ -36,29 +36,29 @@ router.get('/', requiredAuth, async(req, res) => {
     return res.status(200).json(board);
 });
 
-router.put('/', requiredAuth, async(req, res) => {
+router.put('/', requiredAuth, async (req, res) => {
     let boardId = req.body.boardId;
     if (typeof boardId !== 'string') {
         return res.status(400).json({ target: 'boardId', message: '변경할 라운지/토픽을 찾을 수 없습니다.' })
     }
     const board = await boardModel.getBoard(boardId);
-    const immediate = req.userObject.isAdmin? !!req.body.immediate : false;
+    const immediate = req.userObject.isAdmin ? req.body.immediate : false;
     if (!Array.isArray(board) || board.length < 1) {
         return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
     } else if (board[0].ownerId !== req.userObject.userId && !req.userObject.isAdmin) {
         return res.status(403).json({ target: 'boardId', message: '라운지/토픽 정보를 변경할 수 있는 권한이 없습니다.' });
     } else if (board[0].reservedContents && !req.body.overwrite && !immediate) {
-        return res.status(403).json({ message: `이미 ${moment(board[0].reservedDate, 'YYYYMMDD').format('YYYY-M-D')}에 예약된 변경내용이 존재합니다.` });
+        return res.status(403).json({ message: `이미 ${moment(board[0].reservedDate, 'YYYYMMDD').format('YYYY년 M월 D일')}에 예약된 변경내용이 존재합니다.` });
     }
-    
-    if(!board[0].reservedContents){
+
+    if (!board[0].reservedContents) {
         board[0].reservedContents = {};
     }
-    let reservedContents = req.userObject.isAdmin && req.body.reservedContents? req.body.reservedContents : {};
-    if (typeof req.body.boardName === 'string' && req.body.boardName !== '' && (safeStringLength(req.body.boardName, 200) !== board[0].boardName || (board[0].reservedContents.boardName && safeStringLength(req.body.boardName, 200) !== board[0].reservedContents.boardName))) {
+    let reservedContents = {};
+    if (typeof req.body.boardName === 'string' && req.body.boardName !== '' && safeStringLength(req.body.boardName, 200) !== board[0].boardName) {
         reservedContents.boardName = safeStringLength(req.body.boardName, 200)
     }
-    if (typeof req.body.boardDescription === 'string' && (safeStringLength(req.body.boardDescription, 1000) !== board[0].boardDescription || (board[0].reservedContents.boardDescription && safeStringLength(req.body.boardDescription, 1000) !== board[0].reservedContents.boardDescription))) {
+    if (typeof req.body.boardDescription === 'string' && safeStringLength(req.body.boardDescription, 1000) !== board[0].boardDescription) {
         reservedContents.boardDescription = safeStringLength(req.body.boardDescription, 1000);
     }
     if (typeof req.body.ownerNickName === 'string') {
@@ -74,13 +74,13 @@ router.put('/', requiredAuth, async(req, res) => {
             }
         }
     }
-    if (typeof req.body.allowAnonymous === 'boolean' && (req.body.allowAnonymous !== board[0].allowAnonymous || (typeof board[0].reservedContents.allowAnonymous === 'boolean' && req.body.allowAnonymous !== board[0].reservedContents.allowAnonymous))) {
+    if (typeof req.body.allowAnonymous === 'boolean' && req.body.allowAnonymous !== board[0].allowAnonymous) {
         reservedContents.allowAnonymous = req.body.allowAnonymous
     }
-    if (typeof req.body.status === 'string' && ['NORMAL', 'DELETED'].indexOf(req.body.status) >= 0 && (req.body.status !== board[0].status || (board[0].reservedContents.status && req.body.status !== board[0].reservedContents.status))) {
+    if (typeof req.body.status === 'string' && ['NORMAL', 'DELETED'].indexOf(req.body.status) >= 0 && req.body.status !== board[0].status) {
         reservedContents.status = req.body.status;
     }
-    if (typeof req.body.allGroupAuth === 'string' && ['NONE', 'READONLY', 'READWRITE'].indexOf(req.body.allGroupAuth) >= 0 && (req.body.allGroupAuth !== board[0].allGroupAuth || (board[0].reservedContents.allGroupAuth && req.body.allGroupAuth !== board[0].reservedContents.allGroupAuth))) {
+    if (typeof req.body.allGroupAuth === 'string' && ['NONE', 'READONLY', 'READWRITE'].indexOf(req.body.allGroupAuth) >= 0 && req.body.allGroupAuth !== board[0].allGroupAuth) {
         reservedContents.allGroupAuth = req.body.allGroupAuth
     }
 
@@ -90,26 +90,22 @@ router.put('/', requiredAuth, async(req, res) => {
             groups = [groups];
         }
         reservedContents.auth = [];
-        groups = groups.filter(x => x.authType === 'READONLY' || x.authType === 'READWRITE');
         let currentBoardAuth = await boardModel.getBoardAuth(boardId);
         let i = 0,
             result;
         if (Array.isArray(currentBoardAuth)) {
             while (i < groups.length) {
-                result = currentBoardAuth.find(x => x.groupId === groups[i].groupId);
-                if (result && result.authType !== groups[i].authType && ['READONLY', 'READWRITE'].indexOf(groups[i].authType) >= 0) { //exist
-                    reservedContents.auth.push({ groupId: groups[i].groupId, authType: groups[i].authType, command: 'UPDATE' });
-                } else if (['READONLY', 'READWRITE'].indexOf(groups[i].authType) >= 0) { //new group
-                    result = await groupModel.getGroup(groups[i].groupId);
+                if (!currentBoardAuth.find(x => x.groupId === groups[i])) { //new group
+                    result = await groupModel.getGroup(groups[i]);
                     if (result && result[0] && (result[0].isOpenToUsers || req.userObject.isAdmin)) {
-                        reservedContents.auth.push({ groupId: groups[i].groupId, authType: groups[i].authType, command: 'INSERT' });
+                        reservedContents.auth.push({ groupId: groups[i], authType: 'READONLY', command: 'INSERT' });
                     }
                 }
                 i++;
             }
             i = 0;
             while (i < currentBoardAuth.length) {
-                if (!(groups.find(x => x.groupId === currentBoardAuth[i].groupId))) { //deleted group
+                if (!(groups.find(x => x === currentBoardAuth[i].groupId))) { //deleted group
                     reservedContents.auth.push({ groupId: currentBoardAuth[i].groupId, command: 'DELETE' })
                 }
                 i++;
@@ -120,30 +116,44 @@ router.put('/', requiredAuth, async(req, res) => {
         }
     }
 
-    if (Object.keys(reservedContents).length < 1 && !(req.userObject.isAdmin && req.body.reservedDate)) {
+    if (Object.keys(reservedContents).length < 1 && (!req.body.overwrite || (board[0].reservedContents === null && Object.keys(reservedContents).length === 0))) {
         return res.status(400).json({ message: '변경될 내용이 없습니다. 입력한 값이 올바른지 확인해주세요.' });
     } else {
         let result;
-        if(immediate){
-            result = await boardModel.updateBoard({boardId:boardId, ...reservedContents});
-        }else{
-            result = await boardModel.updateBoard({ boardId: boardId, reservedDate: (req.userObject.isAdmin && req.body.reservedDate? req.body.reservedDate.replace(/\-/gi, '') : moment().add(1, 'months').format('YYYYMMDD')), reservedContents: reservedContents });
+        if (immediate && reservedContents.auth) {
+            let i = 0;
+            while (i < reservedContents.auth.length) {
+                if (reservedContents.auth[i].command === 'INSERT') {
+                    boardModel.createBoardAuth(boardId, reservedContents.auth[i].groupId, reservedContents.auth[i].authType)
+                } else if (reservedContents.auth[i].command === 'UPDATE') {
+                    boardModel.updateBoardAuth(boardId, reservedContents.auth[i].groupId, reservedContents.auth[i].authType)
+                } else if (reservedContents.auth[i].command === 'DELETE') {
+                    boardModel.deleteBoardAuth(boardId, reservedContents.auth[i].groupId)
+                }
+                i++;
+            }
         }
+        if (immediate && Object.keys(reservedContents).filter(x => x !== 'auth').length > 0) {
+            result = await boardModel.updateBoard({ boardId: boardId, ...reservedContents });
+        } else if (immediate) {
+            result = 1;//all done
+        } else {//reservedDate : admin이 아니고 예약내용이 존재하지 않으면 null, 예약내용이 존재하면 1달뒤, admin이고 예약내용이 존재하지 않으면 null, 예약내용이 존재하고 예약날짜가 있으면 그 날짜로, 없으면 1달뒤
+            const hasContents = Object.keys(reservedContents).length > 0;
+            result = await boardModel.updateBoard({ boardId: boardId, reservedDate: (req.userObject.isAdmin ? (hasContents ? (req.body.reservedDate ? req.body.reservedDate.replace(/\-/gi, '') : moment().add(1, 'months').format('YYYYMMDD')) : null) : (hasContents ? moment().add(1, 'months').format('YYYYMMDD') : null)), reservedContents: (Object.keys(reservedContents).length === 0 ? null : reservedContents) });
+        }
+
         if (typeof result === 'object' || result === 0) {
             logger.error('게시판 설정 변경 처리 중 에러 : ', result, req.userObject.userId, reservedContents)
             return res.status(500).json({ message: `변경될 내용을 저장하는 데 실패하였습니다.[${result.code || ''}] 다시 시도해주세요.` });
         } else {
-            if (process.env.NODE_ENV === 'development') {
-            //    await applyReservedContents(boardId);
-            }
-            return res.status(200).json({ message: `정상적으로 변경예약되었습니다. 변경 내용은 ${moment().add(1, 'months').format('YYYY-MM-DD')}에 반영됩니다.` })
+            return res.status(200).json({ message: `정상적으로 변경${immediate ? '' : '예약'}되었습니다.${immediate ? '' : ' 변경 내용은 ' + (req.userObject.isAdmin && req.body.reservedDate ? req.body.reservedDate : moment().add(1, 'months').format('YYYYMMDD')) + '에 반영됩니다.'}` })
         }
     }
 
 });
 
-router.post('/', requiredAuth, async(req, res) => {
-    let board = {...req.body };
+router.post('/', requiredAuth, async (req, res) => {
+    let board = { ...req.body };
 
     if (!constants.boardTypeDomain.hasOwnProperty(board.boardType) || (board.boardType !== 'T' && !req.userObject.isAdmin)) {
         return res.status(400).json({ target: 'boardType', message: '라운지/토픽 구분값이 올바르지 않습니다.' });
@@ -209,7 +219,7 @@ router.post('/', requiredAuth, async(req, res) => {
     }
 });
 
-router.delete('/:boardId([a-zA-z]+)', adminOnly, async(req, res) => {
+router.delete('/:boardId([a-zA-z]+)', adminOnly, async (req, res) => {
     let boardId = req.params.boardId;
     if (typeof boardId !== 'string' || boardId === '') {
         return res.status(400).json({ target: 'boardId', message: '삭제할 토픽 ID값이 없습니다.' });
@@ -218,14 +228,14 @@ router.delete('/:boardId([a-zA-z]+)', adminOnly, async(req, res) => {
     if (typeof result === 'object') {
         logger.error('게시판 삭제 중 에러 : ', result, req.userObject.userId, boardId)
         return res.status(500).json({ message: '게시판을 삭제하는 중에 오류가 발생했습니다.' });
-    } else if(result === 0) {
-        return res.status(404).json({ target:'boardId', message: '존재하지 않는 게시판입니다.' });
+    } else if (result === 0) {
+        return res.status(404).json({ target: 'boardId', message: '존재하지 않는 게시판입니다.' });
     } else {
         return res.status(200).json({ message: '게시판을 삭제하였습니다.' });
     }
 });
 
-router.get('/list', requiredAuth, async(req, res) => {
+router.get('/list', requiredAuth, async (req, res) => {
     let isAscending, sortTarget, searchTarget, searchQuery, page, boardType;
     if (typeof req.query.isAscending === 'boolean') {
         isAscending = req.query.isAscending;
@@ -260,7 +270,7 @@ router.get('/list', requiredAuth, async(req, res) => {
     }
 });
 
-const applyReservedContents = async(boardId) => {
+const applyReservedContents = async (boardId) => {
     let board = await boardModel.getBoard(boardId);
     if (!Array.isArray(board) || board.length === 0) {
         return 0;
@@ -281,10 +291,14 @@ const applyReservedContents = async(boardId) => {
         }
     }
     reservedContents.boardId = boardId;
-    let result = await boardModel.updateBoard(reservedContents);
-    if (typeof result === 'object' || result === 0) {
-        logger.error('board update apply error : ' + result);
-        return -1;
+    if (Object.keys(reservedContents).filter(x => x !== 'auth').length > 0) {
+        let result = await boardModel.updateBoard(reservedContents);
+        if (typeof result === 'object' || result === 0) {
+            logger.error('board update apply error : ' + result);
+            return -1;
+        } else {
+            return 1;
+        }
     } else {
         return 1;
     }
