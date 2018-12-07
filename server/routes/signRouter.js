@@ -11,9 +11,9 @@ const signModel = require('../models/signModel'),
     logger = require('../logger');
 
 //based on /
-router.get('/signin', visitorOnly('/'), (req, res) => {
+/*router.get('/signin', visitorOnly('/'), (req, res) => {
     res.status(501).end();
-});
+});*/
 
 router.post('/signin', visitorOnly('/'), async (req, res) => {
     let userId = req.body.userId;
@@ -56,13 +56,13 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
     }
 });
 
-router.get('/signup', visitorOnly('/'), (req, res) => { //회원가입 페이지 접근
+/*router.get('/signup', visitorOnly('/'), (req, res) => { //회원가입 페이지 접근
     res.status(501).end();
 });
 
 router.get('/resetPassword', visitorOnly('/'), (req, res) => {
     res.status(501).end();
-});
+});*/
 
 router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
     let userId = req.body.userId;

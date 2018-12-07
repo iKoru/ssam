@@ -20,7 +20,7 @@ exports.checkBoardId = async(boardId) => {
 
 exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boardName", sortTarget = "boardName", isAscending = true, isAdmin = false) => {
     let query = builder.select().fields({
-            'BOARD_ID': '"boardId"',
+            'BOARD.BOARD_ID': '"boardId"',
             'BOARD_NAME': '"boardName"',
             'OWNER_ID': '"ownerId"',
             'BOARD_DESCRIPTION': '"boardDescription"',
@@ -28,9 +28,14 @@ exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boar
             'STATUS': '"status"',
             'ALL_GROUP_AUTH': '"allGroupAuth"',
             'ALLOW_ANONYMOUS': '"allowAnonymous"',
-        })
-        .from('SS_MST_BOARD');
-    if (!isAdmin) {
+            'RESERVED_DATE':'"reservedDate"',
+            'RESERVED_CONTENTS':'"reservedContents"'
+        });
+    if(isAdmin){
+        query.field('array_agg(AUTH.ALLOWED_GROUP_ID)', 'allowedGroups')
+            .from('SS_MST_BOARD', 'BOARD')
+            .left_join('SS_MST_BOARD_AUTH', 'AUTH', 'AUTH.BOARD_ID = BOARD.BOARD_ID');
+    }else{
         query.where('STATUS <> \'DELETED\'');
     }
     if (searchQuery) {
@@ -53,7 +58,10 @@ exports.getBoards = async(searchQuery, boardType, page = 1, searchTarget = "boar
             query.order('BOARD_NAME', isAscending);
             break;
     }
-    return await pool.executeQuery('getBoards' + (isAdmin ? 'admin' : '') + (searchQuery && searchTarget === 'boardName' ? 'name' : '') + (boardType ? 'type' : ''),
+    if(isAdmin){
+        query.group('BOARD.BOARD_ID')
+    }
+    return await pool.executeQuery('getBoardss' + (isAdmin ? 'admin' : '') + (searchQuery && searchTarget === 'boardName' ? 'name' : '') + (boardType ? 'type' : ''),
         query.limit(15).offset((page - 1) * 15)
         .toParam()
     )

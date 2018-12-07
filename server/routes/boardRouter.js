@@ -42,18 +42,23 @@ router.put('/', requiredAuth, async(req, res) => {
         return res.status(400).json({ target: 'boardId', message: '변경할 라운지/토픽을 찾을 수 없습니다.' })
     }
     const board = await boardModel.getBoard(boardId);
+    const immediate = req.userObject.isAdmin? !!req.body.immediate : false;
     if (!Array.isArray(board) || board.length < 1) {
         return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
     } else if (board[0].ownerId !== req.userObject.userId && !req.userObject.isAdmin) {
         return res.status(403).json({ target: 'boardId', message: '라운지/토픽 정보를 변경할 수 있는 권한이 없습니다.' });
-    } else if (board[0].reservedContents && !req.body.overwrite) {
+    } else if (board[0].reservedContents && !req.body.overwrite && !immediate) {
         return res.status(403).json({ message: `이미 ${moment(board[0].reservedDate, 'YYYYMMDD').format('YYYY-M-D')}에 예약된 변경내용이 존재합니다.` });
     }
-    let reservedContents = {};
-    if (typeof req.body.boardName === 'string' && req.body.boardName !== '' && safeStringLength(req.body.boardName, 200) !== board[0].boardName) {
+    
+    if(!board[0].reservedContents){
+        board[0].reservedContents = {};
+    }
+    let reservedContents = req.userObject.isAdmin && req.body.reservedContents? req.body.reservedContents : {};
+    if (typeof req.body.boardName === 'string' && req.body.boardName !== '' && (safeStringLength(req.body.boardName, 200) !== board[0].boardName || (board[0].reservedContents.boardName && safeStringLength(req.body.boardName, 200) !== board[0].reservedContents.boardName))) {
         reservedContents.boardName = safeStringLength(req.body.boardName, 200)
     }
-    if (typeof req.body.boardDescription === 'string' && safeStringLength(req.body.boardDescription, 1000) !== board[0].boardDescription) {
+    if (typeof req.body.boardDescription === 'string' && (safeStringLength(req.body.boardDescription, 1000) !== board[0].boardDescription || (board[0].reservedContents.boardDescription && safeStringLength(req.body.boardDescription, 1000) !== board[0].reservedContents.boardDescription))) {
         reservedContents.boardDescription = safeStringLength(req.body.boardDescription, 1000);
     }
     if (typeof req.body.ownerNickName === 'string') {
@@ -69,13 +74,13 @@ router.put('/', requiredAuth, async(req, res) => {
             }
         }
     }
-    if (typeof req.body.allowAnonymous === 'boolean' && req.body.allowAnonymous !== board[0].allowAnonymous) {
+    if (typeof req.body.allowAnonymous === 'boolean' && (req.body.allowAnonymous !== board[0].allowAnonymous || (typeof board[0].reservedContents.allowAnonymous === 'boolean' && req.body.allowAnonymous !== board[0].reservedContents.allowAnonymous))) {
         reservedContents.allowAnonymous = req.body.allowAnonymous
     }
-    if (typeof req.body.status === 'string' && ['NORMAL', 'DELETED'].indexOf(req.body.status) >= 0 && req.body.status !== board[0].status) {
+    if (typeof req.body.status === 'string' && ['NORMAL', 'DELETED'].indexOf(req.body.status) >= 0 && (req.body.status !== board[0].status || (board[0].reservedContents.status && req.body.status !== board[0].reservedContents.status))) {
         reservedContents.status = req.body.status;
     }
-    if (typeof req.body.allGroupAuth === 'string' && ['NONE', 'READONLY', 'READWRITE'].indexOf(req.body.allGroupAuth) >= 0 && req.body.allGroupAuth !== board[0].allGroupAuth) {
+    if (typeof req.body.allGroupAuth === 'string' && ['NONE', 'READONLY', 'READWRITE'].indexOf(req.body.allGroupAuth) >= 0 && (req.body.allGroupAuth !== board[0].allGroupAuth || (board[0].reservedContents.allGroupAuth && req.body.allGroupAuth !== board[0].reservedContents.allGroupAuth))) {
         reservedContents.allGroupAuth = req.body.allGroupAuth
     }
 
@@ -115,16 +120,21 @@ router.put('/', requiredAuth, async(req, res) => {
         }
     }
 
-    if (Object.keys(reservedContents).length < 1) {
+    if (Object.keys(reservedContents).length < 1 && !(req.userObject.isAdmin && req.body.reservedDate)) {
         return res.status(400).json({ message: '변경될 내용이 없습니다. 입력한 값이 올바른지 확인해주세요.' });
     } else {
-        let result = await boardModel.updateBoard({ boardId: boardId, reservedDate: moment().add(1, 'months').format('YYYYMMDD'), reservedContents: reservedContents });
+        let result;
+        if(immediate){
+            result = await boardModel.updateBoard({boardId:boardId, ...reservedContents});
+        }else{
+            result = await boardModel.updateBoard({ boardId: boardId, reservedDate: (req.userObject.isAdmin && req.body.reservedDate? req.body.reservedDate.replace(/\-/gi, '') : moment().add(1, 'months').format('YYYYMMDD')), reservedContents: reservedContents });
+        }
         if (typeof result === 'object' || result === 0) {
             logger.error('게시판 설정 변경 처리 중 에러 : ', result, req.userObject.userId, reservedContents)
             return res.status(500).json({ message: `변경될 내용을 저장하는 데 실패하였습니다.[${result.code || ''}] 다시 시도해주세요.` });
         } else {
             if (process.env.NODE_ENV === 'development') {
-                await applyReservedContents(boardId);
+            //    await applyReservedContents(boardId);
             }
             return res.status(200).json({ message: `정상적으로 변경예약되었습니다. 변경 내용은 ${moment().add(1, 'months').format('YYYY-MM-DD')}에 반영됩니다.` })
         }
