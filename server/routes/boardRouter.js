@@ -153,7 +153,15 @@ router.put('/', requiredAuth, async (req, res) => {
 });
 
 router.post('/', requiredAuth, async (req, res) => {
-    let board = { ...req.body };
+    let board = {
+        boardId: req.body.boardId,
+        boardName: req.body.boardName,
+        boardDescription: req.body.boardDescription,
+        allowAnonymous: req.body.allowAnonymous,
+        allGroupAuth: req.body.allGroupAuth,
+        boardType: req.body.boardType,
+        groups: req.body.allowedGroups
+    };
 
     if (!constants.boardTypeDomain.hasOwnProperty(board.boardType) || (board.boardType !== 'T' && !req.userObject.isAdmin)) {
         return res.status(400).json({ target: 'boardType', message: '라운지/토픽 구분값이 올바르지 않습니다.' });
@@ -186,7 +194,13 @@ router.post('/', requiredAuth, async (req, res) => {
     if (Array.isArray(check) && check.length > 0) {
         return res.status(409).json({ target: 'boardId', message: `이미 존재하는 ${constants.boardTypeDomain[board.boardType]} ID입니다.` });
     }
-    board.ownerId = req.userObject.userId;
+    board.ownerId = req.userObject.isAdmin ? (req.body.ownerId ? req.body.ownerId : req.userObject.userId) : req.userObject.userId;
+    if (board.ownerId !== req.userObject.userId) {
+        check = await userModel.getUser(board.ownerId);
+        if (!Array.isArray(check) || check.length === 0) {
+            return res.status(404).json({ target: 'ownerId', message: '입력한 소유자 ID에 해당하는 회원ID가 존재하지 않습니다.' })
+        }
+    }
     board.boardDescription = safeStringLength(board.boardDescription, 1000);
     board.boardName = safeStringLength(board.boardName, 200);
     let groups = [];
@@ -240,16 +254,16 @@ router.get('/list', requiredAuth, async (req, res) => {
     if (typeof req.query.isAscending === 'boolean') {
         isAscending = req.query.isAscending;
     }
-    if (['boardType', 'boardName'].indexOf(req.query.sortTarget) >= 0) {
+    if (['boardType', 'boardName'].includes(req.query.sortTarget)) {
         sortTarget = req.query.sortTarget;
     }
-    if (req.query.searchTarget === 'boardName') {
+    if (['boardName', 'boardId'].includes(req.query.searchTarget)) {
         searchTarget = req.query.searchTarget;
     }
     if (typeof req.query.searchQuery === 'string' && req.query.searchQuery !== '') {
         searchQuery = req.query.searchQuery;
     }
-    if (['L', 'T', 'D'].indexOf(req.query.boardType) >= 0) {
+    if (['L', 'T', 'D', 'E'].includes(req.query.boardType)) {
         boardType = req.query.boardType;
     }
     if (Number.isInteger(req.query.page) && req.query.page > 0) {

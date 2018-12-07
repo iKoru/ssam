@@ -36,11 +36,14 @@ exports.getBoards = async (searchQuery, boardType, page = 1, searchTarget = "boa
             .from('SS_MST_BOARD', 'BOARD')
             .left_join('SS_MST_BOARD_AUTH', 'AUTH', 'AUTH.BOARD_ID = BOARD.BOARD_ID');
     } else {
-        query.where('STATUS <> \'DELETED\'');
+        query.from('SS_MS_BOARD', 'BOARD')
+            .where('STATUS <> \'DELETED\'');
     }
     if (searchQuery) {
         if (searchTarget === 'boardName') {
             query.where('BOARD_NAME LIKE \'%\'||?||\'%\'', searchQuery)
+        } else if (searchTarget === 'boardId') {
+            query.where('BOARD.BOARD_ID LIKE \'%\'||?||\'%\'', searchQuery)
         }
     }
     if (boardType) {
@@ -53,6 +56,9 @@ exports.getBoards = async (searchQuery, boardType, page = 1, searchTarget = "boa
         case 'status':
             query.order('STATUS', isAscending);
             break;
+        case 'boardId':
+            query.order('BOARD.BOARD_ID', isAscending);
+            break;
         case 'boardName':
         default:
             query.order('BOARD_NAME', isAscending);
@@ -61,7 +67,7 @@ exports.getBoards = async (searchQuery, boardType, page = 1, searchTarget = "boa
     if (isAdmin) {
         query.group('BOARD.BOARD_ID')
     }
-    return await pool.executeQuery('getBoardss' + (isAdmin ? 'admin' : '') + (searchQuery && searchTarget === 'boardName' ? 'name' : '') + (boardType ? 'type' : ''),
+    return await pool.executeQuery('getBoards' + (isAdmin ? 'admin' : '') + (searchQuery ? searchTarget : '') + (boardType ? 'type' : ''),
         query.limit(15).offset((page - 1) * 15)
             .toParam()
     )
