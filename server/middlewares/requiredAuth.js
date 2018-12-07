@@ -15,8 +15,10 @@ const auth = (req, res, next) => {
 
     const p = new Promise((resolve, reject) => {
         jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
-            if (err) reject(err)
-            resolve(result);
+            if (err){
+              return reject(err);
+            } 
+            return resolve(result);
         });
     })
 
@@ -29,7 +31,7 @@ const auth = (req, res, next) => {
         if (result.userId) {
             let user = await userModel.getUser(result.userId);
             if (user && user[0]) {
-                if (user[0].status === 'AUTHORIZED') {
+                if (user[0].status === 'AUTHORIZED' || user[0].isAdmin) {
                     req.userObject = user[0];
                     next();
                 } else {
