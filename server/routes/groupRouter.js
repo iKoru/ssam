@@ -43,6 +43,15 @@ router.get('/', checkSignin, async (req, res) => { //get group list
 router.post('/', adminOnly, async (req, res) => { //create new group
     let group = { ...req.body };
     //parameter safe check
+    if(typeof group.groupId === 'string'){
+        group.groupId = 1*group.groupId;
+    }
+    if(typeof group.expirePeriod === 'string'){
+        group.expirePeriod = 1*group.expirePeriod;
+    }
+    if(typeof group.parentGroupId === 'string'){
+        group.parentGroupId = 1* group.parentGroupId;
+    }
     if (typeof group.groupName !== 'string' || group.groupName === '') {
         return res.status(400).json({ target: 'groupName', message: '그룹 이름 값이 올바르지 않습니다.' });
     } else if (group.groupDescription && typeof group.groupDescription !== 'string') {
@@ -53,7 +62,7 @@ router.post('/', adminOnly, async (req, res) => { //create new group
         return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 너무 깁니다. 관리자에게 문의해주세요.' });
     } else if (!['N', 'M', 'G', 'R'].includes(group.groupType)) {
         return res.status(400).json({ target: 'groupType', message: '그룹 종류 값이 올바르지 않습니다.' });
-    } else if (group.parentGroupId && !Number.isInteger(group.parentGroupId) || group.parentGroupId < 1) {
+    } else if (group.parentGroupId && (!Number.isInteger(group.parentGroupId) || group.parentGroupId < 1)) {
         return res.status(400).json({ target: 'parentGroupId', message: '상위 그룹 ID가 올바르지 않습니다.' });
     } else if (!Number.isInteger(group.expirePeriod)) {
         return res.status(400).json({ target: 'expirePeriod', message: '만료기간 값이 올바르지 않습니다.' });
@@ -77,6 +86,15 @@ router.post('/', adminOnly, async (req, res) => { //create new group
 router.put('/', adminOnly, async (req, res) => { //update current group
     let group = { ...req.body };
     //parameter safe check
+    if(typeof group.groupId === 'string'){
+        group.groupId = 1*group.groupId;
+    }
+    if(typeof group.expirePeriod === 'string'){
+        group.expirePeriod = 1*group.expirePeriod;
+    }
+    if(typeof group.parentGroupId === 'string'){
+        group.parentGroupId = 1* group.parentGroupId;
+    }
     if (!Number.isInteger(group.groupId)) {
         return res.status(400).json({ target: 'groupId', message: '그룹 ID가 올바르지 않습니다.' });
     } else if (group.groupName && (typeof group.groupName === 'object' || group.groupName === '')) {
@@ -89,7 +107,7 @@ router.put('/', adminOnly, async (req, res) => { //update current group
         return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 너무 깁니다. 관리자에게 문의해주세요.' });
     } else if (group.groupType && !['N', 'M', 'G', 'R'].includes(group.groupType)) {
         return res.status(400).json({ target: 'groupType', message: '그룹 종류 값이 올바르지 않습니다.' });
-    } else if (group.parentGroupId && !Number.isInteger(group.parentGroupId) || group.parentGroupId < 1) {
+    } else if (group.parentGroupId && (!Number.isInteger(group.parentGroupId) || group.parentGroupId < 1)) {
         return res.status(400).json({ target: 'parentGroupId', message: '상위 그룹 ID가 올바르지 않습니다.' });
     } else if (group.expirePeriod && !Number.isInteger(group.expirePeriod)) {
         return res.status(400).json({ target: 'expirePeriod', message: '만료기간 값이 올바르지 않습니다.' });
