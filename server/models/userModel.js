@@ -40,8 +40,7 @@ exports.checkEmail = async (email) => {
 }
 
 exports.createUser = async (user) => {
-    let result = await pool.executeQuery('createUser',
-        builder.insert()
+    let query = builder.insert()
             .into('SS_MST_USER')
             .setFields({
                 USER_ID: user.userId,
@@ -51,7 +50,18 @@ exports.createUser = async (user) => {
                 PASSWORD: user.password,
                 INVITE_CODE: util.partialUUID(),
                 INVITER: user.inviter
-            })
+            });
+    if(user.status){
+        query.set('STATUS', user.status)
+    }
+    if(user.memo){
+        query.set('MEMO', user.memo)
+    }
+    if(typeof user.isAdmin === 'boolean'){
+        query.set('IS_ADMIN', user.isAdmin)
+    }
+    let result = await pool.executeQuery('createUser' + (user.status?'st':'') + (user.memo?'mem':'') + (typeof user.isAdmin === 'boolean'?'ad':''),
+        query
             .toParam()
     );
     if (result === 1 && user.inviter) {

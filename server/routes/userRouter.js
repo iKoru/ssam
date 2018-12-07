@@ -7,7 +7,8 @@ const constants = require('../constants'),
     logger = require('../logger'),
     config = require('../../config');
 const adminOnly = require('../middlewares/adminOnly'),
-    requiredSignin = require('../middlewares/requiredSignin');
+    requiredSignin = require('../middlewares/requiredSignin'),
+    checkSignin = require('../middlewares/checkSignin');
 const userModel = require('../models/userModel'),
     groupModel = require('../models/groupModel'),
     documentModel = require('../models/documentModel'),
@@ -197,8 +198,14 @@ router.put('/', requiredSignin, async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => { //회원가입
-    let user = { ...req.body };
+router.post('/', checkSignin, async (req, res) => { //회원가입
+    let user = { 
+        userId:req.body.userId,
+        password:req.body.password,
+        major:req.body.major,
+        grade:req.body.grade,
+        email:req.body.email
+    };
     if (!user.userId) {
         return res.status(400).json({ target: 'userId', message: '아이디를 입력해주세요.' });
     } else if (typeof user.userId !== 'string' || !constants.userIdRegex.test(user.userId)) {
@@ -242,7 +249,7 @@ router.post('/', async (req, res) => { //회원가입
         }
     }
     if (user.grade) {
-        result = await userModel.getGroup(user.grade, ['G']);
+        result = await groupModel.getGroup(user.grade, ['G']);
         if (result && result[0]) {
             if (!Array.isArray(user.userGroup)) {
                 user.userGroup = [];
@@ -253,7 +260,7 @@ router.post('/', async (req, res) => { //회원가입
         }
     }
     if (user.major) {
-        result = await userModel.getGroup(user.major, ['M']);
+        result = await groupModel.getGroup(user.major, ['M']);
         if (result && result[0]) {
             if (!Array.isArray(user.userGroup)) {
                 user.userGroup = [];
@@ -276,6 +283,25 @@ router.post('/', async (req, res) => { //회원가입
         trial++;
     }
     user.password = await bcrypt.hash(user.password, config.bcryptSalt);
+    if(req.userObject && req.userObject.isAdmin){
+        user.memo = req.body.memo;
+        if(Array.isArray(req.body.groups) && req.body.groups.length > 0){
+            if(!Array.isArray(user.userGroup)){
+                user.userGroup = user.groups;
+            }else{
+                user.userGroup = user.userGroup.concat(req.body.groups);
+            }
+        }
+        if(typeof req.body.isAdmin === 'boolean'){
+            user.isAdmin = req.body.isAdmin;
+        }
+        if(['NORMAL', 'AUTHORIZED', 'BLOCKED', 'DELETED'].includes(req.body.status)){
+            user.status = req.body.status;
+        }
+        if(req.body.region){
+            user.userGroup.push(req.body.region)
+        }
+    }
     result = await userModel.createUser(user);
     if (typeof result !== 'object' && result > 0) {
         //TODO : send email
@@ -290,7 +316,7 @@ router.post('/', async (req, res) => { //회원가입
             trial++;
         }
         await scrapModel.createScrapGroup(user.userId, '기본 그룹');
-        return res.status(200).json({ message: '회원가입에 성공하였습니다. 입력하신 이메일 주소로 인증메일을 보냈으니 확인해주세요.' });
+        return res.status(200).json({ message: '회원가입에 성공하였습니다. 입력하신 이메일 주소로 인증메일을 보냈으니 확인해주세요.' , nickName:user.nickName});
     } else {
         logger.error('사용자 생성 중 에러 : ', result, user);
         return res.status(500).json({ message: `회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.[${result.code || ''}]` });
