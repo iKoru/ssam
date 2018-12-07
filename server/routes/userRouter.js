@@ -38,7 +38,7 @@ router.put('/', requiredSignin, async (req, res) => {
             }
             original = original[0];
         }
-        let result; console.log(user);
+        let result;
         if (typeof user.loungeNickName === 'string' && user.loungeNickName !== original.loungeNickName) {
             if (original.loungeNickNameModifiedDate && moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment()) && !req.userObject.isAdmin) {
                 return res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
@@ -49,7 +49,7 @@ router.put('/', requiredSignin, async (req, res) => {
             result = await userModel.checkNickName(user.userId, user.loungeNickName);
             if (result[0] && result[0].count > 0) {
                 return res.status(409).json({ target: 'loungeNickName', message: '이미 존재하는 라운지 필명입니다.' });
-            } else {
+            } else if(!req.userObject.isAdmin){
                 let i = 0;
                 while (i < constants.reservedNickName.length) {
                     if (user.loungeNickName.indexOf(constants.reservedNickName[i]) >= 0) {
@@ -70,7 +70,7 @@ router.put('/', requiredSignin, async (req, res) => {
             result = await userModel.checkNickName(user.userId, user.topicNickName);
             if (result[0] && result[0].count > 0) {
                 return res.status(409).json({ target: 'topicNickName', message: '이미 존재하는 토픽 닉네임입니다.' });
-            } else {
+            } else if(!req.userObject.isAdmin){
                 let i = 0;
                 while (i < constants.reservedNickName.length) {
                     if (user.topicNickName.indexOf(constants.reservedNickName[i]) >= 0) {
