@@ -49,7 +49,7 @@ router.put('/', requiredSignin, async (req, res) => {
             result = await userModel.checkNickName(user.userId, user.loungeNickName);
             if (result[0] && result[0].count > 0) {
                 return res.status(409).json({ target: 'loungeNickName', message: '이미 존재하는 라운지 필명입니다.' });
-            } else if(!req.userObject.isAdmin){
+            } else if (!req.userObject.isAdmin) {
                 let i = 0;
                 while (i < constants.reservedNickName.length) {
                     if (user.loungeNickName.indexOf(constants.reservedNickName[i]) >= 0) {
@@ -70,7 +70,7 @@ router.put('/', requiredSignin, async (req, res) => {
             result = await userModel.checkNickName(user.userId, user.topicNickName);
             if (result[0] && result[0].count > 0) {
                 return res.status(409).json({ target: 'topicNickName', message: '이미 존재하는 토픽 닉네임입니다.' });
-            } else if(!req.userObject.isAdmin){
+            } else if (!req.userObject.isAdmin) {
                 let i = 0;
                 while (i < constants.reservedNickName.length) {
                     if (user.topicNickName.indexOf(constants.reservedNickName[i]) >= 0) {
@@ -199,12 +199,12 @@ router.put('/', requiredSignin, async (req, res) => {
 });
 
 router.post('/', checkSignin, async (req, res) => { //회원가입
-    let user = { 
-        userId:req.body.userId,
-        password:req.body.password,
-        major:req.body.major,
-        grade:req.body.grade,
-        email:req.body.email
+    let user = {
+        userId: req.body.userId,
+        password: req.body.password,
+        major: req.body.major,
+        grade: req.body.grade,
+        email: req.body.email
     };
     if (!user.userId) {
         return res.status(400).json({ target: 'userId', message: '아이디를 입력해주세요.' });
@@ -283,22 +283,22 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
         trial++;
     }
     user.password = await bcrypt.hash(user.password, config.bcryptSalt);
-    if(req.userObject && req.userObject.isAdmin){
+    if (req.userObject && req.userObject.isAdmin) {
         user.memo = req.body.memo;
-        if(Array.isArray(req.body.groups) && req.body.groups.length > 0){
-            if(!Array.isArray(user.userGroup)){
+        if (Array.isArray(req.body.groups) && req.body.groups.length > 0) {
+            if (!Array.isArray(user.userGroup)) {
                 user.userGroup = user.groups;
-            }else{
+            } else {
                 user.userGroup = user.userGroup.concat(req.body.groups);
             }
         }
-        if(typeof req.body.isAdmin === 'boolean'){
+        if (typeof req.body.isAdmin === 'boolean') {
             user.isAdmin = req.body.isAdmin;
         }
-        if(['NORMAL', 'AUTHORIZED', 'BLOCKED', 'DELETED'].includes(req.body.status)){
+        if (['NORMAL', 'AUTHORIZED', 'BLOCKED', 'DELETED'].includes(req.body.status)) {
             user.status = req.body.status;
         }
-        if(req.body.region){
+        if (req.body.region) {
             user.userGroup.push(req.body.region)
         }
     }
@@ -316,7 +316,7 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
             trial++;
         }
         await scrapModel.createScrapGroup(user.userId, '기본 그룹');
-        return res.status(200).json({ message: '회원가입에 성공하였습니다. 입력하신 이메일 주소로 인증메일을 보냈으니 확인해주세요.' , nickName:user.nickName});
+        return res.status(200).json({ message: '회원가입에 성공하였습니다. 입력하신 이메일 주소로 인증메일을 보냈으니 확인해주세요.', nickName: user.nickName });
     } else {
         logger.error('사용자 생성 중 에러 : ', result, user);
         return res.status(500).json({ message: `회원 정보를 저장하는 데 실패하였습니다. 관리자에게 문의해 주세요.[${result.code || ''}]` });
@@ -452,7 +452,7 @@ router.get('/document', requiredSignin, async (req, res) => {
     if (typeof req.query.page === 'string') {
         req.query.page = 1 * req.query.page
     }
-    if (req.query.page !== undefined && !Number.isInteger(req.querypage)) {
+    if (req.query.page !== undefined && !Number.isInteger(req.query.page)) {
         return res.status(400).json({ target: 'page', message: '페이지를 찾을 수 없습니다.' });
     } else if (req.query.page === undefined || req.query.page < 1) {
         req.query.page = 1;
@@ -481,7 +481,7 @@ router.get('/comment', requiredSignin, async (req, res) => {
     if (typeof req.query.page === 'string') {
         req.query.page = 1 * req.query.page
     }
-    if (req.query.page !== undefined && !Number.isInteger(req.querypage)) {
+    if (req.query.page !== undefined && !Number.isInteger(req.query.page)) {
         return res.status(400).json({ target: 'page', message: '페이지를 찾을 수 없습니다.' });
     } else if (req.query.page === undefined || req.query.page < 1) {
         req.query.page = 1;
