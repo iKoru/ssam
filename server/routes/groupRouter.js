@@ -2,7 +2,8 @@ const router = require('express').Router();
 const adminOnly = require('../middlewares/adminOnly'),
     checkSignin = require('../middlewares/checkSignin'),
     util = require('../util'),
-    logger = require('../logger');
+    logger = require('../logger'),
+    config = require('../../config');
 const groupModel = require('../models/groupModel')
 //based on /group
 
@@ -43,14 +44,14 @@ router.get('/', checkSignin, async (req, res) => { //get group list
 router.post('/', adminOnly, async (req, res) => { //create new group
     let group = { ...req.body };
     //parameter safe check
-    if(typeof group.groupId === 'string'){
-        group.groupId = 1*group.groupId;
+    if (typeof group.groupId === 'string') {
+        group.groupId = 1 * group.groupId;
     }
-    if(typeof group.expirePeriod === 'string'){
-        group.expirePeriod = 1*group.expirePeriod;
+    if (typeof group.expirePeriod === 'string') {
+        group.expirePeriod = 1 * group.expirePeriod;
     }
-    if(typeof group.parentGroupId === 'string'){
-        group.parentGroupId = 1* group.parentGroupId;
+    if (typeof group.parentGroupId === 'string') {
+        group.parentGroupId = 1 * group.parentGroupId;
     }
     if (typeof group.groupName !== 'string' || group.groupName === '') {
         return res.status(400).json({ target: 'groupName', message: '그룹 이름 값이 올바르지 않습니다.' });
@@ -86,14 +87,14 @@ router.post('/', adminOnly, async (req, res) => { //create new group
 router.put('/', adminOnly, async (req, res) => { //update current group
     let group = { ...req.body };
     //parameter safe check
-    if(typeof group.groupId === 'string'){
-        group.groupId = 1*group.groupId;
+    if (typeof group.groupId === 'string') {
+        group.groupId = 1 * group.groupId;
     }
-    if(typeof group.expirePeriod === 'string'){
-        group.expirePeriod = 1*group.expirePeriod;
+    if (typeof group.expirePeriod === 'string') {
+        group.expirePeriod = 1 * group.expirePeriod;
     }
-    if(typeof group.parentGroupId === 'string'){
-        group.parentGroupId = 1* group.parentGroupId;
+    if (typeof group.parentGroupId === 'string') {
+        group.parentGroupId = 1 * group.parentGroupId;
     }
     if (!Number.isInteger(group.groupId)) {
         return res.status(400).json({ target: 'groupId', message: '그룹 ID가 올바르지 않습니다.' });
@@ -139,6 +140,9 @@ router.delete('/:groupId([0-9]+)', adminOnly, async (req, res) => { //delete exi
     }
     if (!Number.isInteger(groupId) || groupId === 0) {
         return res.status(400).json({ target: 'groupId', message: '삭제할 그룹ID가 올바르지 않습니다.' });
+    }
+    if (groupId === config.authGrantedParentGroupId || groupId === config.authDeniedParentGroupId) {
+        return res.status(400).json({ target: 'groupId', message: '영구 인증/불인증 상위그룹은 필수항목이므로 삭제할 수 없습니다.' });
     }
     let result = await groupModel.deleteGroup(groupId);
     if (typeof result === 'object') {
