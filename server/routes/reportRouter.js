@@ -69,7 +69,7 @@ router.put('/document', adminOnly, async(req, res) => {
     if (typeof report.userId !== 'string') {
         return res.status(400).json({ target: 'userId', message: '변경할 신고의 사용자 ID가 올바르지 않습니다.' });
     }
-    if (typeof report.status !== 'string') {
+    if (!['NORMAL', 'INVALID'].includes(report.status)) {
         return res.status(400).json({ target: 'status', message: '변경할 신고 상태가 올바르지 않습니다.' });
     }
 
@@ -150,7 +150,7 @@ router.put('/comment', adminOnly, async(req, res) => {
     if (typeof report.userId !== 'string') {
         return res.status(400).json({ target: 'userId', message: '변경할 신고의 사용자 ID가 올바르지 않습니다.' });
     }
-    if (typeof report.status !== 'string') {
+    if (!['NORMAL', 'INVALID'].includes(report.status)) {
         return res.status(400).json({ target: 'status', message: '변경할 신고 상태가 올바르지 않습니다.' });
     }
 
@@ -184,25 +184,25 @@ router.get('/document', requiredAuth, async(req, res) => {
 });
 
 router.get('/comment', requiredAuth, async(req, res) => {
-    let commentId = req.query.commentId;
-    if (typeof commentId === 'string') {
-        commentId = 1*commentId
+    let documentId = req.query.documentId;
+    if (typeof documentId === 'string') {
+        documentId = 1*documentId
     }
-    if (!Number.isInteger(commentId) || commentId === 0) {
-        return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
+    if (!Number.isInteger(documentId) || documentId === 0) {
+        return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
-    const comment = await commentModel.getComment(commentId);
-    if (!Array.isArray(comment) || comment.length === 0) {
-        return res.status(404).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
-    } else if (comment[0].isDeleted) {
-        return res.status(403).json({ target: 'commentId', message: '삭제된 댓글입니다.' })
+    const document = await documentModel.getDocument(documentId);
+    if (!Array.isArray(document) || document.length === 0) {
+        return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
+    } else if (document[0].isDeleted) {
+        return res.status(403).json({ target: 'documentId', message: '삭제된 댓글입니다.' })
     }
 
-    let result = await reportModel.getCommentReports(commentId, 'NORMAL', 1); //NORMAL, 1page default
+    let result = await reportModel.getCommentReports(null, 'NORMAL', documentId, 1); //NORMAL, 1page default
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {
-        logger.error('댓글 신고 조회 중 에러 : ', result, commentId, req.userObject.userId)
+        logger.error('댓글 신고 조회 중 에러 : ', result, documentId, req.userObject.userId)
         return res.status(500).json({ message: `신고내역을 조회하지 못했습니다.[${result.code || ''}]` })
     }
 });
@@ -215,15 +215,15 @@ router.get('/document/list', adminOnly, async(req, res) => {
     if (documentId !== undefined && (!Number.isInteger(documentId) || documentId === 0)) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
-    let status = req.body.status;
-    if (![undefined, 'NORMAL', 'DELETED'].includes(status)) {
+    let status = req.query.status;
+    if (![undefined, 'NORMAL', 'INVALID'].includes(status)) {
         return res.status(400).json({ target: 'status', message: '조회할 신고 상태값이 올바르지 않습니다.' })
     }
-    let userId = req.body.userId;
+    let userId = req.query.userId;
     if (userId !== undefined && typeof userId !== 'string') {
         return res.status(400).json({ target: 'userId', message: '조회할 신고의 사용자 ID가 올바르지 않습니다.' });
     }
-    let page = req.body.page;
+    let page = req.query.page;
     if (typeof page === 'string') {
         page = 1*page;
     }
@@ -248,15 +248,22 @@ router.get('/comment/list', adminOnly, async(req, res) => {
     if (commentId !== undefined && (!Number.isInteger(commentId) || commentId === 0)) {
         return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
     }
-    let status = req.body.status;
-    if (![undefined, 'NORMAL', 'DELETED'].includes(status)) {
+    let documentId = req.query.documentId;
+    if (typeof documentId === 'string') {
+        documentId = 1*documentId
+    }
+    if (documentId !== undefined && (!Number.isInteger(documentId) || documentId === 0)) {
+        return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
+    }
+    let status = req.query.status;
+    if (![undefined, 'NORMAL', 'INVALID'].includes(status)) {
         return res.status(400).json({ target: 'status', message: '조회할 신고 상태값이 올바르지 않습니다.' })
     }
-    let userId = req.body.userId;
+    let userId = req.query.userId;
     if (userId !== undefined && typeof userId !== 'string') {
         return res.status(400).json({ target: 'userId', message: '조회할 신고의 사용자 ID가 올바르지 않습니다.' });
     }
-    let page = req.body.page;
+    let page = req.query.page;
     if (typeof page === 'string') {
         page = 1*page;
     }
@@ -264,7 +271,7 @@ router.get('/comment/list', adminOnly, async(req, res) => {
         page = 1;
     }
 
-    let result = await reportModel.getCommentReportsAdmin(commentId, userId, status, page);
+    let result = await reportModel.getCommentReportsAdmin(commentId, userId, status, documentId, page);
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {

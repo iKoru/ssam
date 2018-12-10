@@ -33,7 +33,7 @@ exports.getDocumentReports = async(documentId, status, page = 1) => {
 }
 
 exports.getDocumentReportsAdmin = async(documentId, userId, status, page = 1) => {
-    let from = builder.select().fields(['USER_NICKNAME', 'DOCUMENT_ID', 'REPORT_TYPE_ID', 'REPORT_DATETIME', 'STATUS']).from('SS_HST_DOCUMENT_REPORT')
+    let from = builder.select().fields(['USER_NICKNAME', 'USER_ID', 'DOCUMENT_ID', 'REPORT_TYPE_ID', 'REPORT_DATETIME', 'STATUS']).from('SS_HST_DOCUMENT_REPORT')
     if(userId){
         from.where('USER_ID = ?', userId);
     }
@@ -50,26 +50,26 @@ exports.getDocumentReportsAdmin = async(documentId, userId, status, page = 1) =>
     let query = builder.select()
         .fields({
             'RUSER.DOCUMENT_ID': '"documentId"',
+            'BOARD_ID':'"boardId"',
             'DOCUMENT.TITLE':'"title"',
-            'DOCUMENT.BOARD_ID':'"boardId"',
+            'RUSER.USER_ID':'"userId"',
             'RUSER.USER_NICKNAME': '"nickName"',
-            'REPORT_TYPE_NAME': '"reportTypeName"',
-            'REPORT_TYPE_DESCRIPTION': '"reportTypeDescription"',
+            'REPORT_TYPE_ID': '"reportTypeId"',
             'REPORT_DATETIME': '"reportDateTime"',
-            'RUSER.STATUS': '"status"'
+            'RUSER.STATUS': '"status"',
+            'count(*) OVER()':'"totalCount"'
         })
         .from(from, 'RUSER')
-        .join('SS_MST_REPORT', 'REPORT', 'REPORT.REPORT_TYPE_ID = RUSER.REPORT_TYPE_ID')
         .join(document, 'DOCUMENT', 'RUSER.DOCUMENT_ID = DOCUMENT.DOCUMENT_ID')
-    return await pool.executeQuery('getDocumentReportsAdmin',
+    return await pool.executeQuery('getDocumentReportsAdmin' + (userId?'usr':'') + (status?'stat':'') + (documentId?'doc':''),
         query.order('REPORT_DATETIME', false)
-        .offset((page - 1) * 10)
-        .limit(10)
+        .offset((page - 1) * 15)
+        .limit(15)
         .toParam()
     )
 }
 
-exports.getCommentReports = async(commentId, status, page = 1) => {
+exports.getCommentReports = async(commentId, status, documentId, page = 1) => {
     //if commentId is null, select all comment's reports. admin access only in this case.
     let from = builder.select().fields(['COMMENT_ID', 'USER_NICKNAME', 'REPORT_TYPE_ID', 'REPORT_DATETIME', 'STATUS']).from('SS_HST_COMMENT_REPORT');
     if (commentId) {
@@ -78,18 +78,20 @@ exports.getCommentReports = async(commentId, status, page = 1) => {
     if (status) {
         from.where('STATUS = ?', status)
     }
-    return await pool.executeQuery('getCommentReports' + (commentId ? 'doc' : '') + (status ? 'st' : ''),
-        builder.select()
+    let query = builder.select()
         .fields({
             'COMMENT_ID': '"commentId"',
             'USER_NICKNAME': '"nickName"',
-            'REPORT_TYPE_NAME': '"reportTypeName"',
-            'REPORT_TYPE_DESCRIPTION': '"reportTypeDescription"',
+            'REPORT_TYPE_ID': '"reportTypeId"',
             'REPORT_DATETIME': '"reportDateTime"',
             'STATUS': '"status"'
         })
-        .from(from, 'COMMENT')
-        .join('SS_MST_REPORT', 'REPORT', 'REPORT.REPORT_TYPE_ID = COMMENT.REPORT_TYPE_ID')
+        .from(from, 'MCOMMENT')
+    if(documentId){
+        query.where('MCOMMENT.COMMENT_ID IN (SELECT COMMENT_ID FROM SS_MST_COMMENT WHERE DOCUMENT_ID = ?)', documentId)
+    }    
+    return await pool.executeQuery('getCommentReports' + (commentId ? 'com' : '') + (status ? 'st' : '') + (documentId? 'doc':''),
+        query
         .order('REPORT_DATETIME')
         .offset((page - 1) * 10)
         .limit(10)
@@ -97,8 +99,8 @@ exports.getCommentReports = async(commentId, status, page = 1) => {
     )
 }
 
-exports.getCommentReportsAdmin = async(commentId, userId, status, page = 1) => {
-    let from = builder.select().fields(['USER_NICKNAME', 'COMMENT_ID', 'REPORT_TYPE_ID', 'REPORT_DATETIME', 'STATUS']).from('SS_HST_COMMENT_REPORT')
+exports.getCommentReportsAdmin = async(commentId, userId, status, documentId, page = 1) => {
+    let from = builder.select().fields(['USER_NICKNAME', 'USER_ID', 'COMMENT_ID', 'REPORT_TYPE_ID', 'REPORT_DATETIME', 'STATUS']).from('SS_HST_COMMENT_REPORT')
     if(userId){
         from.where('USER_ID = ?', userId);
     }
@@ -108,27 +110,31 @@ exports.getCommentReportsAdmin = async(commentId, userId, status, page = 1) => {
     let comment;
     if(commentId){
         comment = builder.select().from('SS_MST_COMMENT').where('COMMENT_ID = ?', commentId)
+    }else if(documentId){
+        comment = builder.select().from('SS_MST_COMMENT').where('DOCUMENT_ID = ?', documentId)
     }else{
         comment = 'SS_MST_COMMENT';
     }
     
     let query = builder.select()
         .fields({
-            'DOCUMENT_ID': '"documentId"',
+            'DOCUMENT_ID':'"documentId"',
+            'RUSER.COMMENT_ID':'"commentId"',
+            'CONTENTS':'"contents"',
+            'RUSER.USER_ID':'"userId"',
             'RUSER.COMMENT_ID': '"commentId"',
             'RUSER.USER_NICKNAME': '"nickName"',
-            'REPORT_TYPE_NAME': '"reportTypeName"',
-            'REPORT_TYPE_DESCRIPTION': '"reportTypeDescription"',
+            'REPORT_TYPE_ID': '"reportTypeId"',
             'REPORT_DATETIME': '"reportDateTime"',
-            'RUSER.STATUS': '"status"'
+            'RUSER.STATUS': '"status"',
+            'count(*) OVER()':'"totalCount"'
         })
         .from(from, 'RUSER')
-        .join('SS_MST_REPORT', 'REPORT', 'REPORT.REPORT_TYPE_ID = RUSER.REPORT_TYPE_ID')
         .join(comment, 'COMMENT', 'RUSER.COMMENT_ID = COMMENT.COMMENT_ID')
-    return await pool.executeQuery('getCommentReportsAdmin',
+    return await pool.executeQuery('getCommentReportsAdmin' + (userId? 'user':'') + (status?'st':'') + (commentId?'com':'') + (documentId?'doc':''),
         query.order('REPORT_DATETIME', false)
-        .offset((page - 1) * 10)
-        .limit(10)
+        .offset((page - 1) * 15)
+        .limit(15)
         .toParam()
     )
 }
