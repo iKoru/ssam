@@ -2,7 +2,8 @@ const pool = require('./db').instance,
     builder = require('./db').builder,
     util = require('../util'),
     logger = require('../logger'),
-    cache = require('../cache');
+    cache = require('../cache'),
+    config = require('../../config');
 const groupModel = require('./groupModel');
 
 exports.checkUserId = async (userId) => {
@@ -37,6 +38,25 @@ exports.checkEmail = async (email) => {
             .limit(1)
             .toParam()
     );
+}
+
+exports.checkUserAuth = async(userId) => {
+    return await pool.executeQuery('checkUserAuth',
+        builder.select()
+            .field('GGROUP.GROUP_ID', '"groupId"')
+            .field("'AUTH_GRANTED'", '"type"')
+            .from('SS_MST_USER_GROUP', 'GGROUP')
+            .where('USER_ID = ?', userId)
+            .where('GGROUP.GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_GROUP WHERE PARENT_GROUP_ID = ?)', config.authGrantedParentGroupId)
+            .union(builder.select()
+                .field('DGROUP.GROUP_ID', '"groupId"')
+                .field("'AUTH_DENIED'", '"type"')
+                .from('SS_MST_USER_GROUP', 'DGROUP')
+                .where('USER_ID = ?', userId)
+                .where('DGROUP.GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_GROUP WHERE PARENT_GROUP_ID = ?)', config.authDeniedParentGroupId)
+            )
+        .toParam()
+    )
 }
 
 exports.createUser = async (user) => {

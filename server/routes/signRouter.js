@@ -22,7 +22,7 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
         return res.status(400).json({ message: '아이디와 비밀번호를 모두 입력해주세요.' });
     } else {
         const user = await userModel.getUser(userId);
-        if (!user || user.length === 0) {
+        if (!Array.isArray(user) || user.length === 0) {
             return res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
         } else if (user.length > 1) {
             logger.error('로그인 중 중복아이디 에러 : ', user);
@@ -31,10 +31,19 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
             if (user[0].status === 'DELETED') {
                 signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
                 return res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
-            } else if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
-                signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
-                return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
             } else if (await bcrypt.compare(password, user[0].password)) {
+                if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
+                    signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
+                    return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
+                }
+                const auth = await userModel.checkUserAuth(userId);
+                if(Array.isArray(auth) && auth.length > 0){
+                    if(auth.some(x=>x.type === 'AUTH_DENIED')){//영구 인증 불가 그룹
+                        signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
+                        return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
+                    }
+                }
+                
                 jwt.sign({ userId: userId }, config.jwtKey, { expiresIn: (req.body.rememberMe ? "7d" : "3h"), ...config.jwtOptions }, (err, token) => {
                     if (err) {
                         signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
@@ -42,7 +51,11 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
                         return res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
                     } else {
                         signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, true);
-                        if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
+                        if(Array.isArray(auth) && auth.length > 0){
+                            if(auth.some(x=>x.type === 'AUTH_GRANTED')){//영구 인증 그룹
+                                return res.json({ token: token });
+                            }
+                        } else if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
                             return res.json({ token: token, redirectTo: '/auth' });
                         }
                         return res.json({ token: token });
