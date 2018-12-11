@@ -6,12 +6,12 @@ const request = require('supertest')(app),
     boardModel = require('../../server/models/boardModel')
 const headers = { 'Accept': 'application/json' };
 const util = require('../../server/util');
-describe('Test the user path', async() => {
+describe('Test the user path', async () => {
     // test('user pre test', async(done) => {
     //     expect(await userModel.updateUserAdmin({ userId: 'blue', isAdmin: true })).toEqual(1);
     //     done();
     // })
-    test('user get test', async(done) => {
+    test('user get test', async (done) => {
         let response = await request.get('/user').set(headers);
         expect(response.statusCode).toEqual(403);
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
@@ -25,15 +25,13 @@ describe('Test the user path', async() => {
         expect(response.statusCode).toEqual(403);
         done();
     })
-    test('signup test', async(done) => {
+    test('signup test', async (done) => {
+        await userModel.deleteUser('orange1');
         //not acceptable email host
         let response = await request.post('/user').set(headers).send({ userId: 'orange1', email: 'orange1@test.com', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(400);
         //no password parameter
         response = await request.post('/user').set(headers).send({ userId: 'orange1', email: 'orange1@test.com' });
-        expect(response.statusCode).toEqual(400);
-        //no email parameter
-        response = await request.post('/user').set(headers).send({ userId: 'orange1', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(400);
         //no userId parameter
         response = await request.post('/user').set(headers).send({ email: 'orange1@test.com', password: 'xptmxm1!' });
@@ -63,10 +61,10 @@ describe('Test the user path', async() => {
         done();
     })
 
-    test('user put test', async(done) => {
+    test('user put test', async (done) => {
         let response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         expect(await userModel.updateUserInfoDate('orange', null, null, null)).toEqual(1); //reset info modified date
         //not allowed to change other users' information
@@ -159,10 +157,10 @@ describe('Test the user path', async() => {
         expect(await request.put('/user').set(headers_local).send(original[0])).toHaveProperty('statusCode', 200);
         done();
     })
-    test('user delete test', async(done) => {
+    test('user delete test', async (done) => {
         let response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        const headers_local = {...headers, 'x-auth': response.body.token };
+        const headers_local = { ...headers, 'x-auth': response.body.token };
         //no parameters given
         response = await request.delete('/user/').set(headers_local);
         expect(response.statusCode).toEqual(404);
@@ -183,7 +181,7 @@ describe('Test the user path', async() => {
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
         //admin only
-        response = await request.delete('/user/blue123').set({...headers, 'x-auth': response.body.token });
+        response = await request.delete('/user/blue123').set({ ...headers, 'x-auth': response.body.token });
         expect(response.statusCode).toEqual(403);
 
         response = await request.delete('/user/blue123').set(headers_local);
@@ -191,18 +189,18 @@ describe('Test the user path', async() => {
 
         done();
     })
-    test('user list get test', async(done) => {
+    test('user list get test', async (done) => {
         let response = await request.get('/user/list').set(headers);
         expect(response.statusCode).toEqual(403);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.get('/user/list').set(headers_local);
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toBeGreaterThan(1);
         response = await request.get('/user/list').set(headers_local).query({ userId: 'orange' });
         expect(response.statusCode).toEqual(200);
-        expect(response.body).toHaveLength(1);
+        expect(response.body.length).toBeGreaterThanOrEqual(1);
         response = await request.get('/user/list').set(headers_local).query({ email: 'orange@sen.go.kr' });
         expect(response.statusCode).toEqual(200);
         expect(response.body).toHaveLength(1);
@@ -214,12 +212,12 @@ describe('Test the user path', async() => {
         expect(response.body.length).toEqual(0);
         done();
     })
-    test('user document get test', async(done) => {
+    test('user document get test', async (done) => {
         let response = await request.get('/user/document').set(headers);
         expect(response.statusCode).toEqual(403);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.get('/user/document').set(headers_local).query({ userId: 'blue' });
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toBeGreaterThan(1);
@@ -229,7 +227,7 @@ describe('Test the user path', async() => {
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        headers_local = {...headers, 'x-auth': response.body.token };
+        headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.get('/user/document').set(headers_local).query({ userId: 'blue' });
         expect(response.statusCode).toEqual(400);
         response = await request.get('/user/document').set(headers_local).query({ userId: 'orange' });
@@ -238,12 +236,12 @@ describe('Test the user path', async() => {
 
         done();
     })
-    test('user comment get test', async(done) => {
+    test('user comment get test', async (done) => {
         let response = await request.get('/user/comment').set(headers);
         expect(response.statusCode).toEqual(403);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.get('/user/comment').set(headers_local).query({ userId: 'blue' });
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toBeGreaterThan(1);
@@ -253,7 +251,7 @@ describe('Test the user path', async() => {
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        headers_local = {...headers, 'x-auth': response.body.token };
+        headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.get('/user/comment').set(headers_local).query({ userId: 'blue' });
         expect(response.statusCode).toEqual(400);
         response = await request.get('/user/comment').set(headers_local).query({ userId: 'orange' });
@@ -261,12 +259,12 @@ describe('Test the user path', async() => {
         expect(response.body.length).toBeGreaterThan(1);
         done();
     })
-    test('user board put test', async(done) => {
+    test('user board put test', async (done) => {
         let response = await request.put('/user/board').set(headers);
         expect(response.statusCode).toEqual(403);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.put('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(400);
         const boards = await boardModel.getBoards(null, 'T');
@@ -291,7 +289,7 @@ describe('Test the user path', async() => {
         //not admin
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        headers_local = {...headers, 'x-auth': response.body.token };
+        headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.put('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(400);
 
@@ -313,31 +311,31 @@ describe('Test the user path', async() => {
 
         done();
     })
-    test('user board get test', async(done) => {
+    test('user board get test', async (done) => {
         let response = await request.get('/user/board').set(headers);
         expect(response.statusCode).toEqual(403);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.get('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toBeGreaterThan(0);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        headers_local = {...headers, 'x-auth': response.body.token };
+        headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.get('/user/board').set(headers_local);
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toEqual(0);
         done();
     })
 
-    test('user group put test', async(done) => {
+    test('user group put test', async (done) => {
         let response = await request.put('/user/group').set(headers);
         expect(response.statusCode).toEqual(403);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.put('/user/group').set(headers_local);
         expect(response.statusCode).toEqual(400);
         const groups = await groupModel.getGroups(true, ['N', 'M', 'G']);
@@ -361,12 +359,12 @@ describe('Test the user path', async() => {
         expect(response.body.length).toEqual(groups.length);
         done();
     })
-    test('user group get test', async(done) => {
+    test('user group get test', async (done) => {
         let response = await request.get('/user/group').set(headers);
         expect(response.statusCode).toEqual(403);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.get('/user/group').set(headers_local).query({ userId: 'blue' });
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toBeGreaterThan(0);
@@ -376,7 +374,7 @@ describe('Test the user path', async() => {
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        headers_local = {...headers, 'x-auth': response.body.token };
+        headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.get('/user/group').set(headers_local).query({ userId: 'orange' });
         expect(response.statusCode).toEqual(403);
         done();

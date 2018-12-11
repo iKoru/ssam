@@ -7,15 +7,15 @@ const app = require('../../app'),
     reportModel = require('../../server/models/reportModel'),
     headers = { 'Accept': 'application/json' };
 
-describe('Test the report path', async() => {
+describe('Test the report path', async () => {
 
-    test('document report crud test', async(done) => {
+    test('document report crud test', async (done) => {
         let response = await request.post('/report/document').set(headers);
         expect(response.statusCode).toEqual(403);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await userModel.updateUserInfo({ userId: 'orange', status: 'AUTHORIZED' });
         expect(response).toEqual(1);
@@ -65,7 +65,7 @@ describe('Test the report path', async() => {
 
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        headers_local = {...headers, 'x-auth': response.body.token };
+        headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await request.put('/report/document').set(headers_local).send({ documentId: 'aaa' });
         expect(response.statusCode).toEqual(400);
@@ -76,27 +76,27 @@ describe('Test the report path', async() => {
         response = await request.put('/report/document').set(headers_local).send({ documentId: documentId, userId: 'orange' });
         expect(response.statusCode).toEqual(400);
         expect(response.body).toHaveProperty('target', 'status')
-        response = await request.put('/report/document').set(headers_local).send({ documentId: documentId, userId: 'orange', status: 'DELETED' });
+        response = await request.put('/report/document').set(headers_local).send({ documentId: documentId, userId: 'orange', status: 'INVALID' });
         expect(response.statusCode).toEqual(200);
 
         response = await request.get('/report/document/list').set(headers_local).query({ documentId: documentId });
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toBeGreaterThan(0);
-        expect(response.body[0].status).toEqual('DELETED');
+        expect(response.body[0].status).toEqual('INVALID');
 
         response = await documentModel.deleteDocument(documentId);
         expect(response).toEqual(1);
 
         done();
     })
-    test('comment report crud test', async(done) => {
+    test('comment report crud test', async (done) => {
         //create report
         let response = await request.post('/report/comment').set(headers);
         expect(response.statusCode).toEqual(403);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await userModel.updateUserInfo({ userId: 'orange', status: 'AUTHORIZED' });
         expect(response).toEqual(1);
@@ -142,16 +142,16 @@ describe('Test the report path', async() => {
         expect(response.statusCode).toEqual(409);
 
         //get comment reports
-        response = await request.get('/report/comment').set(headers_local).query({ commentId: 'aaa' });
+        response = await request.get('/report/comment').set(headers_local).query({ documentId: 'aaa' });
         expect(response.statusCode).toEqual(400);
-        expect(response.body).toHaveProperty('target', 'commentId')
-        response = await request.get('/report/comment').set(headers_local).query({ commentId: commentId });
+        expect(response.body).toHaveProperty('target', 'documentId')
+        response = await request.get('/report/comment').set(headers_local).query({ documentId: documentId });
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toBeGreaterThan(0);
 
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        headers_local = {...headers, 'x-auth': response.body.token };
+        headers_local = { ...headers, 'x-auth': response.body.token };
 
         //put comment report
         response = await request.put('/report/comment').set(headers_local).send({ commentId: 'aaa' });
@@ -163,13 +163,13 @@ describe('Test the report path', async() => {
         response = await request.put('/report/comment').set(headers_local).send({ commentId: commentId, userId: 'orange' });
         expect(response.statusCode).toEqual(400);
         expect(response.body).toHaveProperty('target', 'status')
-        response = await request.put('/report/comment').set(headers_local).send({ commentId: commentId, userId: 'orange', status: 'DELETED' });
+        response = await request.put('/report/comment').set(headers_local).send({ commentId: commentId, userId: 'orange', status: 'INVALID' });
         expect(response.statusCode).toEqual(200);
 
         response = await request.get('/report/comment/list').set(headers_local).query({ commentId: commentId });
         expect(response.statusCode).toEqual(200);
         expect(response.body.length).toBeGreaterThan(0);
-        expect(response.body[0].status).toEqual('DELETED');
+        expect(response.body[0].status).toEqual('INVALID');
 
         response = await commentModel.deleteComment(commentId);
         expect(response).toEqual(1);
@@ -178,14 +178,14 @@ describe('Test the report path', async() => {
 
         done();
     })
-    test('report type crud test', async(done) => {
+    test('report type crud test', async (done) => {
         //create report type
         let response = await request.post('/report/type').set(headers);
         expect(response.statusCode).toEqual(403);
 
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await request.post('/report/type').set(headers_local);
         expect(response.statusCode).toEqual(400);

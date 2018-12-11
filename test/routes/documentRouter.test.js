@@ -6,7 +6,7 @@ const request = require('supertest')(app),
     boardModel = require('../../server/models/boardModel')
 const headers = { 'Accept': 'application/json' };
 
-describe('Test the document path', async() => {
+describe('Test the document path', async () => {
     // test('create test user for document (init)', async(done) => {
     //     let response = await request.post('/user').set(headers).send({ userId: 'grey', password: 'xptmxm1!', email: 'grey@sen.go.kr' });
     //     expect(response.statusCode).toEqual(200);
@@ -14,7 +14,7 @@ describe('Test the document path', async() => {
     //        expect(response).toEqual(1);
     //     done();
     // })
-    test('document get test', async(done) => {
+    test('document get test', async (done) => {
         let response = await request.get('/asdfasdf').set(headers);
         expect(response.statusCode).toEqual(403);
 
@@ -23,7 +23,7 @@ describe('Test the document path', async() => {
 
         response = await request.post('/signin').set(headers).send({ userId: 'grey', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await userModel.updateUserInfo({ userId: 'grey', status: 'NORMAL' });
         expect(response).toEqual(1);
@@ -42,8 +42,7 @@ describe('Test the document path', async() => {
         let documents = await documentModel.getDocuments('nofree');
         expect(documents.length).toBeGreaterThan(0);
 
-        response = await boardModel.deleteUserBoard('grey', 'nofree');
-        expect(response).toEqual(1);
+        await boardModel.deleteUserBoard('grey', 'nofree');
         //not allowed to access the board
         response = await request.get('/' + documents[0].documentId).set(headers_local);
         expect(response.statusCode).toEqual(403);
@@ -62,13 +61,13 @@ describe('Test the document path', async() => {
         expect(response.statusCode).toEqual(200);
         done();
     })
-    test('document create, put, delete test', async(done) => {
+    test('document create, put, delete test', async (done) => {
         let response = await request.post('/document').set(headers);
         expect(response.statusCode).toEqual(403);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await userModel.updateUserInfo({ userId: 'orange', status: 'AUTHORIZED' });
         expect(response).toEqual(1);
@@ -143,7 +142,7 @@ describe('Test the document path', async() => {
         expect(response).toEqual(1);
         response = await request.post('/signin').set(headers).send({ userId: 'grey', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        response = await request.put('/document').set({...headers, 'x-auth': response.body.token }).send({ documentId: documentId });
+        response = await request.put('/document').set({ ...headers, 'x-auth': response.body.token }).send({ documentId: documentId });
         expect(response.statusCode).toEqual(403);
 
         response = await request.put('/document').set(headers_local).send({ documentId: documentId, title: 'changed?', contents: '' })
@@ -167,11 +166,11 @@ describe('Test the document path', async() => {
 
         response = await request.post('/signin').set(headers).send({ userId: 'grey', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        response = await request.delete('/document/' + documentId).set({...headers, 'x-auth': response.body.token });
+        response = await request.delete('/document/' + documentId).set({ ...headers, 'x-auth': response.body.token });
         expect(response.statusCode).toEqual(403);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        response = await request.delete('/document/' + documentId).set({...headers, 'x-auth': response.body.token });
+        response = await request.delete('/document/' + documentId).set({ ...headers, 'x-auth': response.body.token });
         expect(response.statusCode).toEqual(200);
 
         response = await documentModel.getDocument(documentId);
@@ -179,13 +178,13 @@ describe('Test the document path', async() => {
 
         done();
     })
-    test('get document list test', async(done) => {
+    test('get document list test', async (done) => {
         let response = await request.get('/free').set(headers);
         expect(response.statusCode).toEqual(403);
 
         response = await request.post('/signin').set(headers).send({ userId: 'grey', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await userModel.updateUserInfo({ userId: 'grey', status: 'NORMAL' });
         expect(response).toEqual(1);

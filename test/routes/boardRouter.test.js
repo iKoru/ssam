@@ -6,21 +6,21 @@ const app = require('../../app'),
     userModel = require('../../server/models/userModel'),
     headers = { 'Accept': 'application/json' };
 
-describe('Test the board path', async() => {
-    // test('board test init - create new user', async(done) => {
+describe('Test the board path', async () => {
+    // test('board test init - create new user', async (done) => {
     //     let response = await request.post('/user').set(headers).send({ userId: 'reds', password: 'xptmxm1!', email: 'reds@sen.go.kr' });
     //     expect(response.statusCode).toEqual(200);
     //     response = await request.post('/user').set(headers).send({ userId: 'black', password: 'xptmxm1!', email: 'black@sen.go.kr' });
     //     expect(response.statusCode).toEqual(200);
     //     done();
     // })
-    test('board (list) get test', async(done) => {
+    test('board (list) get test', async (done) => {
         let response = await request.get('/board').set(headers);
         expect(response.statusCode).toEqual(403);
 
         response = await request.post('/signin').set(headers).send({ userId: 'reds', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await userModel.updateUserInfo({ userId: 'reds', status: 'NORMAL' });
         expect(response).toEqual(1);
@@ -61,13 +61,13 @@ describe('Test the board path', async() => {
         expect(response).toEqual(1);
         done();
     })
-    test('board create, put, delete test', async(done) => {
+    test('board create, put, delete test', async (done) => {
         let response = await request.post('/board').set(headers);
         expect(response.statusCode).toEqual(403);
 
         response = await request.post('/signin').set(headers).send({ userId: 'black', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await userModel.updateUserInfo({ userId: 'black', status: 'NORMAL' });
         expect(response).toEqual(1);
@@ -132,7 +132,7 @@ describe('Test the board path', async() => {
                 authType: 'READWRITE'
             })
         });
-        response = await request.post('/board').set(headers_local).send({ boardType: 'T', boardId: 'freefree', boardName: 'aasdf', boardDescription: 'description!!', allowAnonymous: true, allGroupAuth: 'READWRITE', groups: groupsParam });
+        response = await request.post('/board').set(headers_local).send({ boardType: 'T', boardId: 'freefree', boardName: 'aasdf', boardDescription: 'description!!', allowAnonymous: true, allGroupAuth: 'READWRITE', allowedGroups: groupsParam });
         expect(response.statusCode).toEqual(200);
 
         response = await boardModel.getBoard('freefree');
@@ -150,13 +150,15 @@ describe('Test the board path', async() => {
         expect(response.statusCode).toEqual(404);
         expect(response.body).toHaveProperty('target', 'boardId');
 
+        response = await request.put('/board').set(headers_local).send({ boardId: 'freefree' });
+        expect(response.statusCode).toEqual(400);
         response = await boardModel.updateBoard({ boardId: 'freefree', reservedContents: { aa: 'aa' } });
         expect(response).toEqual(1);
         response = await request.put('/board').set(headers_local).send({ boardId: 'freefree' });
         expect(response.statusCode).toEqual(403);
+        response = await boardModel.updateBoard({ boardId: 'freefree', reservedContents: null });
+        expect(response).toEqual(1);
         //nothing to change
-        response = await request.put('/board').set(headers_local).send({ boardId: 'freefree', overwrite: true });
-        expect(response.statusCode).toEqual(400);
         response = await request.put('/board').set(headers_local).send({ boardId: 'freefree', overwrite: true, ownerNickName: 'asdfasdf' });
         expect(response.statusCode).toEqual(404);
         expect(response.body).toHaveProperty('target', 'ownerNickName');
@@ -180,7 +182,7 @@ describe('Test the board path', async() => {
 
         response = await boardModel.getBoard('freefree');
         expect(response.length).toEqual(1);
-        expect(response[0]).toHaveProperty('allowAnonymous', false);
+        expect(response[0].reservedContents).toHaveProperty('allowAnonymous', false);
 
         //delete board
         response = await request.delete('/board/123123').set(headers);
@@ -192,7 +194,7 @@ describe('Test the board path', async() => {
 
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        headers_local = {...headers, 'x-auth': response.body.token };
+        headers_local = { ...headers, 'x-auth': response.body.token };
         response = await request.delete('/board/freefree').set(headers_local);
         expect(response.statusCode).toEqual(200);
 

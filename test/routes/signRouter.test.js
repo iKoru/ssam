@@ -4,20 +4,20 @@ const app = require('../../app'),
     bcrypt = require('bcrypt'),
     userModel = require('../../server/models/userModel'),
     groupModel = require('../../server/models/groupModel')
-    // test('signup init', async (done) => {
-    //    //지역정보에 맞는 그룹을 넣어준다.
-    // expect(await groupModel.createGroup({
-    //     groupName: '서울',
-    //     groupDescription: '서울 지역에 해당하는 그룹',
-    //     groupType: 'R',
-    //     expirePeriod: -1,
-    //     isOpenToUsers: true
-    // })).toHaveProperty('rowCount', 1);
-    // done();
-    // });
-describe('Test the root path', async() => {
+// test('signup init', async (done) => {
+//    //지역정보에 맞는 그룹을 넣어준다.
+// expect(await groupModel.createGroup({
+//     groupName: '서울',
+//     groupDescription: '서울 지역에 해당하는 그룹',
+//     groupType: 'R',
+//     expirePeriod: -1,
+//     isOpenToUsers: true
+// })).toHaveProperty('rowCount', 1);
+// done();
+// });
+describe('Test the root path', async () => {
     let jwt;
-    test('signin test', async(done) => {
+    test('signin test', async (done) => {
         //await userModel.updateUserPassword({ userId: 'orange', password: await bcrypt.hash('xptmxm1!', 10) })
         //not authorized access
         let response = await request.get('/');
@@ -38,7 +38,7 @@ describe('Test the root path', async() => {
         expect(jwt.length).toBeGreaterThan(20); //jwt toke check
         //change user status 
         expect(await userModel.updateUserInfo({ userId: 'orange', status: 'BLOCKED' })).toEqual(1)
-            //user status check
+        //user status check
         response = await request.post('/signin').set('Accept', 'application/json').send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toBe(403);
         //restore user status
@@ -47,7 +47,7 @@ describe('Test the root path', async() => {
         done();
     })
 
-    test('resetPassword test', async(done) => {
+    test('resetPassword test', async (done) => {
         //create temporary userId
         let response = await request.post('/user').set('Accept', 'application/json').send({ userId: 'orange1234', password: 'xptmxm1!', email: 'orange1234@sen.go.kr' });
         expect(response.statusCode).toBe(200);
@@ -81,7 +81,7 @@ describe('Test the root path', async() => {
         done();
     })
 
-    test('refresh token test', async(done) => {
+    test('refresh token test', async (done) => {
         //not authorized access
         let response = await request.get('/');
         expect(response.statusCode).toBe(403);
@@ -92,7 +92,7 @@ describe('Test the root path', async() => {
         response = await request.get('/').set('x-auth', jwt);
         expect(response.statusCode).toBe(501);
         response = await request.post('/refresh').set('Accept', 'application/json').set('x-auth', jwt);
-        expect(response.body).toEqual(jwt);
+        expect(response.body).toHaveProperty('token', jwt);
         done();
     });
 })

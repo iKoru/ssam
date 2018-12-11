@@ -3,17 +3,18 @@ const app = require('../../app'),
     request = require('supertest')(app),
     userModel = require('../../server/models/userModel'),
     documentModel = require('../../server/models/documentModel'),
-    commentModel = require('../../server/models/commentModel')
+    commentModel = require('../../server/models/commentModel'),
+    boardModel = require('../../server/models/boardModel')
 const headers = { 'Accept': 'application/json' };
-describe('Test the vote path', async() => {
+describe('Test the vote path', async () => {
 
-    test('document vote create test', async(done) => {
+    test('document vote create test', async (done) => {
         let response = await request.post('/vote/document').set(headers);
         expect(response.statusCode).toEqual(403);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await userModel.updateUserInfo({ userId: 'orange', status: 'AUTHORIZED' });
         expect(response).toEqual(1);
@@ -30,6 +31,8 @@ describe('Test the vote path', async() => {
 
         let document = await documentModel.getDocuments('nofree');
         expect(document.length).toBeGreaterThan(0);
+        response = await boardModel.checkUserBoardReadable('orange', 'nofree');
+        expect(response[0]).toHaveProperty('count', 0);
         response = await request.post('/vote/document').set(headers_local).send({ documentId: document[0].documentId });
         expect(response.statusCode).toEqual(403);
         expect(response.body).toHaveProperty('target', 'documentId')
@@ -70,13 +73,13 @@ describe('Test the vote path', async() => {
 
         done();
     })
-    test('comment vote create test', async(done) => {
+    test('comment vote create test', async (done) => {
         let response = await request.post('/vote/comment').set(headers);
         expect(response.statusCode).toEqual(403);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await userModel.updateUserInfo({ userId: 'orange', status: 'AUTHORIZED' });
         expect(response).toEqual(1);
