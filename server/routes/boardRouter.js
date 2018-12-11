@@ -115,8 +115,8 @@ router.put('/', requiredAuth, async (req, res) => {
             delete reservedContents.auth;
         }
     }
-    
-    if(req.userObject.isAdmin && req.body.categories){
+
+    if (req.userObject.isAdmin && req.body.categories) {
         let categories = req.body.categories;
         if (!Array.isArray(categories)) {
             categories = [categories];
@@ -145,7 +145,7 @@ router.put('/', requiredAuth, async (req, res) => {
         }
     }
 
-    if (Object.keys(reservedContents).length < 1 && (!req.body.overwrite || (board[0].reservedContents === null && Object.keys(reservedContents).length === 0))) {
+    if (Object.keys(reservedContents).length === 0 && !(req.body.overwrite && Object.keys(board[0].reservedContents).length !== 0)) {
         return res.status(400).json({ message: '변경될 내용이 없습니다. 입력한 값이 올바른지 확인해주세요.' });
     } else {
         let result;
@@ -162,12 +162,12 @@ router.put('/', requiredAuth, async (req, res) => {
                 i++;
             }
         }
-        if(reservedContents.categories){
-            if(reservedContents.categories.some(x=>x.command === 'INSERT')){
-                await boardModel.createBoardCategory(boardId, reservedContents.categories.filter(x=> x.command === 'INSERT').map(x=>x.category));
+        if (reservedContents.categories) {
+            if (reservedContents.categories.some(x => x.command === 'INSERT')) {
+                await boardModel.createBoardCategory(boardId, reservedContents.categories.filter(x => x.command === 'INSERT').map(x => x.category));
             }
-            if(reservedContents.categories.some(x=>x.command === 'DELETE')){
-                await boardModel.deleteBoardCategory(boardId, reservedContents.categories.filter(x=> x.command === 'DELETE').map(x=>x.category));
+            if (reservedContents.categories.some(x => x.command === 'DELETE')) {
+                await boardModel.deleteBoardCategory(boardId, reservedContents.categories.filter(x => x.command === 'DELETE').map(x => x.category));
             }
             delete reservedContents.categories;
         }
@@ -264,9 +264,9 @@ router.post('/', requiredAuth, async (req, res) => {
                 i++;
             }
         }
-        if(req.userObject.isAdmin && Array.isArray(req.body.categories) && req.body.categories.length > 0){
+        if (req.userObject.isAdmin && Array.isArray(req.body.categories) && req.body.categories.length > 0) {
             await boardModel.createBoardCategory(board.boardId, req.body.categories);
-        }else if(board.boardType === 'T'){
+        } else if (board.boardType === 'T') {
             await boardModel.createBoardCategory(board.boardId, constants.defaultTopicCategories);
         }
         return res.status(200).json({ message: `${constants.boardTypeDomain[board.boardType]}을 만들었습니다.` })
@@ -279,7 +279,7 @@ router.post('/', requiredAuth, async (req, res) => {
 router.delete('/:boardId([a-zA-z]+)', adminOnly, async (req, res) => {
     let boardId = req.params.boardId;
     if (typeof boardId !== 'string' || boardId === '') {
-        return res.status(400).json({ target: 'boardId', message: '삭제할 토픽 ID값이 없습니다.' });
+        return res.status(400).json({ target: 'boardId', message: '삭제할 게시판 ID값이 없습니다.' });
     }
     let result = await boardModel.deleteBoard(boardId);
     if (typeof result === 'object') {

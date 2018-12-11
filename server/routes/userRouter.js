@@ -204,7 +204,8 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
         password: req.body.password,
         major: req.body.major,
         grade: req.body.grade,
-        email: req.body.email
+        email: req.body.email,
+        userGroup: []
     };
     if (!user.userId) {
         return res.status(400).json({ target: 'userId', message: '아이디를 입력해주세요.' });
@@ -237,9 +238,6 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
             }
             const region = await groupModel.getGroupByRegion(constants.regionGroup[email[1]]);
             if (region && region[0]) {
-                if (!Array.isArray(user.userGroup)) {
-                    user.userGroup = [];
-                }
                 user.userGroup.push(region[0].groupId);
             } else {
                 return res.status(400).json({ target: 'email', message: '해당 이메일 주소에 맞는 지역정보가 없습니다.' });
@@ -251,9 +249,6 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
     if (user.grade) {
         result = await groupModel.getGroup(user.grade, ['G']);
         if (result && result[0]) {
-            if (!Array.isArray(user.userGroup)) {
-                user.userGroup = [];
-            }
             user.userGroup.push(user.grade);
         } else {
             return res.status(400).json({ target: 'grade', message: '입력된 학년 값이 정확하지 않습니다.' });
@@ -262,9 +257,6 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
     if (user.major) {
         result = await groupModel.getGroup(user.major, ['M']);
         if (result && result[0]) {
-            if (!Array.isArray(user.userGroup)) {
-                user.userGroup = [];
-            }
             user.userGroup.push(user.major);
         } else {
             return res.status(400).json({ target: 'major', message: '입력된 전공과목 값이 정확하지 않습니다.' });
@@ -503,7 +495,7 @@ router.get('/comment', requiredSignin, async (req, res) => {
 });
 
 router.get('/board', requiredSignin, async (req, res) => {
-    let userId = req.userObject.isAdmin ? req.query.userId : req.userObject.userId;
+    let userId = req.userObject.isAdmin ? (req.query.userId || req.userObject.userId) : req.userObject.userId;
     let result = await boardModel.getUserBoard(userId, req.userObject.isAdmin);
     if (Array.isArray(result)) {
         return res.status(200).json(result);

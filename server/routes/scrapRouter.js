@@ -6,9 +6,9 @@ const requiredSignin = require('../middlewares/requiredSignin'),
 const scrapModel = require('../models/scrapModel'),
     documentModel = require('../models/documentModel'),
     boardModel = require('../models/boardModel')
-    //based on /scrap
+//based on /scrap
 
-router.get('/group', requiredSignin, async(req, res) => { //scrapgroup
+router.get('/group', requiredSignin, async (req, res) => { //scrapgroup
     let result = await scrapModel.getScrapGroupByUserId(req.userObject.userId);
     if (Array.isArray(result)) {
         return res.status(200).json(result);
@@ -18,7 +18,7 @@ router.get('/group', requiredSignin, async(req, res) => { //scrapgroup
     }
 });
 
-router.post('/group', requiredSignin, async(req, res) => {
+router.post('/group', requiredSignin, async (req, res) => {
     let scrapGroupName = req.body.scrapGroupName;
     if (typeof scrapGroupName !== 'string' || scrapGroupName === '') {
         return res.status(400).json({ target: 'scrapGroupName', message: '스크랩 그룹 이름을 입력해주세요.' });
@@ -34,12 +34,12 @@ router.post('/group', requiredSignin, async(req, res) => {
     }
 })
 
-router.delete(/\/group\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) => {
+router.delete(/\/group\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async (req, res) => {
     let scrapGroupId = req.params[0];
     if (typeof scrapGroupId === 'string') {
-        scrapGroupId = 1*scrapGroupId;
+        scrapGroupId = 1 * scrapGroupId;
     }
-    if (typeof scrapGroupId !== 'number' || scrapGroupId > 32767 || scrapGroupId === 0) {
+    if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {
         return res.status(400).json({ target: 'scrapGroupId', message: '스크랩 그룹이 올바르지 않습니다.' });
     }
 
@@ -54,7 +54,7 @@ router.delete(/\/group\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) =
     }
 })
 
-router.put('/group', requiredSignin, async(req, res) => {
+router.put('/group', requiredSignin, async (req, res) => {
     let scrapGroupName = req.body.scrapGroupName,
         scrapGroupId = req.body.scrapGroupId;
     if (typeof scrapGroupName !== 'string' || scrapGroupName === '') {
@@ -76,17 +76,17 @@ router.put('/group', requiredSignin, async(req, res) => {
     }
 })
 
-router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) => { //scrap in scrapgroup
+router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async (req, res) => { //scrap in scrapgroup
     let scrapGroupId = req.params[0];
     if (typeof scrapGroupId === 'string') {
-        scrapGroupId = 1*scrapGroupId;
+        scrapGroupId = 1 * scrapGroupId;
     }
-    if (typeof scrapGroupId !== 'number' || scrapGroupId > 32767 || scrapGroupId === 0) {
+    if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {
         return res.status(400).json({ target: 'scrapGroupId', message: '스크랩 그룹이 올바르지 않습니다.' });
     }
     let page = req.query.page;
     if (typeof page === 'string') {
-        page = 1*page
+        page = 1 * page
     }
     if (page !== undefined && (!Number.isInteger(page) || page < 1)) {
         return res.status(400).json({ target: 'page', message: '페이지 값이 올바르지 않습니다.' });
@@ -101,7 +101,7 @@ router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) => { //scra
     }
 });
 
-router.post('/', requiredAuth, async(req, res) => { //add document into scrap group
+router.post('/', requiredAuth, async (req, res) => { //add document into scrap group
     let scrapGroupId = req.body.scrapGroupId,
         documentId = req.body.documentId;
     if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {
@@ -134,14 +134,14 @@ router.post('/', requiredAuth, async(req, res) => { //add document into scrap gr
     }
 });
 
-router.delete(/\/(\d+)\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async(req, res) => {
+router.delete(/\/(\d+)\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async (req, res) => {
     let scrapGroupId = req.params[0],
         documentId = req.params[1];
     if (typeof scrapGroupId === 'string') {
-        scrapGroupId = 1*scrapGroupId;
+        scrapGroupId = 1 * scrapGroupId;
     }
     if (typeof documentId === 'string') {
-        documentId = 1*documentId;
+        documentId = 1 * documentId;
     }
 
     if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {
