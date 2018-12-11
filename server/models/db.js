@@ -20,7 +20,7 @@ if (Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1) {
         logger.error('UNEXPECTED ERROR ON IDLE CLIENT', err);
     });
 
-    pool.executeQuery = async(name, input, callback) => {
+    pool.executeQuery = async (name, input, callback) => {
         try {
             const client = await pool.connect();
             let res = null;
@@ -41,7 +41,7 @@ if (Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1) {
             }
         } catch (e) {
             logger.error('EXECUTING QUERY ERROR : ', e.stack);
-            logger.error('TRIED QUERY TO EXECUTE : ', input.text, input.values);
+            logger.error('TRIED QUERY TO EXECUTE : ', '[' + name + ']', input.text, input.values);
             logger.error(e);
             return e;
         }
@@ -52,12 +52,12 @@ if (Object.getOwnPropertySymbols(global).indexOf(builder_key) <= -1) {
     global[builder_key] = require('squel').useFlavour('postgres');
 }
 Object.defineProperty(singleton, "instance", {
-    get: function() {
+    get: function () {
         return global[pool_key];
     }
 })
 Object.defineProperty(singleton, "builder", {
-    get: function() {
+    get: function () {
         return global[builder_key];
     }
 })
