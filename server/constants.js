@@ -42,3 +42,4 @@ exports.boardTypeDomain = { 'D': '아카이브', 'L': '라운지', 'T': '토픽'
 
 exports.commentNotificationTemplate = '작성하신 글에 $1건의 새로운 댓글이 있습니다.';
 exports.childCommentNotificationTemplate = '작성하신 댓글에 $1건의 새로운 대댓글이 있습니다.';
+exports.defaultTopicCategories = ['일반', '정보', '질문'];

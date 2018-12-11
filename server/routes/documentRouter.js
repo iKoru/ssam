@@ -32,7 +32,7 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
         return res.status(400).json({ target: 'contents', message: '게시물 내용을 입력해주세요.' })
     } else if (typeof document.allowAnonymous !== 'boolean') {
         return res.status(400).json({ target: 'allowAnonymous', message: '익명댓글 허용여부가 올바르지 않습니다.' })
-    } else if (document.survey !== undefined && typeof document.survey !== 'object') {
+    } else if (document.survey !== undefined && Array.isArray(document.survey)) {
         return res.status(400).json({ target: 'survey', message: '설문조사 내용이 올바르지 않습니다.' })
     }
 

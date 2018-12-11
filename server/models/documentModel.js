@@ -5,11 +5,11 @@ const util = require('../util'),
 const boardModel = require('./boardModel'),
     userModel = require('./userModel');
 
-exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending = false, page, isAdmin = false) => {
+exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending = false, page, isAdmin = false, category = null) => {
     if (!boardId) {
         return [];
     }
-    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending) {
+    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category) {
         let cachedData = await cache.getAsync('[document]' + boardId + '@' + (page || ''));
         if (cachedData) {//array itself
             return cachedData;
@@ -21,7 +21,6 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
             'BOARD_ID': '"boardId"',
             'COMMENT_COUNT': '"commentCount"',
             'VOTE_UP_COUNT': '"voteUpCount"',
-            'VOTE_DOWN_COUNT': '"voteDownCount"',
             'VIEW_COUNT': '"viewCount"',
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
@@ -31,10 +30,13 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
     if (!isAdmin) {
         query.where('IS_DELETED = false');
     }
-    if (boardId && typeof boardId === 'string') {
+    if (typeof boardId === 'string') {
         query.where('BOARD_ID = ?', boardId)
-    } else if (boardId && typeof boardId === 'object') { //array
+    } else if (Array.isArray(boardId)) { //array
         query.where('BOARD_ID IN ?', boardId)
+    }
+    if(category){
+        query.where('CATEGORY = ?', category)
     }
     if (searchQuery) {
         switch (searchTarget) {
@@ -54,8 +56,8 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
             query.order('VIEW_COUNT', isAscending)
             break;
         case 'voteCount':
-            query.order('(VOTE_UP_COUNT - VOTE_DOWN_COUNT)', isAscending)
-            break; //indexed
+            query.order('VOTE_UP_COUNT', isAscending)
+            break;
         case 'writeDateTime':
         default:
             query.order('WRITE_DATETIME', isAscending)
@@ -72,7 +74,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
                 withQuery.field(`ROW_NUMBER() OVER (ORDER BY VIEW_COUNT ${isAscending ? 'ASC' : 'DESC'})`, 'NUM')
                 break;
             case 'voteCount':
-                withQuery.field(`ROW_NUMBER() OVER (ORDER BY (VOTE_UP_COUNT - VOTE_DOWN_COUNT) ${isAscending ? 'ASC' : 'DESC'})`, 'NUM')
+                withQuery.field(`ROW_NUMBER() OVER (ORDER BY VOTE_UP_COUNT ${isAscending ? 'ASC' : 'DESC'})`, 'NUM')
                 break; //indexed
             case 'writeDateTime':
             default:
@@ -83,9 +85,9 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
         if (!isAdmin) {
             withQuery.where('IS_DELETED = false');
         }
-        if (boardId && typeof boardId === 'string') {
+        if (typeof boardId === 'string') {
             withQuery.where('BOARD_ID = ?', boardId)
-        } else if (boardId && typeof boardId === 'object') { //array
+        } else if (Array.isArray(boardId)) { //array
             withQuery.where('BOARD_ID IN ?', boardId)
         }
         if (searchQuery) {
@@ -101,11 +103,14 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
                     break;
             }
         }
+        if(category){
+            withQuery.where('CATEGORY = ?', category)
+        }
         const pages = await pool.executeQuery('findDocumentPage' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc'),
             builder.select().with('DOCUMENTS', withQuery).field('CEIL(NUM/10.0)', '"page"').from('DOCUMENTS').where('DOCUMENT_ID = ?', documentId)
                 .toParam()
         );
-        if (pages && pages.length === 1 && pages[0].page) {
+        if (Array.isArray(pages) && pages.length === 1 && pages[0].page) {
             page = pages[0].page;
         } else { //document가 해당 board에 없을 경우/삭제되었을 경우 등등
             page = 1;
@@ -115,11 +120,11 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
     }
 
     //select documents
-    let result = await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc'),
+    let result = await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc') + (category? 'cat':''),
         query.limit(10).offset((page - 1) * 10)
             .toParam()
     )
-    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending) {
+    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category) {
         cache.setAsync('[document]' + boardId + '@' + (page || ''), result, 30);//maintain in 30 sec
     }
     return result;
@@ -139,7 +144,6 @@ exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarg
             'DOCUMENT.BOARD_ID': '"boardId"',
             'COMMENT_COUNT': '"commentCount"',
             'VOTE_UP_COUNT': '"voteUpCount"',
-            'VOTE_DOWN_COUNT': '"voteDownCount"',
             'VIEW_COUNT': '"viewCount"',
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
@@ -220,14 +224,13 @@ exports.getPeriodicallyBestDocuments = async (boardType, since) => {
                 'DOCUMENT_ID': '"documentId"',
                 'BOARD_ID': '"boardId"',
                 'VOTE_UP_COUNT': '"voteUpCount"',
-                'VOTE_DOWN_COUNT': '"voteDownCount"',
                 'WRITE_DATETIME': '"writeDateTime"',
                 'TITLE': '"title"',
             })
             .from('SS_MST_DOCUMENT', 'DOCUMENT')
             .where('WRITE_DATETIME >= ?', since)
             .where('DOCUMENT.BOARD_ID IN (SELECT BOARD_ID FROM BOARDS)')
-            .order('(VOTE_UP_COUNT - VOTE_DOWN_COUNT)', false)
+            .order('VOTE_UP_COUNT', false)
             .order('WRITE_DATETIME', false)
             .limit(10)
             .toParam()
@@ -261,6 +264,9 @@ exports.updateDocument = async (document) => {
     }
     if (document.hasSurvey !== undefined) {
         query.set('HAS_SURVEY', document.hasSurvey)
+    }
+    if (document.category !== undefined) {
+        query.set('CATEGORY', document.category)
     }
     if (document.hasAttach !== undefined) {
         query.set('HAS_ATTACH', document.hasAttach)
@@ -315,6 +321,7 @@ exports.createDocument = async (document) => {
                 'RESTRICTION': JSON.stringify(document.restriction),
                 'HAS_SURVEY': !!document.survey,
                 'HAS_ATTACH': !!document.attach,
+                'CATEGORY': document.category,
                 'RESERVED1': document.reserved1,
                 'RESERVED2': document.reserved2,
                 'RESERVED3': document.reserved3,
@@ -336,7 +343,6 @@ const getDocument = async (documentId) => {
                 'COMMENT_COUNT': '"commentCount"',
                 'REPORT_COUNT': '"reportCount"',
                 'VOTE_UP_COUNT': '"voteUpCount"',
-                'VOTE_DOWN_COUNT': '"voteDownCount"',
                 'VIEW_COUNT': '"viewCount"',
                 'WRITE_DATETIME': '"writeDateTime"',
                 'BEST_DATETIME': '"bestDateTime"',
@@ -345,6 +351,7 @@ const getDocument = async (documentId) => {
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
                 'HAS_SURVEY': '"hasSurvey"',
                 'HAS_ATTACH': '"hasAttach"',
+                'CATEGORY': '"category"',
                 'RESERVED1': '"reserved1"',
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
@@ -368,7 +375,6 @@ exports.getUserDocument = async (userId, isAdmin, page = 1) => {
             'IS_DELETED': '"isDeleted"',
             'COMMENT_COUNT': '"commentCount"',
             'VOTE_UP_COUNT': '"voteUpCount"',
-            'VOTE_DOWN_COUNT': '"voteDownCount"',
             'VIEW_COUNT': '"viewCount"',
             'WRITE_DATETIME': '"writeDateTime"',
             'BEST_DATETIME': '"bestDateTime"',
@@ -412,7 +418,6 @@ exports.getNickNameDocument = async (nickName, boardType, page = 1) => {
                 'USER_NICKNAME': '"nickName"',
                 'COMMENT_COUNT': '"commentCount"',
                 'VOTE_UP_COUNT': '"voteUpCount"',
-                'VOTE_DOWN_COUNT': '"voteDownCount"',
                 'VIEW_COUNT': '"viewCount"',
                 'WRITE_DATETIME': '"writeDateTime"',
                 'TITLE': '"title"',
@@ -517,6 +522,11 @@ exports.deleteDocumentAttach = async (documentId, attachId) => {
 }
 
 exports.createDocumentSurvey = async (documentId, surveyContents) => {
+    let answer = [], i=0;
+    while(i<surveyContents.length){
+        answer.push(Array(surveyContents[i].choices.length).fill(0));
+        i++;
+    }
     return await pool.executeQuery('createDocumentSurvey',
         builder.insert()
             .into('SS_MST_DOCUMENT_SURVEY')

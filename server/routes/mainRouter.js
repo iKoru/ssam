@@ -54,19 +54,31 @@ router.post('/survey', requiredAuth, async(req, res) => {
     if (!Array.isArray(check) || check[0].count === 0) {
         return res.status(403).json({ target: 'documentId', message: '게시물을 읽을 수 있는 권한이 없습니다.' });
     }
+    let original = await documentModel.getDocumentSurvey(survey.documentId);
+    if (!Array.isArray(original) || original.length === 0) {
+        return res.status(404).json({ target: 'documentId', message: '설문조사가 없는 게시물입니다.' })
+    }else if(survey.answer.length !== original[0].surveyContents.length){
+        return res.status(400).json({ target: 'answer', message: '미응답 질문이 있습니다. 모든 질문에 응답해주세요.' })
+    }
+    
     check = await documentModel.createDocumentSurveyHistory(survey.documentId, req.userObject.userId, survey.answer);
     if (check > 0) {
-        let original = await documentModel.getDocumentSurvey(survey.documentId);
-        if (!Array.isArray(original) || original.length === 0) {
-            await documentModel.deleteDocumentSurveyHistory(survey.documentId, req.userObject.userId)
-            return res.status(404).json({ target: 'documentId', message: '설문조사가 없는 게시물입니다.' })
+        let i=0;
+        try{
+            while(i<original[0].surveyContents.length){
+                original[0].surveyAnswers[i][survey.answer[i] - 1]++;
+                i++;
+            }
+        }catch(err){
+            logger.error('설문 내용 반영 중 에러 : ', err, survey.documentId, original[0].surveyContents, survey.answer);
+            await documentModel.deleteDocumentSurveyHistory(survey.documentId, req.userObject.userId);
+            return res.status(500).json({ message: `설문 응답을 저장하는 데 실패하였습니다.[${i+1}번째 응답값이 올바르지 않습니다.]` })
         }
-        //TODO : reflect user's answer into survey answer summary
-        check = await documentModel.updateDocumentSurvey(survey.documentId, original.surveyAnswers);
+        check = await documentModel.updateDocumentSurvey(survey.documentId, original[0].surveyAnswers);
         if (typeof check === 'object' || check === 0) {
             await documentModel.deleteDocumentSurveyHistory(survey.documentId, req.userObject.userId)
             logger.error('설문 내용 제출 중 에러 : ', check, req.userObject.userId, survey.answer)
-            return res.status(500).json({ message: `설문 응답을 저장하는 데 실패하였습니다.[${check.code}]` })
+            return res.status(500).json({ message: `설문 응답을 저장하는 데 실패하였습니다.[${check.code} || '']` })
         } else {
             return res.status(200).json({ message: '설문 내용을 저장하였습니다.' });
         }
@@ -157,7 +169,8 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
                     documentId = req.query.documentId,
                     searchQuery = req.query.searchQuery,
                     searchTarget = req.query.searchTarget,
-                    isAscending = req.query.isAscending;
+                    isAscending = req.query.isAscending,
+                    category = req.query.category;
                 if (typeof page === 'string') {
                     page = 1*page
                 }
@@ -180,8 +193,11 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
                     searchQuery = undefined;
                     searchTarget = undefined;
                 }
+                if(typeof category !== 'string' || category.length > 30){
+                    category = undefined;
+                }
 
-                let result = await documentModel.getDocuments(boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending, page, req.userObject.isAdmin);
+                let result = await documentModel.getDocuments(boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending, page, req.userObject.isAdmin, category);
                 if (Array.isArray(result)) {
                     return res.status(200).json(result);
                 } else {

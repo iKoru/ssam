@@ -29,14 +29,17 @@ exports.getBoards = async (searchQuery, boardType, page = 1, searchTarget = "boa
         'ALL_GROUP_AUTH': '"allGroupAuth"',
         'ALLOW_ANONYMOUS': '"allowAnonymous"',
         'RESERVED_DATE': '"reservedDate"',
-        'RESERVED_CONTENTS': '"reservedContents"'
+        'RESERVED_CONTENTS': '"reservedContents"',
+        'array_agg(CAT.CATEGORY_NAME)':'"categories"'
     });
     if (isAdmin) {
         query.field('array_agg(AUTH.ALLOWED_GROUP_ID)', '"allowedGroups"')
             .from('SS_MST_BOARD', 'BOARD')
-            .left_join('SS_MST_BOARD_AUTH', 'AUTH', 'AUTH.BOARD_ID = BOARD.BOARD_ID');
+            .left_join('SS_MST_BOARD_AUTH', 'AUTH', 'AUTH.BOARD_ID = BOARD.BOARD_ID')
+            .left_join('SS_MST_BOARD_CATEGORY', 'CAT', 'CAT.BOARD_ID = BOARD.BOARD_ID');
     } else {
         query.from('SS_MS_BOARD', 'BOARD')
+            .left_join('SS_MST_BOARD_CATEGORY', 'CAT', 'CAT.BOARD_ID = BOARD.BOARD_ID')
             .where('STATUS <> \'DELETED\'');
     }
     if (searchQuery) {
@@ -67,7 +70,7 @@ exports.getBoards = async (searchQuery, boardType, page = 1, searchTarget = "boa
     if (isAdmin) {
         query.group('BOARD.BOARD_ID')
     }
-    return await pool.executeQuery('getBoards' + (isAdmin ? 'admin' : '') + (searchQuery ? searchTarget : '') + (boardType ? 'type' : ''),
+    return await pool.executeQuery('getBoardss' + (isAdmin ? 'admin' : '') + (searchQuery ? searchTarget : '') + (boardType ? 'type' : ''),
         query.limit(15).offset((page - 1) * 15)
             .toParam()
     )
@@ -82,10 +85,10 @@ exports.getUserBoard = async (userId, isAdmin) => {
             'BOARD_DESCRIPTION': '"boardDescription"',
             'BOARD_TYPE': '"boardType"',
             'STATUS': '"status"',
-            'ALL_GROUP_AUTH': '"allGroupAuth"',
-            'ALLOW_ANONYMOUS': '"allowAnonymous"',
             'RESERVED_DATE': '"reservedDate"',
-            'RESERVED_CONTENTS': '"reservedContents"'
+            'RESERVED_CONTENTS': '"reservedContents"',
+            'WRITE_RESTRICT_DATE':'"writeRestrictDate"',
+            'READ_RESTRICT_DATE':'"readRestrictDate"'
         })
         .from('SS_MST_USER_BOARD', 'USERBOARD')
         .join('SS_MST_BOARD', 'BOARD', 'BOARD.BOARD_ID = USERBOARD.BOARD_ID')
@@ -94,8 +97,8 @@ exports.getUserBoard = async (userId, isAdmin) => {
         query.where('STATUS <> \'DELETED\'')
     }
     return await pool.executeQuery('getUserBoard' + (isAdmin ? 'admin' : ''),
-        query
-            .toParam())
+        query.toParam()
+    )
 }
 
 exports.getReservedBoard = async () => {
@@ -103,7 +106,7 @@ exports.getReservedBoard = async () => {
     return await pool.executeQuery('getReservedBoard',
         builder.select()
             .fields({
-                'BOARD_ID': '"boardId"',
+                'BOARD.BOARD_ID': '"boardId"',
                 'BOARD_NAME': '"boardName"',
                 'BOARD_DESCRIPTION': '"boardDescription"',
                 'BOARD_TYPE': '"boardType"',
@@ -112,19 +115,25 @@ exports.getReservedBoard = async () => {
                 'ALL_GROUP_AUTH': '"allGroupAuth"',
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
                 'RESERVED_DATE': '"reservedDate"',
-                'RESERVED_CONTENTS': '"reservedContents"'
+                'RESERVED_CONTENTS': '"reservedContents"',
+                'array_agg(CAT.CATEGORY_NAME)':'categories'
             })
-            .from('SS_MST_BOARD')
+            .from('SS_MST_BOARD', 'BOARD')
+            .left_join('SS_MST_BOARD_CATEGORY', 'CAT', 'CAT.BOARD_ID = BOARD.BOARD_ID')
             .where('RESERVED_DATE = ?', yesterday)
             .toParam()
     )
 }
 
 const getBoard = async (boardId) => {
-    return await pool.executeQuery('getBoard',
+    let cachedData = await cache.getAsync('[getBoard]' + boardId);
+    if (cachedData) {
+        return cachedData;
+    }
+    cachedData = await pool.executeQuery('getBoard',
         builder.select()
             .fields({
-                'BOARD_ID': '"boardId"',
+                'BOARD.BOARD_ID': '"boardId"',
                 'BOARD_NAME': '"boardName"',
                 'OWNER_ID': '"ownerId"',
                 'BOARD_DESCRIPTION': '"boardDescription"',
@@ -133,12 +142,19 @@ const getBoard = async (boardId) => {
                 'ALL_GROUP_AUTH': '"allGroupAuth"',
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
                 'RESERVED_DATE': '"reservedDate"',
-                'RESERVED_CONTENTS': '"reservedContents"'
+                'RESERVED_CONTENTS': '"reservedContents"',
+                'array_agg(CAT.CATEGORY_NAME)':'categories'
             })
-            .from('SS_MST_BOARD')
-            .where('BOARD_ID = ?', boardId)
+            .from('SS_MST_BOARD', 'BOARD')
+            .left_join('SS_MST_BOARD_CATEGORY', 'CAT', 'CAT.BOARD_ID = BOARD.BOARD_ID')
+            .where('BOARD.BOARD_ID = ?', boardId)
+            .group('BOARD.BOARD_ID')
             .toParam()
     );
+    if(Array.isArray(cachedData)){
+        cache.setAsync('[getBoard]'+boardId, cachedData, 3600);
+    }
+    return cachedData;
 }
 exports.getBoard = getBoard;
 
@@ -274,8 +290,10 @@ exports.createBoard = async (board) => {
 }
 
 exports.deleteBoard = async (boardId) => {
+    cache.delAsync('[getBoard]'+boardId);
     await deleteUserBoard(null, boardId);
     await deleteBoardAuthOnly(boardId);
+    await deleteBoardCategory(boardId);
     return await pool.executeQuery('deleteBoard',
         builder.delete()
             .from('SS_MST_BOARD')
@@ -317,10 +335,14 @@ exports.updateBoard = async (board) => {
     if (board.reservedContents !== undefined) {
         query.set('RESERVED_CONTENTS', JSON.stringify(board.reservedContents))
     }
-    return await pool.executeQuery(null,
+    let result = await pool.executeQuery(null,
         query.where('BOARD_ID = ?', board.boardId)
             .toParam()
     );
+    if(result > 0){
+        cache.delAsync('[getBoard]'+board.boardId);
+    }
+    return result;
 }
 
 exports.checkUserBoardSubscribable = async (userId, boardId) => {
@@ -336,7 +358,10 @@ exports.checkUserBoardSubscribable = async (userId, boardId) => {
 const checkUserBoard = async (userId, boardId) => {
     return pool.executeQuery('checkUserBoard',
         builder.select()
-            .field('COUNT(*)', 'count')
+            .fields({
+                'WRITE_RESTRICT_DATE':'"writeRestrictDate"',
+                'READ_RESTRICT_DATE':'"readRistrictDate"'
+            })
             .from('SS_MST_USER_BOARD')
             .where('USER_ID = ?', userId)
             .where('BOARD_ID = ?', boardId)
@@ -352,14 +377,28 @@ exports.checkUserBoardReadable = async (userId, boardId) => {
     const board = await getBoard(boardId);
     if (!Array.isArray(board) || board.length === 0) {
         return [{ count: 0 }];
-    } else if (board[0].boardType !== 'T' || board[0].allGroupAuth !== 'NONE') { //lounge or open topic
-        return [{ count: 1 }];
     } else {
         cachedData = await checkUserBoard(userId, boardId);
-        if (Array.isArray(cachedData) && cachedData.length > 0) {
-            cache.setAsync('[readUserBoard]' + userId + '@' + boardId, cachedData, 3600);
+        if (Array.isArray(cachedData)) {
+            if(cachedData.length > 0){//subscription or sanction
+                if(!cachedData[0].readRistrictDate || util.moment().isAfter(util.moment(cachedData[0].readRistrictDate, 'YYYYMMDD'))){//no readability sanction
+                    cache.setAsync('[readUserBoard]' + userId + '@' + boardId, [{count:1}], 3600);
+                    return [{count:1}];
+                }else{
+                    cache.setAsync('[readUserBoard]' + userId + '@' + boardId, [{count:0}], 3600);
+                    return [{count:0}];
+                }
+            }else{
+                if(board[0].boardType !== 'T' || board[0].allGroupAuth !== 'NONE'){//lounge or open topic
+                    cache.setAsync('[readUserBoard]' + userId + '@' + boardId, [{count:1}], 3600);
+                    return [{count:1}];
+                }else{//closed topic - need subscription
+                    cache.setAsync('[readUserBoard]' + userId + '@' + boardId, [{count:0, needSubscription: true}], 3600);
+                    return [{count:0, needSubscription:true}];
+                }
+            }
         }
-        return cachedData;
+        return cachedData;//error to get status
     }
 }
 
@@ -371,24 +410,36 @@ exports.checkUserBoardWritable = async (userId, boardId) => {
     const board = await getBoard(boardId);
     if (!Array.isArray(board) || board.length === 0) {
         return [{ count: 0 }];
-    } else if (board[0].boardType !== 'T') { //lounge, archive
-        cachedData = await pool.executeQuery('checkUserLoungeWritable',
-            builder.select()
-                .field('COUNT(*)', 'count')
-                .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId).where('AUTH_TYPE = \'READWRITE\''), 'AUTH')
-                .where('ALLOWED_GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_USER_GROUP WHERE USER_ID = ?)', userId)
-                .limit(1)
-                .toParam()
-        );
-        if (Array.isArray(cachedData) && cachedData.length > 0) {
-            cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, cachedData, 3600)
-        }
-        return cachedData;
-    } else {
-        cachedData = await checkUserBoard(userId, boardId);
-        if (Array.isArray(cachedData) && cachedData.length > 0) {
-            cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, cachedData, 3600)
-        }
+    } else{
+        cachedData = await checkUserBoard(userId, boardId);//check sanction
+        if(Array.isArray(cachedData)){
+            if(cachedData.length > 0 && cachedData[0].writeRestrictDate && util.moment().isSameOrBefore(util.moment(cachedData[0].writeRestrictDate, 'YYYYMMDD'))){//sanction
+                cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, [{count:0}], 3600);
+                return [{count:0}];
+            }else if(cachedData.length === 0){//no sanction and subscription
+                if(board[0].boardType !== 'T'){//lounge need not subscribe. just check the user has the right group.
+                    cachedData = await pool.executeQuery('checkUserLoungeWritable',
+                        builder.select()
+                            .field('COUNT(*)', 'count')
+                            .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId).where('AUTH_TYPE = \'READWRITE\''), 'AUTH')
+                            .where('ALLOWED_GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_USER_GROUP WHERE USER_ID = ?)', userId)
+                            .limit(1)
+                            .toParam()
+                    );
+                    if(Array.isArray(cachedData)){//save cache only when no error occured
+                        cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, cachedData, 3600);
+                    }
+                    return cachedData;
+                }else{
+                    cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, [{count:0, needSubscription:true}], 3600);
+                    return [{count:0, needSubscription:true}];
+                }
+            }else{//no sanction and already subscribed
+                cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, [{count:1}], 3600);
+                return [{count:1}];
+            }  
+        } 
+        return cachedData;//error case
     }
 }
 
@@ -423,5 +474,40 @@ exports.getBoardByOwnerId = async (ownerId) => {
             .from('SS_MST_BOARD')
             .where('OWNER_ID = ?', ownerId)
             .toParam()
+    )
+}
+
+const deleteBoardCategory = async (boardId, categories) => {
+    let query = builder.delete()
+        .from('SS_MST_BOARD_CATEGORY')
+        .where('BOARD_ID = ?', boardId)
+    if(Array.isArray(categories) && categories.length > 0){
+        query.where('CATEGORY_NAME IN ?', categories);
+    }else if(categories.length === 0){
+        return 0;
+    }
+    return await pool.executeQuery('deleteBoardCategory' + (categories?categories.length:''),
+        query.toParam()
+    )
+}
+
+exports.deleteBoardCategory = deleteBoardCategory;
+
+exports.createBoardCategory = async (boardId, categories) => {
+    return await pool.executeQuery('createBoardCategory' + (categories.length),
+        builder.insert()
+        .into('SS_MST_BOARD_CATEGORY')
+        .setFieldsRows(categories.map(x=>{return {'BOARD_ID':boardId, 'CATEGORY_NAME':x}}))
+        .toParam()
+    )
+}
+
+exports.getBoardCategory = async(boardId) => {
+    return await pool.executeQuery('getBoardCategory',
+        builder.select()
+        .field('CATEGORY_NAME', '"categoryName"')
+        .from('SS_MST_BOARD_CATEGORY')
+        .where('BOARD_ID = ?', boardId)
+        .toParam()
     )
 }
