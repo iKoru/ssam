@@ -35,7 +35,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
     } else if (Array.isArray(boardId)) { //array
         query.where('BOARD_ID IN ?', boardId)
     }
-    if(category){
+    if (category) {
         query.where('CATEGORY = ?', category)
     }
     if (searchQuery) {
@@ -103,7 +103,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
                     break;
             }
         }
-        if(category){
+        if (category) {
             withQuery.where('CATEGORY = ?', category)
         }
         const pages = await pool.executeQuery('findDocumentPage' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc'),
@@ -120,7 +120,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
     }
 
     //select documents
-    let result = await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc') + (category? 'cat':''),
+    let result = await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc') + (category ? 'cat' : ''),
         query.limit(10).offset((page - 1) * 10)
             .toParam()
     )
@@ -321,7 +321,7 @@ exports.createDocument = async (document) => {
                 'RESTRICTION': JSON.stringify(document.restriction),
                 'HAS_SURVEY': !!document.survey,
                 'HAS_ATTACH': !!document.attach,
-                'CATEGORY': document.category,
+                'CATEGORY_NAME': document.categoryName,
                 'RESERVED1': document.reserved1,
                 'RESERVED2': document.reserved2,
                 'RESERVED3': document.reserved3,
@@ -351,7 +351,7 @@ const getDocument = async (documentId) => {
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
                 'HAS_SURVEY': '"hasSurvey"',
                 'HAS_ATTACH': '"hasAttach"',
-                'CATEGORY': '"category"',
+                'CATEGORY_NAME': '"categoryName"',
                 'RESERVED1': '"reserved1"',
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
@@ -522,8 +522,8 @@ exports.deleteDocumentAttach = async (documentId, attachId) => {
 }
 
 exports.createDocumentSurvey = async (documentId, surveyContents) => {
-    let answer = [], i=0;
-    while(i<surveyContents.length){
+    let answer = [], i = 0;
+    while (i < surveyContents.length) {
         answer.push(Array(surveyContents[i].choices.length).fill(0));
         i++;
     }

@@ -101,7 +101,7 @@ exports.updateGroup = async (group) => {
                 'GROUP_NAME': group.groupName || builder.rstr('GROUP_NAME'),
                 'GROUP_DESCRIPTION': group.description || builder.rstr('GROUP_DESCRIPTION'),
                 'GROUP_TYPE': group.groupType || builder.rstr('GROUP_TYPE'),
-                'PARENT_GROUP_ID': group.parentGroupId || builder.rstr('PARENT_GROUP_ID'),
+                'PARENT_GROUP_ID': group.parentGroupId !== undefined ? group.parentGroupId : builder.rstr('PARENT_GROUP_ID'),
                 'ORDER_NUMBER': util.isNumeric(group.orderNumber) ? group.orderNumber : builder.rstr('ORDER_NUMBER'),
                 'IS_OPEN_TO_USERS': group.isOpenToUsers !== undefined ? group.isOpenToUsers : builder.rstr('IS_OPEN_TO_USERS'),
                 'EXPIRE_PERIOD': util.isNumeric(group.expirePeriod) ? group.expirePeriod : builder.rstr('EXPIRE_PERIOD')
