@@ -69,7 +69,7 @@ router.put('/document', adminOnly, async(req, res) => {
     if (typeof report.userId !== 'string') {
         return res.status(400).json({ target: 'userId', message: '변경할 신고의 사용자 ID가 올바르지 않습니다.' });
     }
-    if (!['NORMAL', 'INVALID'].includes(report.status)) {
+    if (!['NORMAL', 'INVALID', 'DONE'].includes(report.status)) {
         return res.status(400).json({ target: 'status', message: '변경할 신고 상태가 올바르지 않습니다.' });
     }
 
@@ -150,7 +150,7 @@ router.put('/comment', adminOnly, async(req, res) => {
     if (typeof report.userId !== 'string') {
         return res.status(400).json({ target: 'userId', message: '변경할 신고의 사용자 ID가 올바르지 않습니다.' });
     }
-    if (!['NORMAL', 'INVALID'].includes(report.status)) {
+    if (!['NORMAL', 'INVALID', 'DONE'].includes(report.status)) {
         return res.status(400).json({ target: 'status', message: '변경할 신고 상태가 올바르지 않습니다.' });
     }
 
@@ -216,7 +216,7 @@ router.get('/document/list', adminOnly, async(req, res) => {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
     let status = req.query.status;
-    if (![undefined, 'NORMAL', 'INVALID'].includes(status)) {
+    if (![undefined, 'NORMAL', 'INVALID', 'DONE'].includes(status)) {
         return res.status(400).json({ target: 'status', message: '조회할 신고 상태값이 올바르지 않습니다.' })
     }
     let userId = req.query.userId;
@@ -256,7 +256,7 @@ router.get('/comment/list', adminOnly, async(req, res) => {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
     }
     let status = req.query.status;
-    if (![undefined, 'NORMAL', 'INVALID'].includes(status)) {
+    if (![undefined, 'NORMAL', 'INVALID', 'DONE'].includes(status)) {
         return res.status(400).json({ target: 'status', message: '조회할 신고 상태값이 올바르지 않습니다.' })
     }
     let userId = req.query.userId;

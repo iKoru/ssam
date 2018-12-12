@@ -8,6 +8,7 @@ const constants = require('../constants'),
     config = require('../../config');
 const adminOnly = require('../middlewares/adminOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
+    requiredAuth = require('../middlewares/requiredAuth'),
     checkSignin = require('../middlewares/checkSignin');
 const userModel = require('../models/userModel'),
     groupModel = require('../models/groupModel'),
@@ -16,8 +17,6 @@ const userModel = require('../models/userModel'),
     boardModel = require('../models/boardModel'),
     scrapModel = require('../models/scrapModel'),
     messageModel = require('../models/messageModel');
-let moment = require('moment-timezone');
-moment.tz.setDefault('Asia/Seoul');
 //based on /user
 router.put('/', requiredSignin, async (req, res) => {
     let user = { ...req.body };
@@ -40,8 +39,8 @@ router.put('/', requiredSignin, async (req, res) => {
         }
         let result;
         if (typeof user.loungeNickName === 'string' && user.loungeNickName !== original.loungeNickName) {
-            if (original.loungeNickNameModifiedDate && moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment()) && !req.userObject.isAdmin) {
-                return res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
+            if (original.loungeNickNameModifiedDate && util.moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(util.moment()) && !req.userObject.isAdmin) {
+                return res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${util.moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
             }
             if (user.loungeNickName.length > 50) {
                 return res.status(400).json({ target: 'loungeNickName', message: '입력된 라운지 필명이 너무 깁니다. 최대 50자로 입력해주세요.' });
@@ -61,8 +60,8 @@ router.put('/', requiredSignin, async (req, res) => {
             parameters.loungeNickName = user.loungeNickName;
         }
         if (typeof user.topicNickName === 'string' && user.topicNickName !== original.topicNickName) {
-            if (original.topicNickNameModifiedDate && moment(original.topicNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(moment()) && !req.userObject.isAdmin) {
-                return res.status(400).json({ target: 'topicNickName', message: `마지막으로 토픽 닉네임을 변경한 날(${moment(original.topicNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
+            if (original.topicNickNameModifiedDate && util.moment(original.topicNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(util.moment()) && !req.userObject.isAdmin) {
+                return res.status(400).json({ target: 'topicNickName', message: `마지막으로 토픽 닉네임을 변경한 날(${util.moment(original.topicNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
             }
             if (user.topicNickName.length > 50) {
                 return res.status(400).json({ target: 'topicNickName', message: '입력된 토픽 닉네임이 너무 깁니다. 최대 50자로 입력해주세요.' });
@@ -88,11 +87,11 @@ router.put('/', requiredSignin, async (req, res) => {
             parameters.status = user.status;
         }
         if ((user.grade && user.grade !== original.grade) || (user.major && user.major !== original.major) || (user.email && user.email !== original.email)) {
-            if (process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && moment().month() !== 2) { //month() === 2 is March
+            if (process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && util.moment().month() !== 2) { //month() === 2 is March
                 return res.status(400).json({ message: '학년, 전공, 이메일은 매년 3월에만 변경이 가능합니다.' })
             }
-            if (!req.userObject.isAdmin && original.infoModifiedDate && moment(original.infoModifiedDate, 'YYYYMMDD').isValid()) {
-                if (moment(original.infoModifiedDate, 'YYYYMMDD').year() >= moment().year()) {
+            if (!req.userObject.isAdmin && original.infoModifiedDate && util.moment(original.infoModifiedDate, 'YYYYMMDD').isValid()) {
+                if (util.moment(original.infoModifiedDate, 'YYYYMMDD').year() >= util.moment().year()) {
                     return res.status(400).json({ message: '올해 이미 내역을 변경하셨습니다.' });
                 }
             }
@@ -496,7 +495,7 @@ router.get('/comment', requiredSignin, async (req, res) => {
 
 router.get('/board', requiredSignin, async (req, res) => {
     let userId = req.userObject.isAdmin ? (req.query.userId || req.userObject.userId) : req.userObject.userId;
-    let result = await boardModel.getUserBoard(userId, req.userObject.isAdmin);
+    let result = await boardModel.getUserBoard(userId, null, req.userObject.isAdmin);
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {
@@ -505,11 +504,42 @@ router.get('/board', requiredSignin, async (req, res) => {
     }
 });
 
+router.post('/board', requiredAuth, async(req, res) => {
+    let userId = req.userObject.isAdmin ? (req.body.userId || req.userObject.userId) : req.userObject.userId,
+        boardId = req.body.boardId, result;
+    if(typeof boardId !== 'string'){
+        return res.status(400).json({target:'boardId', message:'구독할 토픽을 선택해주세요.'})
+    }
+    result = await boardModel.getBoard(boardId);
+    if(!Array.isArray(result) || result.length === 0 || result[0].status === 'DELETED'){
+        return res.status(404).json({target:'boardId', message:'구독할 토픽을 찾을 수 없습니다.'})
+    }else if(result[0].boardType !== 'T'){
+        return res.status(400).json({target:'boardId', message:'구독할 수 없는 게시판입니다.'})
+    }
+    result = await boardModel.getUserBoard(userId, boardId, req.userObject.isAdmin);
+    if(Array.isArray(result) && result.length > 0){
+        return res.status(409).json({target:'boardId', message:'이미 구독중인 토픽입니다.'})
+    }else if(result[0].allGroupAuth !== 'READWRITE'){//모든 그룹 구독 가능하지 않은 경우 체크
+        result = await boardModel.checkUserBoardSubscribable(userId, boardId);
+        if(!Array.isArray(result) || result.length === 0 || result[0].count === 0){
+            logger.warn('구독할 수 없는 토픽 구독 시도. ', userId, boardId, result)
+            return res.status(403).json({message:'구독할 수 있는 토픽이 아닙니다. 토픽 구독 조건을 참고해주세요.'})
+        }
+    }
+    
+    result = await boardModel.createUserBoard(userId, boardId);
+    if(result > 0){
+        return res.status(200).json({message:'토픽을 구독하였습니다.'});
+    }else{
+        return res.status(500).json({message:`토픽을 구독하지 못했습니다.[${result.code || ''}]`})
+    }
+})
+
 router.put('/board', requiredSignin, async (req, res) => {
     let boards = req.body.boards;
     if (!boards) {
         return res.status(400).json({ target: 'boards', message: '구독할 게시판을 선택해주세요.' });
-    } else if (typeof boards === 'string') {
+    } else if (!Array.isArray(boards)) {
         boards = [boards];
     }
     let currentBoard = await boardModel.getUserBoard(req.userObject.userId, req.userObject.isAdmin);
@@ -518,12 +548,12 @@ router.put('/board', requiredSignin, async (req, res) => {
     if (Array.isArray(currentBoard)) {
         let i = 0;
         while (i < boards.length) {
-            if ((currentBoard.filter(x => x.boardId === boards[i])).length < 1) { //new board
-                result = await boardModel.getBoard(boards[i]);
+            if (!(currentBoard.find(x => x.boardId === boards[i].boardId))) { //new board
+                result = await boardModel.getBoard(boards[i].boardId);
                 if (Array.isArray(result) && result[0] && result[0].boardType === 'T') {
-                    result = await boardModel.checkUserBoardSubscribable(req.userObject.userId, boards[i]);
+                    result = await boardModel.checkUserBoardSubscribable(req.userObject.userId, boards[i].boardId);
                     if ((result && result.length > 0 && result[0].count > 0) || req.userObject.isAdmin) {
-                        result = await boardModel.createUserBoard(req.userObject.userId, boards[i]);
+                        result = await boardModel.createUserBoard(req.userObject.userId, boards[i].boardId);
                         if (typeof result === 'object' || result === 0) {
                             failedBoard.push(boards[i]);
                         }
@@ -533,23 +563,33 @@ router.put('/board', requiredSignin, async (req, res) => {
                 } else { //라운지, 아카이브는 구독(취소) 대상 아님
                     failedBoard.push(boards[i]);
                 }
+            }else if(currentBoard.find(x=>x.boardId === boards[i].boardId).orderNumber !== boards[i].orderNumber){//update order check
+                result = await boardModel.updateUserBoard(req.userObject.userId, boards[i].boardId, boards[i].orderNumber)
+                if (typeof result === 'object' || result === 0) {
+                    failedBoard.push(boards[i]);
+                }
             }
             i++;
         }
         i = 0;
         while (i < currentBoard.length) {
-            if ((boards.filter(x => x === currentBoard[i].boardId)).length < 1) { //deleted board
-                result = await boardModel.getBoard(boards[i]);
-                if (Array.isArray(result) && result.length > 0 && result[0].boardType === 'T') {
-                    if (result[0].ownerId === req.userObject.userId) {
-                        failedBoard.push(-1);
-                    }
-                    result = await boardModel.deleteUserBoard(req.userObject.userId, currentBoard[i].boardId);
-                    if (typeof result === 'object' || result === 0) {
+            if (!(boards.find(x => x.boardId === currentBoard[i].boardId))) { //deleted board
+                if((currentBoard[i].writeRestrictDate && util.moment(currentBoard[i].writeRestrictDate, 'YYYYMMDD').isAfter(util.moment())) || (currentBoard[i].readRestrictDate && util.moment(currentBoard[i].readRestrictDate, 'YYYYMMDD').isAfter(util.moment()))) {
+                    failedBoard.push(currentBoard[i].boardId);
+                }else{
+                    result = await boardModel.getBoard(currentBoard[i].boardId);
+                    if (Array.isArray(result) && result.length > 0) {
+                        if (result[0].ownerId === req.userObject.userId) {
+                            failedBoard.push(-1);
+                        }else{
+                            result = await boardModel.deleteUserBoard(req.userObject.userId, currentBoard[i].boardId);
+                            if (typeof result === 'object' || result === 0) {
+                                failedBoard.push(currentBoard[i].boardId);
+                            }
+                        }
+                    } else { //구독 취소 대상 없음
                         failedBoard.push(currentBoard[i].boardId);
                     }
-                } else { //라운지, 아카이브는 구독(취소) 대상 아님
-                    failedBoard.push(currentBoard[i].boardId);
                 }
             }
             i++;
