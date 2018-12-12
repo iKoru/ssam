@@ -66,10 +66,11 @@ router.put('/', requiredAuth, async (req, res) => {
         if (!Array.isArray(nextOwner) || nextOwner.length < 1) {
             return res.status(404).json({ target: 'ownerNickName', message: '존재하지 않는 사용자를 선택하셨습니다.' })
         } else {
-            let result = await boardModel.getUserBoard(nextOwner[0].userId);
-            if (!Array.isArray(result) || !result.find(x => x.boardId === boardId)) {
-                return res.status(404).json({ target: 'ownerNickName', message: '해당 사용자는 이 라운지/토픽을 구독중이지 않습니다.' })
-            } else if (nextOwner[0].userId !== board[0].ownerId) {
+            if(nextOwner[0].userId !== board[0].ownerId){
+                let result = await boardModel.checkUserBoardWritable(nextOwner[0].userId, boardId);
+                if(!Array.isArray(result) || result.length === 0 || result[0].count === 0){
+                    return res.status(400).json({target:'ownerNickName', message:board[0].boardType === 'T'?'해당 사용자는 이 토픽을 구독중이지 않거나, 토픽지기로 지정할 수 없는 상태입니다':'해당 사용자는 이 라운지에 글을 쓸 수 없어 소유자로 지정할 수 없습니다.'})
+                }
                 reservedContents.ownerId = nextOwner[0].userId
             }
         }

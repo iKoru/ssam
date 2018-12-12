@@ -73,6 +73,24 @@ exports.getGroups = async (isAdmin, groupType = ['N', 'M', 'G', 'R'], page) => {
         );
 };
 
+exports.getGroupsByParentGroupId = async(parentGroupId) => {
+    return await pool.executeQuery('getGroupsByParentGroupId',
+        builder.select()
+        .fields({
+            'GROUP_ID': '"groupId"',
+            'GROUP_NAME': '"groupName"',
+            'GROUP_DESCRIPTION': '"groupDescription"',
+            'GROUP_ICON_PATH': '"groupIconPath"',
+            'GROUP_TYPE': '"groupType"',
+            'IS_OPEN_TO_USERS': '"isOpenToUsers"',
+            'EXPIRE_PERIOD': '"expirePeriod"'
+        })
+        .from('SS_MST_GROUP')
+        .where('PARENT_GROUP_ID = ?', parentGroupId)
+        .toParam()
+    )
+}
+
 exports.createGroup = async (group) => {
     return await pool.executeQuery('createGroup',
         builder.insert()
