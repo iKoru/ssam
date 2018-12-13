@@ -126,6 +126,7 @@ exports.getReservedBoard = async () => {
             .from('SS_MST_BOARD', 'BOARD')
             .left_join('SS_MST_BOARD_CATEGORY', 'CAT', 'CAT.BOARD_ID = BOARD.BOARD_ID')
             .where('RESERVED_DATE = ?', yesterday)
+            .group('BOARD.BOARD_ID')
             .toParam()
     )
 }

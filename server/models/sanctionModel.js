@@ -17,7 +17,7 @@ exports.getSanctions = async (userId, boardId) => {
         query.where('BOARD_ID = ?', boardId)
     }
     return await pool.executeQuery('getSanctions' + (boardId?'board':''),
-        query.toParam()
+        query.order('SANCTION_DATE', false).toParam()
     );
 }
 
