@@ -35,7 +35,7 @@ describe('Test the group path', async() => {
 
         //not authorized
         response = await request.post('/group').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         //no groupName
         response = await request.post('/group').set(headers_local).send({})
         expect(response.statusCode).toEqual(400);
@@ -90,7 +90,7 @@ describe('Test the group path', async() => {
 
         //update group
         response = await request.put('/group').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.put('/group').set(headers_local).send({});
         expect(response.statusCode).toEqual(400);
         response = await request.put('/group').set(headers_local).send({ groupId: 'aa' });
@@ -114,7 +114,7 @@ describe('Test the group path', async() => {
 
         //delete group
         response = await request.delete('/group/' + groupId).set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.delete('/group/aaaaaa').set(headers_local);
         expect(response.statusCode).toEqual(404);
         response = await request.delete('/group/' + groupId).set(headers_local);

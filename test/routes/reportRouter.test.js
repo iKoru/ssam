@@ -11,7 +11,7 @@ describe('Test the report path', async () => {
 
     test('document report crud test', async (done) => {
         let response = await request.post('/report/document').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -92,7 +92,7 @@ describe('Test the report path', async () => {
     test('comment report crud test', async (done) => {
         //create report
         let response = await request.post('/report/comment').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -181,7 +181,7 @@ describe('Test the report path', async () => {
     test('report type crud test', async (done) => {
         //create report type
         let response = await request.post('/report/type').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);

@@ -13,7 +13,7 @@ describe('Test the user path', async () => {
     // })
     test('user get test', async (done) => {
         let response = await request.get('/user').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
         let jwt = response.body.token;
@@ -191,7 +191,7 @@ describe('Test the user path', async () => {
     })
     test('user list get test', async (done) => {
         let response = await request.get('/user/list').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
         let headers_local = { ...headers, 'x-auth': response.body.token };
@@ -214,7 +214,7 @@ describe('Test the user path', async () => {
     })
     test('user document get test', async (done) => {
         let response = await request.get('/user/document').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
         let headers_local = { ...headers, 'x-auth': response.body.token };
@@ -238,7 +238,7 @@ describe('Test the user path', async () => {
     })
     test('user comment get test', async (done) => {
         let response = await request.get('/user/comment').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
         let headers_local = { ...headers, 'x-auth': response.body.token };
@@ -261,7 +261,7 @@ describe('Test the user path', async () => {
     })
     test('user board put test', async (done) => {
         let response = await request.put('/user/board').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
         let headers_local = { ...headers, 'x-auth': response.body.token };
@@ -313,7 +313,7 @@ describe('Test the user path', async () => {
     })
     test('user board get test', async (done) => {
         let response = await request.get('/user/board').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
         let headers_local = { ...headers, 'x-auth': response.body.token };
@@ -332,7 +332,7 @@ describe('Test the user path', async () => {
 
     test('user group put test', async (done) => {
         let response = await request.put('/user/group').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
         let headers_local = { ...headers, 'x-auth': response.body.token };
@@ -361,7 +361,7 @@ describe('Test the user path', async () => {
     })
     test('user group get test', async (done) => {
         let response = await request.get('/user/group').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
         let headers_local = { ...headers, 'x-auth': response.body.token };

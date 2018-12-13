@@ -4,13 +4,13 @@ const app = require('../../app'),
     messageModel = require('../../server/models/messageModel'),
     userModel = require('../../server/models/userModel')
 const headers = { 'Accept': 'application/json' };
-describe('Test the message path', async() => {
-    test('get chat list test', async(done) => {
+describe('Test the message path', async () => {
+    test('get chat list test', async (done) => {
         let response = await request.get('/message/list').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await request.get('/message/list').set(headers_local).query({ chatType: 'aa' });
         expect(response.statusCode).toEqual(400);
@@ -31,12 +31,12 @@ describe('Test the message path', async() => {
         done()
     })
 
-    test('create, delete chat test', async(done) => {
+    test('create, delete chat test', async (done) => {
         let response = await request.post('/message/list').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await request.get('/message/list').set(headers_local);
         expect(response.statusCode).toEqual(200);
@@ -85,7 +85,7 @@ describe('Test the message path', async() => {
         //not allowed to delete chat if not participated
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        response = await request.delete('/message/' + chatId).set({...headers, 'x-auth': response.body.token });
+        response = await request.delete('/message/' + chatId).set({ ...headers, 'x-auth': response.body.token });
         expect(response.statusCode).toEqual(403);
 
         response = await request.delete('/message/' + chatId).set(headers_local);
@@ -101,17 +101,17 @@ describe('Test the message path', async() => {
 
         response = await request.post('/signin').set(headers).send({ userId: 'blue2', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        response = await request.delete('/message/' + chatId).set({...headers, 'x-auth': response.body.token });
+        response = await request.delete('/message/' + chatId).set({ ...headers, 'x-auth': response.body.token });
         expect(response.statusCode).toEqual(200);
 
         response = await messageModel.getChat(chatId);
         expect(response.length).toEqual(0);
         done()
     })
-    test('message create and get test', async(done) => {
+    test('message create and get test', async (done) => {
         let response = await request.post('/signin').set(headers).send({ userId: 'blue2', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         const other = await userModel.getUser('blue');
         expect(other.length).toEqual(1);

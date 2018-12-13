@@ -16,10 +16,10 @@ describe('Test the document path', async () => {
     // })
     test('document get test', async (done) => {
         let response = await request.get('/asdfasdf').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.get('/123123').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'grey', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -63,7 +63,7 @@ describe('Test the document path', async () => {
     })
     test('document create, put, delete test', async (done) => {
         let response = await request.post('/document').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -125,7 +125,7 @@ describe('Test the document path', async () => {
 
         //put document
         response = await request.put('/document').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.put('/document').set(headers_local).send({});
         expect(response.statusCode).toEqual(400);
@@ -159,7 +159,7 @@ describe('Test the document path', async () => {
 
         //delete document
         response = await request.delete('/document/' + documentId).set(headers);
-        expect(response.status).toEqual(403);
+        expect(response.status).toEqual(401);
 
         response = await request.delete('/document/asdf').set(headers);
         expect(response.status).toEqual(404);
@@ -180,7 +180,7 @@ describe('Test the document path', async () => {
     })
     test('get document list test', async (done) => {
         let response = await request.get('/free').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'grey', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);

@@ -19,7 +19,7 @@ describe('Test the main path', async () => {
 
     test('profile test', async (done) => {
         let response = await request.get('/profile').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -44,7 +44,7 @@ describe('Test the main path', async () => {
 
     test('document list in board test', async (done) => {
         let response = await request.get('/free').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -65,7 +65,7 @@ describe('Test the main path', async () => {
     });
     test('best document list test', async (done) => {
         let response = await request.get('/loungeBest').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -120,7 +120,7 @@ describe('Test the main path', async () => {
     });
     test('periodically best document test', async (done) => {
         let response = await request.get('/best').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);

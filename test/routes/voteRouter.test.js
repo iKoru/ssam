@@ -10,7 +10,7 @@ describe('Test the vote path', async () => {
 
     test('document vote create test', async (done) => {
         let response = await request.post('/vote/document').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -75,7 +75,7 @@ describe('Test the vote path', async () => {
     })
     test('comment vote create test', async (done) => {
         let response = await request.post('/vote/comment').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);

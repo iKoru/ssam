@@ -20,7 +20,7 @@ describe('Test the comment path', async() => {
     test('comment crud test', async(done) => {
         //create comment
         let response = await request.post('/comment').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -158,7 +158,7 @@ describe('Test the comment path', async() => {
     test('animalName crd test', async(done) => {
         //create animal name
         let response = await request.get('/comment/animal').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'blue', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -185,7 +185,7 @@ describe('Test the comment path', async() => {
 
         //delete animal Name
         response = await request.delete('/comment/animal/' + qs.escape('캬')).set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.delete('/comment/animal/' + qs.escape('캬')).set(headers_local);
         expect(response.statusCode).toEqual(200);

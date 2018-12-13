@@ -21,7 +21,7 @@ describe('Test the root path', async () => {
         //await userModel.updateUserPassword({ userId: 'orange', password: await bcrypt.hash('xptmxm1!', 10) })
         //not authorized access
         let response = await request.get('/');
-        expect(response.statusCode).toBe(403);
+        expect(response.statusCode).toBe(401);
         //no password parameter
         response = await request.post('/signin').set('Accept', 'application/json').send({ userId: 'orange' });
         expect(response.statusCode).toBe(400);
@@ -84,7 +84,7 @@ describe('Test the root path', async () => {
     test('refresh token test', async (done) => {
         //not authorized access
         let response = await request.get('/');
-        expect(response.statusCode).toBe(403);
+        expect(response.statusCode).toBe(401);
         response = await request.post('/signin').set('Accept', 'application/json').send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toBe(200);
         jwt = response.body.token;

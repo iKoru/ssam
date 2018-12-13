@@ -6,15 +6,15 @@ const app = require('../../app'),
     userModel = require('../../server/models/userModel')
 const headers = { 'Accept': 'application/json' };
 
-describe('Test the scrap path', async() => {
+describe('Test the scrap path', async () => {
 
-    test('scrap crd test', async(done) => {
+    test('scrap crd test', async (done) => {
         let response = await request.post('/scrap').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await userModel.updateUserInfo({ userId: 'orange', status: 'NORMAL' });
         expect(response).toEqual(1);
@@ -78,13 +78,13 @@ describe('Test the scrap path', async() => {
 
         done();
     })
-    test('scrap group crud test', async(done) => {
+    test('scrap group crud test', async (done) => {
         let response = await request.post('/scrap/group').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'orange', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
-        let headers_local = {...headers, 'x-auth': response.body.token };
+        let headers_local = { ...headers, 'x-auth': response.body.token };
 
         response = await request.post('/scrap/group').set(headers_local).send();
         expect(response.statusCode).toEqual(400);

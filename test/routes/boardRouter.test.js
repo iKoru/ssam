@@ -16,7 +16,7 @@ describe('Test the board path', async () => {
     // })
     test('board (list) get test', async (done) => {
         let response = await request.get('/board').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'reds', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -46,7 +46,7 @@ describe('Test the board path', async () => {
         expect(response.statusCode).toEqual(404);
 
         response = await request.get('/board/list').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.get('/board/list').set(headers_local);
         expect(response.statusCode).toEqual(200);
@@ -63,7 +63,7 @@ describe('Test the board path', async () => {
     })
     test('board create, put, delete test', async (done) => {
         let response = await request.post('/board').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
 
         response = await request.post('/signin').set(headers).send({ userId: 'black', password: 'xptmxm1!' });
         expect(response.statusCode).toEqual(200);
@@ -142,7 +142,7 @@ describe('Test the board path', async () => {
 
         //put board
         response = await request.put('/board').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.put('/board').set(headers_local);
         expect(response.statusCode).toEqual(400);
         expect(response.body).toHaveProperty('target', 'boardId');
@@ -188,7 +188,7 @@ describe('Test the board path', async () => {
         response = await request.delete('/board/123123').set(headers);
         expect(response.statusCode).toEqual(404);
         response = await request.delete('/board/freefree').set(headers);
-        expect(response.statusCode).toEqual(403);
+        expect(response.statusCode).toEqual(401);
         response = await request.delete('/board/freefree').set(headers_local);
         expect(response.statusCode).toEqual(403);
 
