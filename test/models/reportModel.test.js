@@ -52,6 +52,7 @@ test('document and comment report test', async (done) => {
     const document = (await documentModel.createDocument({
         boardId: 'seoul',
         userId: 'blue',
+        userNickName: 'nickname',
         isAnonymous: false,
         title: '기분좋은 개발놀이!',
         contents: '쿄ㅋ쿄쿄',
@@ -69,14 +70,13 @@ test('document and comment report test', async (done) => {
 
     expect(await reportModel.getDocumentReports(document.rows[0].documentId)).toHaveLength(1);
     expect((await reportModel.getDocumentReports()).length).toBeGreaterThan(0);
-    expect(await reportModel.getDocumentReports(null, 'NORMAL')).toHaveLength(1);
+    expect((await reportModel.getDocumentReports(null, 'NORMAL')).length).toBeGreaterThan(0);
     expect(await reportModel.updateDocumentReport({
         documentId: document.rows[0].documentId,
         userId: 'orange',
         status: 'DELETED'
     })).toEqual(1);
     expect((await reportModel.getDocumentReports(null, 'DELETED')).length).toBeGreaterThan(0);
-    expect((await reportModel.getDocumentReportsByNickName(user[0].loungeNickName, 'L')).length).toBeGreaterThan(0);
 
     const comment = (await commentModel.createComment({
         documentId: document.rows[0].documentId,
@@ -92,14 +92,13 @@ test('document and comment report test', async (done) => {
 
     expect(await reportModel.getCommentReports(comment.rows[0].commentId)).toHaveLength(1);
     expect((await reportModel.getCommentReports()).length).toBeGreaterThan(0);
-    expect(await reportModel.getCommentReports(null, 'NORMAL')).toHaveLength(1);
+    expect((await reportModel.getCommentReports(null, 'NORMAL')).length).toBeGreaterThan(0);
     expect(await reportModel.updateCommentReport({
         commentId: comment.rows[0].commentId,
         userId: 'orange',
         status: 'DELETED'
     })).toEqual(1);
     expect((await reportModel.getCommentReports(null, 'DELETED')).length).toBeGreaterThan(0);
-    expect(await reportModel.getCommentReportsByNickName(user[0].loungeNickName, 'L')).toHaveLength(1);
 
     expect(await documentModel.deleteDocument(document.rows[0].documentId)).toEqual(1);
     expect(await commentModel.deleteComment(comment.rows[0].commentId)).toEqual(1);

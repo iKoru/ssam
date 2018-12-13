@@ -17,7 +17,7 @@ const scrapModel = require('../../server/models/scrapModel'),
 //});
 
 test('get scrap group', async (done) => {
-    expect(await scrapModel.getScrapGroupByUserId('orange')).toHaveLength(1);
+    expect((await scrapModel.getScrapGroupByUserId('orange')).length).toBeGreaterThan(0);
     done();
 });
 

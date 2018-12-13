@@ -4,17 +4,18 @@ const voteModel = require('../../server/models/voteModel'),
     commentModel = require('../../server/models/commentModel');
 const constants = require('../../server/constants');
 
-test('document and comment vote test', async(done) => {
+test('document and comment vote test', async (done) => {
     const document = (await documentModel.createDocument({
         boardId: 'seoul',
         userId: 'blue',
+        userNickName: 'nickName',
         isAnonymous: false,
         title: '기분좋은 개발놀이!',
         contents: '쿄ㅋ쿄쿄',
         allowAnonymous: false
     }));
     expect(document).toHaveProperty('rowCount', 1);
-    expect(await voteModel.createDocumentVote('orange', document.rows[0].documentId, true)).toEqual(1);
+    expect(await voteModel.createDocumentVote('orange', document.rows[0].documentId, true)).toHaveProperty('rowCount', 1);
     expect(await voteModel.createDocumentVote('orange', document.rows[0].documentId, false)).toHaveProperty('code', constants.dbErrorCode.PKDUPLICATION);
     const document2 = (await documentModel.getDocument(document.rows[0].documentId))[0];
     expect(document2.voteUpCount).toBeGreaterThan(0);
@@ -26,7 +27,7 @@ test('document and comment vote test', async(done) => {
         contents: '이것은 댓글이랍니다.'
     }));
     expect(comment).toHaveProperty('rowCount', 1);
-    expect(await voteModel.createCommentVote('orange', comment.rows[0].commentId, true)).toEqual(1);
+    expect(await voteModel.createCommentVote('orange', comment.rows[0].commentId, true)).toHaveProperty('rowCount', 1);
     expect(await voteModel.createCommentVote('orange', comment.rows[0].commentId, false)).toHaveProperty('code', constants.dbErrorCode.PKDUPLICATION);
     const comment2 = (await commentModel.getComment(comment.rows[0].commentId))[0];
     expect(comment2.voteUpCount).toBeGreaterThan(0);

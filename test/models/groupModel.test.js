@@ -37,7 +37,7 @@ const groupModel = require('../../server/models/groupModel');
 //     done();
 // });
 
-test('insert group', async(done) => {
+test('insert group', async (done) => {
     expect(await groupModel.createGroup({
         groupName: '테스트 그룹',
         groupDescription: '테스트 그룹입니다.',
@@ -73,27 +73,25 @@ test('insert group', async(done) => {
     done();
 });
 
-test('get groups and group by group id', async(done) => {
-    expect(await groupModel.getGroups(false, ['N', 'M', 'G', 'R'], 1)).toHaveLength(0);
-    expect(await groupModel.getGroups(true, ['N', 'M', 'G', 'R'], 2)).toHaveLength(0);
-    expect(await groupModel.getGroups(true, ['N'], 1)).toHaveLength(2);
-    expect(await groupModel.getGroups(true, ['M'], 1)).toHaveLength(2);
-    expect(await groupModel.getGroups(true, ['G'], 1)).toHaveLength(2);
-    expect(await groupModel.getGroups(true, ['R'], 1)).toHaveLength(2);
+test('get groups and group by group id', async (done) => {
+    expect((await groupModel.getGroups(false, ['N', 'M', 'G', 'R'], 1)).length).toBeGreaterThan(0);
+    expect(await groupModel.getGroups(true, ['N', 'M', 'G', 'R'], 99)).toHaveLength(0);
+    expect((await groupModel.getGroups(true, ['N'], 1)).length).toBeGreaterThan(1);
+    expect((await groupModel.getGroups(true, ['M'], 1)).length).toBeGreaterThan(1);
+    expect((await groupModel.getGroups(true, ['G'], 1)).length).toBeGreaterThan(1);
+    expect((await groupModel.getGroups(true, ['R'], 1)).length).toBeGreaterThan(1);
     let groups = await groupModel.getGroups(true, ['N', 'M', 'G', 'R'], 1);
-    expect(groups).toHaveLength(8);
-    groups.forEach(async(group) => {
-        let dbGroup = (await groupModel.getGroup(group.groupId));
-        if (dbGroup.length > 0) {
-            expect(dbGroup).toHaveLength(1);
-            dbGroup = dbGroup[0];
-            expect(dbGroup).toEqual(group);
-        }
-    });
+    expect(groups.length).toBeGreaterThan(7);
+    let dbGroup = (await groupModel.getGroup(groups[0].groupId));
+    if (dbGroup.length > 0) {
+        expect(dbGroup).toHaveLength(1);
+        dbGroup = dbGroup[0];
+        expect(dbGroup).toEqual(groups[0]);
+    }
     done();
 });
 
-test('update group', async(done) => {
+test('update group', async (done) => {
     const group = await groupModel.getGroups(true);
     expect(await groupModel.updateGroup({
         groupId: group[0].groupId,
@@ -109,27 +107,27 @@ test('update group', async(done) => {
     done();
 });
 
-test('delete group', async(done) => {
+test('delete group', async (done) => {
     let groups = await groupModel.getGroups(true, ['N', 'M', 'G', 'R'], 1);
-    groups.forEach(async(group) => {
-        if (group.groupId > 42) {
-            expect(await groupModel.deleteGroup(group.groupId)).toEqual(1);
+    console.log(groups);
+    let i = 0;
+    while (i < groups.length) {
+        if (groups[i].groupId > 42) {
+            expect(await groupModel.deleteGroup(groups[i].groupId)).toEqual(1);
         }
-    });
+        i++
+    }
     done();
 });
 
-test('create user group', async(done) => {
+test('create, get, delete user group', async (done) => {
     const group = await groupModel.getGroups(true);
+    await groupModel.deleteUserGroup('orange', group[0].groupId)
     expect(await groupModel.createUserGroup('orange', group[0].groupId)).toEqual(1);
-    expect(await groupModel.getUserGroup('orange')).toHaveLength(1);
-    done();
-});
-
-test('delete user group', async(done) => {
-    const group = await groupModel.getUserGroup('orange');
+    const group1 = await groupModel.getUserGroup('orange');
+    expect(group1.some(x => x.groupId === group[0].groupId)).toBeTruthy();
     expect(await groupModel.deleteUserGroup('orange', group[0].groupId)).toEqual(1);
     const group2 = await groupModel.getUserGroup('orange');
-    expect(group.length).toBeGreaterThan(group2.length);
+    expect(group1.length).toBeGreaterThan(group2.length);
     done();
 });
