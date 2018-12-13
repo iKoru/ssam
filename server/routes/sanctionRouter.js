@@ -18,7 +18,7 @@ router.get('/', adminOnly, async (req, res) => {
         return res.status(400).json({target:'userId', message:'사용자 ID값이 올바르지 않습니다.'})
     }
     let boardId = req.query.boardId;
-    if (!boardId && typeof boardId !== 'string') {
+    if (boardId && typeof boardId !== 'string') {
         return res.status(400).json({target:'boardId', message:'게시판ID가 올바르지 않습니다.'})
     }
 
@@ -166,38 +166,37 @@ router.post('/', adminOnly, async (req, res) => {
             result = await boardModel.createUserBoard(sanction.userId, sanction.boardId, writeRestrictDate, readRestrictDate);
         }
         if(result > 0){
-            await userModel.updateUserInfo({
-                userId:sanction.userId, 
-                memo:`${user[0].memo ? user[0].memo + '\n' : ''}${getYYYYMMDD()}: ${sanction.boardId} 게시판 ${sanction.writeRestrictDays? '글쓰기 제한 ' + sanction.writeRestrictDays + '일' + (sanction.readRestrictDays?', ':'') : ''} ${sanction.readRestrictDays? '읽기 제한 ' + sanction.readRestrictDays + '일' : ''}[${req.userObject.userId}]`
-            })
             result = await notificationModel.getNotifications(sanction.userId, null, 'AN', board[0].boardId);
             if(Array.isArray(result) && result.length > 0 && result.some(x=>!x.isRead)){//exists not read, same notification - update the notification
                 const original = result.find(x=>!x.isRead);
                 let parameters = {
                     notificationId: original.notificationId,
-                    value1: sanction.writeRestrictDays? moment(writeRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : original.value1,
-                    value2: sanction.readRestrictDays? moment(readRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : original.value2
+                    variable1: sanction.writeRestrictDays? moment(writeRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : original.value1,
+                    variable2: sanction.readRestrictDays? moment(readRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : original.value2
                 }
                 if((sanction.writeRestrictDays && !original.variable1) || (sanction.readRestrictDays && !original.variable2)){
-                    parameters.template = `접수된 신고로 인하여 ${board[0].boardName}에 대해 글쓰기가 $1까지, 글읽기가 $2까지 제한됩니다.`
+                    parameters.template = `접수된 신고로 인하여 ${board[0].boardName}에 글쓰기가 $1까지, 글읽기가 $2까지 제한됩니다.`
                 }
-                console.log(parameters);
-                await notificationModel.updateNotification(parameters)
+                result = await notificationModel.updateNotification(parameters)
             }else{//create new notification
-                await notificationModel.createNotification({
+                result = await notificationModel.createNotification({
                     userId: sanction.userId,
                     type: 'AN',
                     href: '/myPage',
-                    template: `접수된 신고로 인하여 ${board[0].boardName}에 대해 ${sanction.writeRestrictDays? '글쓰기가 $1까지' + (sanction.readRestrictDays?', ':'') : ''} ${sanction.readRestrictDays? '글읽기가 $2까지' : ''} 제한됩니다.`,
-                    value1: sanction.writeRestrictDays? moment(writeRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : undefined,
-                    value2: sanction.readRestrictDays ? moment(readRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : undefined,
+                    template: `접수된 신고로 인하여 ${board[0].boardName}에 ${sanction.writeRestrictDays? '글쓰기가 $1까지' + (sanction.readRestrictDays?', ':'') : ''}${sanction.readRestrictDays? '글읽기가 $2까지' : ''} 제한됩니다.`,
+                    variable1: sanction.writeRestrictDays? moment(writeRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : undefined,
+                    variable2: sanction.readRestrictDays ? moment(readRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : undefined,
                     target: board[0].boardId
                 })
             }
-            await sanctionModel.createSanction({
+            userModel.updateUserInfo({
+                userId:sanction.userId, 
+                memo:`${user[0].memo ? user[0].memo + '\n' : ''}${getYYYYMMDD()}: ${sanction.boardId} 게시판 ${sanction.writeRestrictDays? '글쓰기 제한 ' + sanction.writeRestrictDays + '일' + (sanction.readRestrictDays?', ':'') : ''}${sanction.readRestrictDays? '읽기 제한 ' + sanction.readRestrictDays + '일' : ''}[${req.userObject.userId}]`
+            })
+            sanctionModel.createSanction({
                 ...sanction,
                 adminId:req.userObject.userId,
-                sanctionContents: `${sanction.boardId} 게시판 ${sanction.writeRestrictDays? '글쓰기 제한 ' + sanction.writeRestrictDays + '일' + (sanction.readRestrictDays?', ':'') : ''} ${sanction.readRestrictDays? '읽기 제한 ' + sanction.readRestrictDays + '일' : ''}`
+                sanctionContents: `${sanction.boardId}, ${sanction.writeRestrictDays? '쓰기 제한 ' + sanction.writeRestrictDays + '일' + (sanction.readRestrictDays?', ':'') : ''}${sanction.readRestrictDays? '읽기 제한 ' + sanction.readRestrictDays + '일' : ''}`
             })
             return res.status(200).json({message:'회원을 제재처리했습니다.'})
         }else{
