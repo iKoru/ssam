@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken'),
     jwt_decode = require('jwt-decode'),
     bcrypt = require('bcrypt');
-const config = require('../../config');
+const config = require('../../config'),
+    {jwtErrorMessages} = require('../constants');
 const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly'),
     adminOnly = require('../middlewares/adminOnly');
@@ -135,7 +136,7 @@ router.post('/refresh', (req, res) => {
                     return res.status(400).json({ message: '세션이 만료되었습니다.' });
                 }
             } else { //기한만료가 아닌 기타 오류는 갱신 대상 아님
-                return res.status(400).json({ message: '유효하지 않은 접근입니다.' });
+                return res.status(400).json({ message: jwtErrorMessages[err.message] || '유효하지 않은 접근입니다.' });
             }
         });
     } else {

@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const config = require('../../config.js'),
-    util = require('../util'),
+    qs = require('querystring'),
     logger = require('../logger'),
+    {jwtErrorMessages} = require('../constants'),
     userModel = require('../models/userModel');
 
 const auth = (req, res, next) => {
@@ -9,9 +10,9 @@ const auth = (req, res, next) => {
     if (!token) {
         logger.info('signin trial without token')
         if (req.method === 'GET' || req.method === 'DELETE') {
-            return res.status(403).json({ redirectTo: `/signin${util.objectToQuerystring({ method: req.method, path: req.path, ...req.query })}`, message: '로그인이 필요합니다.' });
+            return res.status(401).json({ redirectTo: `/signin${qs.stringify({ method: req.method, redirectTo: req.path, ...req.query })}`, message: '로그인이 필요합니다.' });
         } else {
-            return res.status(403).json({ redirectTo: '/signin', message: '로그인이 필요합니다.' });
+            return res.status(401).json({ redirectTo: '/signin', message: '로그인이 필요합니다.' });
         }
     }
 
@@ -27,8 +28,8 @@ const auth = (req, res, next) => {
 
     const onError = (error) => {
         logger.info('signin trial failed')
-        res.status(403).json({
-            message: `잘못된 접근입니다.[${error.message}]`
+        res.status(401).json({
+            message: `잘못된 접근입니다.[${jwtErrorMessages[error.message] || error.message}]`
         })
     }
     p.then(async(result) => {

@@ -1,16 +1,17 @@
 const jwt = require('jsonwebtoken');
 const config = require('../../config.js');
-const util = require('../util'),
-logger = require('../logger');
+const qs = require('querystring'),
+    logger = require('../logger'),
+    {jwtErrorMessages} = require('../constants');
 const userModel = require('../models/userModel')
 
 const auth = (req, res, next) => {
     const token = req.headers['x-auth'];
     if (!token) {
         if (req.method === 'GET' || req.method === 'DELETE') {
-            return res.status(403).json({ redirectTo: `/signin${util.objectToQuerystring({ method: req.method, path: req.path, ...req.query })}`, message: '로그인이 필요합니다.' });
+            return res.status(401).json({ redirectTo: `/signin${qs.stringify({ method: req.method, redirectTo: req.path, ...req.query })}`, message: '로그인이 필요합니다.' });
         } else {
-            return res.status(403).json({ redirectTo: '/signin', message: '로그인이 필요합니다.' });
+            return res.status(401).json({ redirectTo: '/signin', message: '로그인이 필요합니다.' });
         }
     }
 
@@ -27,7 +28,7 @@ const auth = (req, res, next) => {
     const onError = (error) => {
         logger.error('로그인 에러 : ', error.message);
         return res.status(403).json({
-            message: `잘못된 접근입니다.[${error.message}]`
+            message: `잘못된 접근입니다.[${jwtErrorMessages[error.message] || error.message}]`
         })
         
     }

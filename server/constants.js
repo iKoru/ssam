@@ -43,3 +43,12 @@ exports.boardTypeDomain = { 'D': '아카이브', 'L': '라운지', 'T': '토픽'
 exports.commentNotificationTemplate = '작성하신 글에 $1건의 새로운 댓글이 있습니다.';
 exports.childCommentNotificationTemplate = '작성하신 댓글에 $1건의 새로운 대댓글이 있습니다.';
 exports.defaultTopicCategories = ['일반', '정보', '질문'];
+
+let jwtErrorMessages = {};
+jwtErrorMessages['jwt expired'] = '세션이 만료되었습니다.';
+jwtErrorMessages['jwt malformed'] = '비정상적인 경로의 접근입니다.';
+jwtErrorMessages['jwt signature is required'] = '세션이 존재하지 않습니다.';
+jwtErrorMessages['invalid signature'] = '비정상적인 경로의 접근입니다.';
+jwtErrorMessages['jwt not active'] = '세션이 아직 구성되지 않았습니다.';
+
+exports.jwtErrorMessages = jwtErrorMessages;
