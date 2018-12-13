@@ -201,6 +201,9 @@ exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarg
             page = 1;
         }
     }
+    if (!page) {
+        page = 1;
+    }
 
     let result = await pool.executeQuery('getBestDocumenta' + boardType + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
         query.order('BEST_DATETIME', false).limit(10).offset((page - 1) * 10)

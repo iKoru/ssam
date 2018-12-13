@@ -63,31 +63,31 @@ exports.getGroups = async (isAdmin, groupType = ['N', 'M', 'G', 'R'], page) => {
     }
     query.order('ORDER_NUMBER')
     return isAdmin ?
-        await pool.executeQuery('getGroupsForAdmin' + (groupType ? groupType.length : '') + (page === null ? 'all' : ''),
+        await pool.executeQuery('getGroupsForAdmin' + (groupType ? groupType.length : '') + (page >= 0 ? '' : 'all'),
             query
                 .toParam()
         ) :
-        await pool.executeQuery('getGroups' + (groupType ? groupType.length : '') + (page === null ? 'all' : ''),
+        await pool.executeQuery('getGroups' + (groupType ? groupType.length : '') + (page >= 0 ? '' : 'all'),
             query
                 .toParam()
         );
 };
 
-exports.getGroupsByParentGroupId = async(parentGroupId) => {
+exports.getGroupsByParentGroupId = async (parentGroupId) => {
     return await pool.executeQuery('getGroupsByParentGroupId',
         builder.select()
-        .fields({
-            'GROUP_ID': '"groupId"',
-            'GROUP_NAME': '"groupName"',
-            'GROUP_DESCRIPTION': '"groupDescription"',
-            'GROUP_ICON_PATH': '"groupIconPath"',
-            'GROUP_TYPE': '"groupType"',
-            'IS_OPEN_TO_USERS': '"isOpenToUsers"',
-            'EXPIRE_PERIOD': '"expirePeriod"'
-        })
-        .from('SS_MST_GROUP')
-        .where('PARENT_GROUP_ID = ?', parentGroupId)
-        .toParam()
+            .fields({
+                'GROUP_ID': '"groupId"',
+                'GROUP_NAME': '"groupName"',
+                'GROUP_DESCRIPTION': '"groupDescription"',
+                'GROUP_ICON_PATH': '"groupIconPath"',
+                'GROUP_TYPE': '"groupType"',
+                'IS_OPEN_TO_USERS': '"isOpenToUsers"',
+                'EXPIRE_PERIOD': '"expirePeriod"'
+            })
+            .from('SS_MST_GROUP')
+            .where('PARENT_GROUP_ID = ?', parentGroupId)
+            .toParam()
     )
 }
 
