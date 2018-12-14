@@ -30,7 +30,6 @@ const auth = (req, res, next) => {
         return res.status(403).json({
             message: `잘못된 접근입니다.[${jwtErrorMessages[error.message] || error.message}]`
         })
-        
     }
     p.then(async (result) => {
         if (result.userId) {

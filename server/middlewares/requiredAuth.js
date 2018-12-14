@@ -25,7 +25,8 @@ const auth = (req, res, next) => {
 
     const onError = (error) => {
         res.status(error.statusCode || 401).json({
-            message: `잘못된 접근입니다.[${jwtErrorMessages[error.message] || error.message}]`
+            message: `잘못된 접근입니다.[${jwtErrorMessages[error.message] || error.message}]`,
+            redirectTo: error.redirectTo
         })
     }
     p.then(async(result) => {
@@ -36,7 +37,7 @@ const auth = (req, res, next) => {
                     req.userObject = user[0];
                     next();
                 } else {
-                    onError({ message: '인증이 필요합니다.', statusCode: 403 });
+                    onError({ message: '인증이 필요합니다.', statusCode: 403, redirectTo:'/auth' });
                 }
             } else {
                 onError({ message: '존재하지 않는 ID입니다.', statusCode: 403 });

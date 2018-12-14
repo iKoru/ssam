@@ -57,7 +57,7 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
                                 return res.json({ token: token });
                             }
                         } else if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
-                            return res.json({ token: token, redirectTo: '/auth' });
+                            return res.json({ token: token, redirectTo: '/auth', immenent:user[0].status !== 'NORMAL' });
                         }
                         return res.json({ token: token });
                     }
