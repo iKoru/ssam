@@ -50,14 +50,14 @@ router.post('/', adminOnly, async (req, res) => { //create new group
     if (typeof group.parentGroupId === 'string') {
         group.parentGroupId = 1 * group.parentGroupId;
     }
-    if (typeof group.groupName !== 'string' || group.groupName === '') {
-        return res.status(400).json({ target: 'groupName', message: '그룹 이름 값이 올바르지 않습니다.' });
-    } else if (group.groupDescription && typeof group.groupDescription !== 'string') {
-        return res.status(400).json({ target: 'groupDescription', message: '그룹 설명 값이 올바르지 않습니다.' });
+    if (typeof group.groupName !== 'string' || group.groupName === '' || group.groupName.length > 50) {
+        return res.status(400).json({ target: 'groupName', message: '그룹 이름 값이 너무 길거나(최대 50자) 올바르지 않습니다.'});
+    } else if (group.groupDescription && (typeof group.groupDescription !== 'string' || group.groupDescription.length > 500)) {
+        return res.status(400).json({ target: 'groupDescription', message: '그룹 설명 값이 너무 길거나(최대 500자) 올바르지 않습니다.' });
     } else if (group.groupIconPath && typeof group.groupIconPath !== 'string') {
         return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 올바르지 않습니다.' });
     } else if (group.groupIconPath && group.groupIconPath.length > 200) {
-        return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 너무 깁니다. 관리자에게 문의해주세요.' });
+        return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 너무 깁니다(최대 200자). 관리자에게 문의해주세요.' });
     } else if (!['N', 'M', 'G', 'R'].includes(group.groupType)) {
         return res.status(400).json({ target: 'groupType', message: '그룹 종류 값이 올바르지 않습니다.' });
     } else if (group.parentGroupId !== null && group.parentGroupId !== undefined && (!Number.isInteger(group.parentGroupId) || group.parentGroupId < 1)) {

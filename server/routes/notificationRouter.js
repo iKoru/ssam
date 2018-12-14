@@ -129,8 +129,8 @@ router.post('/', adminOnly, async (req, res) => {
     if (notification.groupId !== undefined && (!Number.isInteger(notification.groupId) || notification.groupId === 0)) {
         return res.status(400).json({ target: 'groupId', message: '알림을 보낼 그룹ID가 올바르지 않습니다.' })
     }
-    if (notification.target && typeof notification.target !== 'number') {
-        return res.status(400).json({ target: 'target', message: '알림 내용 타겟의 형태가 올바르지 않습니다.(숫자)' })
+    if (notification.target && (typeof notification.target !== 'string' || notification.target.length > 15)) {
+        return res.status(400).json({ target: 'target', message: '알림 내용 타겟이 15자를 넘거나 형태가 올바르지 않습니다.' })
     }
     if (notification.href && (typeof notification.href !== 'string' || notification.href.length > 100)) {
         return res.status(400).json({ target: 'href', message: '알림 링크가 100자를 넘거나 형태가 올바르지 않습니다.' })
