@@ -143,7 +143,7 @@ test('delete comment', async (done) => {
 });
 
 test('get user comment', async (done) => {
-    expect(await commentModel.getUserComment('blue', true, 2)).toHaveLength(0);
+    expect(await commentModel.getUserComment('blue', true, 999)).toHaveLength(0);
     expect((await commentModel.getUserComment('blue')).length).toBeGreaterThan(0);
     done();
 })

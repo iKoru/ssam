@@ -24,7 +24,7 @@ test('get scrap group', async (done) => {
 test('get scraps', async (done) => {
     const scrapGroup = (await scrapModel.getScrapGroupByUserId('orange'))[0];
 
-    expect((await scrapModel.getScraps('orange', scrapGroup.scrapGroupId)).length).toBeGreaterThan(1);
+    expect((await scrapModel.getScraps('orange', scrapGroup.scrapGroupId)).length).toBeGreaterThan(0);
     expect(await scrapModel.getScraps('orange', 123)).toHaveLength(0);
     expect(await scrapModel.getScraps('blue', 1)).toHaveLength(0);
     expect(await scrapModel.getScraps('orange', scrapGroup.scrapGroupId, 2)).toHaveLength(0);
