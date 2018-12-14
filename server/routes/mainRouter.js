@@ -17,7 +17,7 @@ router.get('/', requiredSignin, (req, res) => {
     res.status(501).end();
 });
 
-router.get('/profile', requiredAuth, async(req, res) => {
+router.get('/profile', requiredAuth, async (req, res) => {
     let nickName = req.query.nickName;
     if (typeof nickName !== 'string') {
         return res.status(400).json({ target: 'nickName', message: '닉네임이 올바르지 않습니다.' })
@@ -34,10 +34,10 @@ router.get('/profile', requiredAuth, async(req, res) => {
     }
 });
 
-router.post('/survey', requiredAuth, async(req, res) => {
+router.post('/survey', requiredAuth, async (req, res) => {
     let survey = { documentId: req.body.documentId, answer: req.body.answer }
     if (typeof survey.documentId === 'string') {
-        survey.documentId = 1*survey.documentId
+        survey.documentId = 1 * survey.documentId
     }
     if (!Number.isInteger(survey.documentId) || survey.documentId === 0) {
         return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' });
@@ -57,22 +57,30 @@ router.post('/survey', requiredAuth, async(req, res) => {
     let original = await documentModel.getDocumentSurvey(survey.documentId);
     if (!Array.isArray(original) || original.length === 0) {
         return res.status(404).json({ target: 'documentId', message: '설문조사가 없는 게시물입니다.' })
-    }else if(survey.answer.length !== original[0].surveyContents.length){
+    } else if (survey.answer.length !== original[0].surveyContents.length) {
         return res.status(400).json({ target: 'answer', message: '미응답 질문이 있습니다. 모든 질문에 응답해주세요.' })
     }
-    
+
     check = await documentModel.createDocumentSurveyHistory(survey.documentId, req.userObject.userId, survey.answer);
     if (check > 0) {
-        let i=0;
-        try{
-            while(i<original[0].surveyContents.length){
-                original[0].surveyAnswers[i][survey.answer[i] - 1]++;
+        let i = 0; j;
+        try {
+            while (i < original[0].surveyContents.length) {
+                if (original[0].surveyContents.allowMultipleChoice && Array.isArray(survey.answer[i])) {
+                    j = 0;
+                    while (j < survey.answer[i].length) {
+                        original[0].surveyAnswers[i][survey.answer[i][j] - 1]++;
+                        j++;
+                    }
+                } else {
+                    original[0].surveyAnswers[i][survey.answer[i] - 1]++;
+                }
                 i++;
             }
-        }catch(err){
+        } catch (err) {
             logger.error('설문 내용 반영 중 에러 : ', err, survey.documentId, original[0].surveyContents, survey.answer);
             await documentModel.deleteDocumentSurveyHistory(survey.documentId, req.userObject.userId);
-            return res.status(500).json({ message: `설문 응답을 저장하는 데 실패하였습니다.[${i+1}번째 응답값이 올바르지 않습니다.]` })
+            return res.status(500).json({ message: `설문 응답을 저장하는 데 실패하였습니다.[${i + 1}번째 응답값이 올바르지 않습니다.]` })
         }
         check = await documentModel.updateDocumentSurvey(survey.documentId, original[0].surveyAnswers);
         if (typeof check === 'object' || check === 0) {
@@ -87,7 +95,7 @@ router.post('/survey', requiredAuth, async(req, res) => {
     }
 });
 
-router.get('/best', requiredSignin, async(req, res) => {
+router.get('/best', requiredSignin, async (req, res) => {
     let boardType = req.query.boardType;
     if (boardType !== 'L' && boardType !== 'T') {
         return res.status(400).json({ target: 'boardType', message: '게시판 타입이 올바르지 않습니다.' });
@@ -124,7 +132,7 @@ router.get('/best', requiredSignin, async(req, res) => {
     }
 })
 
-router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
+router.get('/:boardId([a-zA-Z]+)', requiredAuth, async (req, res, next) => {
     let boardId = req.params.boardId
     if (boardId === 'loungeBest' || boardId === 'topicBest') {
         let page = req.query.page,
@@ -132,13 +140,13 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
             searchQuery = req.query.searchQuery,
             searchTarget = req.query.searchTarget;
         if (typeof page === 'string') {
-            page = 1*page
+            page = 1 * page
         }
         if (page === undefined || !Number.isInteger(page) || page < 1) {
             page = 1;
         }
         if (typeof documentId === 'string') {
-            documentId = 1*documentId;
+            documentId = 1 * documentId;
         }
         if (documentId !== undefined && (!Number.isInteger(documentId) || documentId === 0)) {
             documentId = undefined;
@@ -172,7 +180,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
                     isAscending = req.query.isAscending,
                     category = req.query.category;
                 if (typeof page === 'string') {
-                    page = 1*page
+                    page = 1 * page
                 }
                 if (page === undefined || !Number.isInteger(page) || page < 1) {
                     page = 1;
@@ -181,7 +189,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
                     sortTarget = undefined;
                 }
                 if (typeof documentId === 'string') {
-                    documentId = 1*documentId;
+                    documentId = 1 * documentId;
                 }
                 if (documentId !== undefined && (!Number.isInteger(documentId) || documentId === 0)) {
                     documentId = undefined;
@@ -193,7 +201,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
                     searchQuery = undefined;
                     searchTarget = undefined;
                 }
-                if(typeof category !== 'string' || category.length > 30){
+                if (typeof category !== 'string' || category.length > 30) {
                     category = undefined;
                 }
 
@@ -213,7 +221,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredAuth, async(req, res, next) => {
     return;
 });
 
-const getDocument = async(req, res) => {
+const getDocument = async (req, res) => {
     let documentId = req.params.documentId;
     let result = await documentModel.getDocument(documentId);
     if (Array.isArray(result) && result.length > 0) {
@@ -259,14 +267,14 @@ const getDocument = async(req, res) => {
     }
 }
 
-router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async(req, res, next) => {
+router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async (req, res, next) => {
     if (typeof req.params.boardId === 'number' || reserved.includes(req.params.boardId)) {
         next();
         return;
     }
     let documentId = req.params.documentId;
     if (!Number.isInteger(documentId)) {
-        documentId = 1*documentId;
+        documentId = 1 * documentId;
         if (isNaN(documentId) || documentId === 0) {
             next();
             return;
@@ -275,10 +283,10 @@ router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async(req
     return await getDocument(req, res);
 });
 
-router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredAuth, async(req, res, next) => {
+router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredAuth, async (req, res, next) => {
     let documentId = req.params[0];
     if (!Number.isInteger(documentId)) {
-        documentId = 1*documentId;
+        documentId = 1 * documentId;
         if (isNaN(documentId) || documentId === 0) {
             next();
             return;
