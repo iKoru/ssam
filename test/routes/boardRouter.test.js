@@ -165,7 +165,7 @@ describe('Test the board path', async () => {
 
         response = await userModel.getUser('orange');
         response = await request.put('/board').set(headers_local).send({ boardId: 'freefree', overwrite: true, ownerNickName: response[0].topicNickName });
-        expect(response.statusCode).toEqual(404);
+        expect(response.statusCode).toEqual(400);
         expect(response.body).toHaveProperty('target', 'ownerNickName');
 
         response = await request.put('/board').set(headers_local).send({ boardID: 'freefree', overwrite: true, allowAnonymous: 'aaa' })

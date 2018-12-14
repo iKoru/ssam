@@ -96,12 +96,15 @@ describe('Test the vote path', async () => {
 
         let document = await documentModel.getDocuments('nofree');
         expect(document.length).toBeGreaterThan(0);
-        response = await commentModel.getComments(document[0].documentId);
-        expect(response.length).toBeGreaterThan(0);
-        let comment = response[0];
-        response = await request.post('/vote/comment').set(headers_local).send({ commentId: comment.commentId });
-        expect(response.statusCode).toEqual(403);
-        expect(response.body).toHaveProperty('target', 'documentId')
+        document = document.find(x=>x.commentCount > 0);
+        if(document){
+            response = await commentModel.getComments(document.documentId);
+            expect(response.length).toBeGreaterThan(0);
+            let comment = response[0];
+            response = await request.post('/vote/comment').set(headers_local).send({ commentId: comment.commentId });
+            expect(response.statusCode).toEqual(403);
+            expect(response.body).toHaveProperty('target', 'documentId')
+        }
 
         response = await request.post('/document').set(headers_local).send({ boardId: 'free', isAnonymous: true, title: 'asdf', contents: 'asdfasdf', allowAnonymous: false });
         expect(response.statusCode).toEqual(200);
