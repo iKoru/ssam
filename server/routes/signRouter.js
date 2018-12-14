@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken'),
     jwt_decode = require('jwt-decode'),
     bcrypt = require('bcrypt');
 const config = require('../../config'),
-    {jwtErrorMessages} = require('../constants');
+    { jwtErrorMessages } = require('../constants');
 const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly'),
     adminOnly = require('../middlewares/adminOnly');
@@ -12,9 +12,6 @@ const signModel = require('../models/signModel'),
     logger = require('../logger');
 
 //based on /
-/*router.get('/signin', visitorOnly('/'), (req, res) => {
-    res.status(501).end();
-});*/
 
 router.post('/signin', visitorOnly('/'), async (req, res) => {
     let userId = req.body.userId;
@@ -38,11 +35,9 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
                     return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
                 }
                 const auth = await userModel.checkUserAuth(userId);
-                if (Array.isArray(auth) && auth.length > 0) {
-                    if (auth.some(x => x.type === 'AUTH_DENIED')) {//영구 인증 불가 그룹
-                        signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
-                        return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
-                    }
+                if (Array.isArray(auth) && auth.length > 0 && auth.some(x => x.type === 'AUTH_DENIED')) {//영구 인증 불가 그룹
+                    signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
+                    return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
                 }
 
                 jwt.sign({ userId: userId }, config.jwtKey, { expiresIn: (req.body.rememberMe ? "7d" : "3h"), ...config.jwtOptions }, (err, token) => {
@@ -52,12 +47,11 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
                         return res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
                     } else {
                         signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, true);
-                        if (Array.isArray(auth) && auth.length > 0) {
-                            if (auth.some(x => x.type === 'AUTH_GRANTED')) {//영구 인증 그룹
-                                return res.json({ token: token });
-                            }
-                        } else if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
-                            return res.json({ token: token, redirectTo: '/auth', immenent:user[0].status !== 'NORMAL' });
+                        if (Array.isArray(auth) && auth.length > 0 && auth.some(x => x.type === 'AUTH_GRANTED')) {//영구 인증 그룹
+                            return res.json({ token: token });
+                        }
+                        if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
+                            return res.json({ token: token, redirectTo: '/auth', immenent: user[0].status !== 'NORMAL' });
                         }
                         return res.json({ token: token });
                     }
@@ -69,14 +63,6 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
         }
     }
 });
-
-/*router.get('/signup', visitorOnly('/'), (req, res) => { //회원가입 페이지 접근
-    res.status(501).end();
-});
-
-router.get('/resetPassword', visitorOnly('/'), (req, res) => {
-    res.status(501).end();
-});*/
 
 router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
     let userId = req.body.userId;
@@ -115,20 +101,60 @@ router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
 router.post('/refresh', (req, res) => {
     const token = req.headers['x-auth'];
     if (token) {
-        jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
+        jwt.verify(token, config.jwtKey, config.jwtOptions, async (err, result) => {
             if (!err) { //아직 유효한 토큰이면 그대로 보낸다.
-                return res.status(200).json({ token: token });
+                const user = await userModel.getUser(result.userId);
+                if (!Array.isArray(user) || user.length === 0) {
+                    return res.status(400).json({ message: '잘못된 접근입니다.' });
+                } else {
+                    if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
+                        return res.status(400).json({ message: '잘못된 접근입니다.' });
+                    }
+                    const auth = await userModel.checkUserAuth(result.userId);
+                    if (Array.isArray(auth) && auth.length > 0) {
+                        if (auth.some(x => x.type === 'AUTH_DENIED')) {//영구 인증 불가 그룹
+                            return res.status(400).json({ message: '잘못된 접근입니다.' });
+                        }
+                        if (auth.some(x => x.type === 'AUTH_GRANTED')) {//영구 인증 그룹
+                            return res.json({ token: token });
+                        }
+                    }
+                    if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
+                        return res.json({ token: token, redirectTo: '/auth', immenent: user[0].status !== 'NORMAL' });
+                    }
+                    return res.json({ token: token });
+                }
             } else if (err.name === 'TokenExpiredError') { //token is valid except it's expired
                 if ((new Date(err.expiredAt).getTime() + 3600000) >= (new Date().getTime())) { //기한 만료 및 만료시간부터 1시간이 지나지 않았다면 토큰 리프레시
                     const decoded = jwt_decode(token);
                     if (decoded.userId) {
-                        jwt.sign({ userId: decoded.userId }, config.jwtKey, { expiresIn: (decoded.exp - decoded.iat), ...config.jwtOptions }, (err, token) => {
-                            if (err) {
-                                return res.status(500).json({ message: '로그인 연장에 실패하였습니다.' });
-                            } else {
-                                return res.status(200).json({ token: token });
+                        const user = await userModel.getUser(decoded.userId);
+                        if (!Array.isArray(user) || user.length === 0) {
+                            return res.status(400).json({ message: '잘못된 접근입니다.' });
+                        } else {
+                            if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
+                                return res.status(400).json({ message: '잘못된 접근입니다.' });
                             }
-                        })
+                            const auth = await userModel.checkUserAuth(decoded.userId);
+                            if (Array.isArray(auth) && auth.length > 0) {
+                                if (auth.some(x => x.type === 'AUTH_DENIED')) {//영구 인증 불가 그룹
+                                    return res.status(400).json({ message: '잘못된 접근입니다.' });
+                                }
+                            }
+                            jwt.sign({ userId: decoded.userId }, config.jwtKey, { expiresIn: (decoded.exp - decoded.iat), ...config.jwtOptions }, (err, token) => {
+                                if (err) {
+                                    return res.status(500).json({ message: '로그인 연장에 실패하였습니다.' });
+                                } else {
+                                    if (Array.isArray(auth) && auth.length > 0 && auth.some(x => x.type === 'AUTH_GRANTED')) {//영구 인증 그룹
+                                        return res.json({ token: token });
+                                    }
+                                    if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
+                                        return res.json({ token: token, redirectTo: '/auth', immenent: user[0].status !== 'NORMAL' });
+                                    }
+                                    return res.json({ token: token });
+                                }
+                            })
+                        }
                     } else {
                         return res.status(400).json({ message: '잘못된 접근입니다.' });
                     }
