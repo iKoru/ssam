@@ -333,10 +333,7 @@ router.post('/picture', requiredSignin, multer.single('picture'), async (req, re
 });
 
 router.get('/', requiredSignin, async (req, res) => {
-    let userId = req.query.userId;
-    if (!req.userObject.isAdmin && userId !== req.userObject.userId) {
-        return res.status(403).json({ target: 'userId', message: '요청에 대한 권한이 없습니다.' });
-    }
+    let userId = req.userObject.isAdmin ? req.query.userId || req.userObject.userId : req.userObject.userId;
     let result;
     if (req.userObject.userId === userId) {
         result = { ...req.userObject };
@@ -504,34 +501,34 @@ router.get('/board', requiredSignin, async (req, res) => {
     }
 });
 
-router.post('/board', requiredAuth, async(req, res) => {
+router.post('/board', requiredAuth, async (req, res) => {
     let userId = req.userObject.isAdmin ? (req.body.userId || req.userObject.userId) : req.userObject.userId,
         boardId = req.body.boardId, result;
-    if(typeof boardId !== 'string'){
-        return res.status(400).json({target:'boardId', message:'구독할 토픽을 선택해주세요.'})
+    if (typeof boardId !== 'string') {
+        return res.status(400).json({ target: 'boardId', message: '구독할 토픽을 선택해주세요.' })
     }
     result = await boardModel.getBoard(boardId);
-    if(!Array.isArray(result) || result.length === 0 || result[0].status === 'DELETED'){
-        return res.status(404).json({target:'boardId', message:'구독할 토픽을 찾을 수 없습니다.'})
-    }else if(result[0].boardType !== 'T'){
-        return res.status(400).json({target:'boardId', message:'구독할 수 없는 게시판입니다.'})
+    if (!Array.isArray(result) || result.length === 0 || result[0].status === 'DELETED') {
+        return res.status(404).json({ target: 'boardId', message: '구독할 토픽을 찾을 수 없습니다.' })
+    } else if (result[0].boardType !== 'T') {
+        return res.status(400).json({ target: 'boardId', message: '구독할 수 없는 게시판입니다.' })
     }
     result = await boardModel.getUserBoard(userId, boardId, req.userObject.isAdmin);
-    if(Array.isArray(result) && result.length > 0){
-        return res.status(409).json({target:'boardId', message:'이미 구독중인 토픽입니다.'})
-    }else if(result[0].allGroupAuth !== 'READWRITE'){//모든 그룹 구독 가능하지 않은 경우 체크
+    if (Array.isArray(result) && result.length > 0) {
+        return res.status(409).json({ target: 'boardId', message: '이미 구독중인 토픽입니다.' })
+    } else if (result[0].allGroupAuth !== 'READWRITE') {//모든 그룹 구독 가능하지 않은 경우 체크
         result = await boardModel.checkUserBoardSubscribable(userId, boardId);
-        if(!Array.isArray(result) || result.length === 0 || result[0].count === 0){
+        if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
             logger.warn('구독할 수 없는 토픽 구독 시도. ', userId, boardId, result)
-            return res.status(403).json({message:'구독할 수 있는 토픽이 아닙니다. 토픽 구독 조건을 참고해주세요.'})
+            return res.status(403).json({ message: '구독할 수 있는 토픽이 아닙니다. 토픽 구독 조건을 참고해주세요.' })
         }
     }
-    
+
     result = await boardModel.createUserBoard(userId, boardId);
-    if(result > 0){
-        return res.status(200).json({message:'토픽을 구독하였습니다.'});
-    }else{
-        return res.status(500).json({message:`토픽을 구독하지 못했습니다.[${result.code || ''}]`})
+    if (result > 0) {
+        return res.status(200).json({ message: '토픽을 구독하였습니다.' });
+    } else {
+        return res.status(500).json({ message: `토픽을 구독하지 못했습니다.[${result.code || ''}]` })
     }
 })
 
@@ -563,7 +560,7 @@ router.put('/board', requiredSignin, async (req, res) => {
                 } else { //라운지, 아카이브는 구독(취소) 대상 아님
                     failedBoard.push(boards[i]);
                 }
-            }else if(currentBoard.find(x=>x.boardId === boards[i].boardId).orderNumber !== boards[i].orderNumber){//update order check
+            } else if (currentBoard.find(x => x.boardId === boards[i].boardId).orderNumber !== boards[i].orderNumber) {//update order check
                 result = await boardModel.updateUserBoard(req.userObject.userId, boards[i].boardId, boards[i].orderNumber)
                 if (typeof result === 'object' || result === 0) {
                     failedBoard.push(boards[i]);
@@ -574,14 +571,14 @@ router.put('/board', requiredSignin, async (req, res) => {
         i = 0;
         while (i < currentBoard.length) {
             if (!(boards.find(x => x.boardId === currentBoard[i].boardId))) { //deleted board
-                if((currentBoard[i].writeRestrictDate && util.moment(currentBoard[i].writeRestrictDate, 'YYYYMMDD').isAfter(util.moment())) || (currentBoard[i].readRestrictDate && util.moment(currentBoard[i].readRestrictDate, 'YYYYMMDD').isAfter(util.moment()))) {
+                if ((currentBoard[i].writeRestrictDate && util.moment(currentBoard[i].writeRestrictDate, 'YYYYMMDD').isAfter(util.moment())) || (currentBoard[i].readRestrictDate && util.moment(currentBoard[i].readRestrictDate, 'YYYYMMDD').isAfter(util.moment()))) {
                     failedBoard.push(currentBoard[i].boardId);
-                }else{
+                } else {
                     result = await boardModel.getBoard(currentBoard[i].boardId);
                     if (Array.isArray(result) && result.length > 0) {
                         if (result[0].ownerId === req.userObject.userId) {
                             failedBoard.push(-1);
-                        }else{
+                        } else {
                             result = await boardModel.deleteUserBoard(req.userObject.userId, currentBoard[i].boardId);
                             if (typeof result === 'object' || result === 0) {
                                 failedBoard.push(currentBoard[i].boardId);
