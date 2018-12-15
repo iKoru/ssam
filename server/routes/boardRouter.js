@@ -66,10 +66,10 @@ router.put('/', requiredAuth, async (req, res) => {
         if (!Array.isArray(nextOwner) || nextOwner.length < 1) {
             return res.status(404).json({ target: 'ownerNickName', message: '존재하지 않는 사용자를 선택하셨습니다.' })
         } else {
-            if(nextOwner[0].userId !== board[0].ownerId){
+            if (nextOwner[0].userId !== board[0].ownerId) {
                 let result = await boardModel.checkUserBoardWritable(nextOwner[0].userId, boardId);
-                if(!Array.isArray(result) || result.length === 0 || result[0].count === 0){
-                    return res.status(400).json({target:'ownerNickName', message:board[0].boardType === 'T'?'해당 사용자는 이 토픽을 구독중이지 않거나, 토픽지기로 지정할 수 없는 상태입니다':'해당 사용자는 이 라운지에 글을 쓸 수 없어 소유자로 지정할 수 없습니다.'})
+                if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
+                    return res.status(400).json({ target: 'ownerNickName', message: board[0].boardType === 'T' ? '해당 사용자는 이 토픽을 구독중이지 않거나, 토픽지기로 지정할 수 없는 상태입니다' : '해당 사용자는 이 라운지에 글을 쓸 수 없어 소유자로 지정할 수 없습니다.' })
                 }
                 reservedContents.ownerId = nextOwner[0].userId
             }
@@ -234,11 +234,15 @@ router.post('/', requiredAuth, async (req, res) => {
         return res.status(409).json({ target: 'boardId', message: `이미 존재하는 ${constants.boardTypeDomain[board.boardType]} ID입니다.` });
     }
     board.ownerId = req.userObject.isAdmin ? (req.body.ownerId ? req.body.ownerId : req.userObject.userId) : req.userObject.userId;
+    let isAdmin = false;
     if (board.ownerId !== req.userObject.userId) {
         check = await userModel.getUser(board.ownerId);
         if (!Array.isArray(check) || check.length === 0) {
             return res.status(404).json({ target: 'ownerId', message: '입력한 소유자 ID에 해당하는 회원ID가 존재하지 않습니다.' })
         }
+        isAdmin = check[0].isAdmin;
+    } else {
+        isAdmin = req.userObject.isAdmin;
     }
     board.boardDescription = safeStringLength(board.boardDescription, 1000);
     board.boardName = safeStringLength(board.boardName, 200);
@@ -255,7 +259,16 @@ router.post('/', requiredAuth, async (req, res) => {
             i++;
         }
     }
-
+    if (board.allGroupAuth !== 'READWRITE' && !isAdmin) {//check to owner could join the board
+        let userGroups = await groupModel.getUserGroup(board.ownerId);
+        if (Array.isArray(userGroups)) {
+            if (!groups.some(x => x.authType === 'READWRITE' && userGroups.some(y => y.groupId === x.groupId))) {
+                return res.statusCode(400).json({ target: 'groups', message: `내가 구독할 수 없는 ${constants.boardTypeDomain[board.boardType] + (board.boardType === 'T' ? '은' : '는')} 생성할 수 없습니다.` })
+            }
+        } else {
+            return res.status(500).json({ message: `${constants.boardTypeDomain[board.boardType]} 생성에 실패하였습니다.[${userGroups.code || ''}]` })
+        }
+    }
     check = await boardModel.createBoard(board);
     if (check > 0) {
         if (groups.length > 0) {
@@ -265,6 +278,7 @@ router.post('/', requiredAuth, async (req, res) => {
                 i++;
             }
         }
+        await boardModel.createUserBoard(board.ownerId, board.boardId);
         if (req.userObject.isAdmin && Array.isArray(req.body.categories) && req.body.categories.length > 0) {
             await boardModel.createBoardCategory(board.boardId, req.body.categories);
         } else if (board.boardType === 'T') {
