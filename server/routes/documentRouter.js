@@ -59,13 +59,13 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
     } else {
         req.body.documentId = result.rows[0].documentId;
         if (document.survey) {
-            result = await documentModel.createDocumentSurvey(document.documentId, document.survey);
+            result = await documentModel.createDocumentSurvey(req.body.documentId, document.survey);
             if (typeof result === 'object' || result === 0) {
                 return res.status(200).json({ target: 'survey', message: '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' });
             }
         }
         if (document.attach) {
-            result = await util.uploadFile(req.files, 'attach', document.documentId, documentModel.createDocumentAttach);
+            result = await util.uploadFile(req.files, 'attach', req.body.documentId, documentModel.createDocumentAttach);
             return res.status(200).json({ target: 'attach', message: result.status === 200 ? '게시물을 등록하였습니다.' : '게시물을 등록하였으나, 첨부파일을 업로드하지 못했습니다.', documentId: req.body.documentId });
         } else {
             return res.status(200).json({ message: '게시물을 등록하였습니다.', documentId: req.body.documentId })
