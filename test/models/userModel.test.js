@@ -88,6 +88,11 @@ test('updateUserPassword', async (done) => {
     expect(await userModel.updateUserPassword({ userId: 'orange' })).toEqual(0);
     user = (await userModel.getUser('orange'))[0];
     expect(await bcrypt.compare(raw, user.password)).toEqual(true);
+    
+    expect(await userModel.updateUserPassword({ userId: 'orange', password: await bcrypt.hash('xptmxm1!', 10) })).toEqual(1);
+    user = (await userModel.getUser('orange'))[0];
+    expect(await bcrypt.compare('xptmxm1!', user.password)).toEqual(true);
+    expect(user.passwordChangeDate).toEqual(util.getYYYYMMDD());
     done();
 });
 
