@@ -338,9 +338,9 @@ router.get('/', requiredSignin, async (req, res) => {
     if (req.userObject.userId === userId) {
         result = { ...req.userObject };
     } else {
-        result = await userModel.getUser(req.query.userId);
+        result = await userModel.getUser(userId);
         if (!Array.isArray(result) || result.length === 0) {
-            logger.error('사용자 정보 불러오기 중 에러 : ', result, req.query.userId, req.userObject.userId);
+            logger.error('사용자 정보 불러오기 중 에러 : ', result, userId, req.userObject.userId);
             return res.status(500).json({ message: `정보 불러오기에 실패하였습니다.[${result.code || ''}]` })
         }
     }
