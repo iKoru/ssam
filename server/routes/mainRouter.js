@@ -57,16 +57,16 @@ router.post('/survey', requiredAuth, async (req, res) => {
     let original = await documentModel.getDocumentSurvey(survey.documentId);
     if (!Array.isArray(original) || original.length === 0) {
         return res.status(404).json({ target: 'documentId', message: '설문조사가 없는 게시물입니다.' })
-    } else if (survey.answer.length !== original[0].surveyContents.length) {
+    } else if (survey.answer.length !== original[0].surveyContents.questions.length) {
         return res.status(400).json({ target: 'answer', message: '미응답 질문이 있습니다. 모든 질문에 응답해주세요.' })
     }
 
     check = await documentModel.createDocumentSurveyHistory(survey.documentId, req.userObject.userId, survey.answer);
     if (check > 0) {
-        let i = 0; j;
+        let i = 0, j;
         try {
-            while (i < original[0].surveyContents.length) {
-                if (original[0].surveyContents.allowMultipleChoice && Array.isArray(survey.answer[i])) {
+            while (i < original[0].surveyContents.questions.length) {
+                if (original[0].surveyContents.questions[i].allowMultipleChoice && Array.isArray(survey.answer[i])) {
                     j = 0;
                     while (j < survey.answer[i].length) {
                         original[0].surveyAnswers[i][survey.answer[i][j] - 1]++;
