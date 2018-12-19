@@ -2,7 +2,7 @@ const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
-    { reserved, boardTypeDomain } = require('../constants'),
+    { reserved, reservedNickName, boardTypeDomain } = require('../constants'),
     logger = require('../logger'),
     { moment } = require('../util');
 const documentModel = require('../models/documentModel'),
@@ -129,6 +129,26 @@ router.get('/best', requiredSignin, async (req, res) => {
     } else {
         logger.error('기간별 베스트 가져오기 에러 : ', boardType);
         return res.status(500).json({ message: '기간별 베스트를 가져오지 못했습니다.' });
+    }
+})
+
+router.get('/userId', async(req,res)=>{
+    if(typeof req.query.userId === 'string'){
+        if(req.query.userId.length < 50){
+            if(reserved.includes(req.query.userId) || reservedNickName.includes(req.query.userId)){
+                return res.status(400).json({target:'userId', message:'사용할 수 없는 ID입니다.'})
+            }
+            let check = await userModel.checkUserId(req.query.userId)
+            if(Array.isArray(check) && check[0].count === 0){
+                return res.status(200).json({message:'사용 가능한 ID입니다.'})
+            }else{
+                return res.status(409).json({message:'이미 사용중인 ID입니다.'})
+            }
+        }else{
+            return res.status(400).json({target:'userId', message:'ID가 너무 깁니다.(최대 50자)'})
+        }
+    }else{
+        return res.status(400).json({target:'userId', message:'검사할 ID를 입력해주세요.'})
     }
 })
 
