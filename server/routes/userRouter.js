@@ -229,7 +229,7 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
         const email = constants.emailRegex.exec(user.email);
         if (email) { //matched email
             if (email.length > 100) {
-                return res.status(400).json({ target: 'email', message: '입력된 이메일 주소의 길이가 너무 깁니다. 관리자에게 문의해주세요.' });
+                return res.status(400).json({ target: 'email', message: '입력된 이메일 주소의 길이가 너무 깁니다.(최대 100자)' });
             }
             result = await userModel.checkEmail(user.email);
             if (result && result[0] && result[0].count > 0) {
