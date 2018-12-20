@@ -2,7 +2,7 @@ const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
-    { reserved, reservedNickName, boardTypeDomain } = require('../constants'),
+    { reserved, reservedNickName, boardTypeDomain, emailRegex } = require('../constants'),
     logger = require('../logger'),
     { moment } = require('../util');
 const documentModel = require('../models/documentModel'),
@@ -148,7 +148,29 @@ router.get('/userId', async(req,res)=>{
             return res.status(400).json({target:'userId', message:'ID가 너무 깁니다.(최대 50자)'})
         }
     }else{
-        return res.status(400).json({target:'userId', message:'검사할 ID를 입력해주세요.'})
+        return res.status(400).json({target:'userId', message:'체크할 ID를 입력해주세요.'})
+    }
+})
+
+router.get('/email', async(req,res)=>{
+    if(typeof req.query.email === 'string'){
+        if(req.query.email.length < 100){
+            const email = emailRegex.exec(req.query.email);
+            if (email) { //matched email
+                let check = await userModel.checkEmail(req.query.email)
+                if(Array.isArray(check) && check[0].count === 0){
+                    return res.status(200).json({message:'사용 가능한 이메일입니다.'})
+                }else{
+                    return res.status(409).json({message:'이미 사용중인 이메일입니다.'})
+                }
+            } else {
+                return res.status(400).json({ target: 'email', message: '유효한 이메일 주소가 아니거나, 인증에 사용할 수 없는 이메일주소입니다.' });
+            }
+        }else{
+            return res.status(400).json({target:'email', message:'이메일 주소가 너무 깁니다.(최대 100자)'})
+        }
+    }else{
+        return res.status(400).json({target:'email', message:'체크할 이메일 주소를 입력해주세요.'})
     }
 })
 
