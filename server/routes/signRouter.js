@@ -51,7 +51,7 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
                             return res.json({ token: token });
                         }
                         if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
-                            return res.json({ token: token, redirectTo: '/auth', immenent: user[0].status !== 'NORMAL', needEmail:!user[0].email});
+                            return res.json({ token: token, redirectTo: '/auth', imminent: user[0].status !== 'NORMAL', needEmail: !user[0].email });
                         }
                         return res.json({ token: token });
                     }
@@ -120,7 +120,7 @@ router.post('/refresh', (req, res) => {
                         }
                     }
                     if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
-                        return res.json({ token: token, redirectTo: '/auth', immenent: user[0].status !== 'NORMAL', needEmail:!user[0].email });
+                        return res.json({ token: token, redirectTo: '/auth', imminent: user[0].status !== 'NORMAL', needEmail: !user[0].email });
                     }
                     return res.json({ token: token });
                 }
@@ -149,7 +149,7 @@ router.post('/refresh', (req, res) => {
                                         return res.json({ token: token });
                                     }
                                     if (user[0].status === 'NORMAL' || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
-                                        return res.json({ token: token, redirectTo: '/auth', immenent: user[0].status !== 'NORMAL', needEmail: !user[0].email });
+                                        return res.json({ token: token, redirectTo: '/auth', imminent: user[0].status !== 'NORMAL', needEmail: !user[0].email });
                                     }
                                     return res.json({ token: token });
                                 }
