@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const requiredAuth = require('../middlewares/requiredAuth'),
+    requiredSignin = require('../middlewares/requiredSignin'),
     adminOnly = require('../middlewares/adminOnly')
 const boardModel = require('../models/boardModel'),
     userModel = require('../models/userModel'),
@@ -307,7 +308,7 @@ router.delete('/:boardId([a-zA-z]+)', adminOnly, async (req, res) => {
     }
 });
 
-router.get('/list', requiredAuth, async (req, res) => {
+router.get('/list', requiredSignin, async (req, res) => {
     let isAscending, sortTarget, searchTarget, searchQuery, page, boardType;
     if (typeof req.query.isAscending === 'boolean') {
         isAscending = req.query.isAscending;
