@@ -32,7 +32,7 @@ const logger = createLogger({
 });
 
 const formatArgs = function(args) {
-    return [util.format.apply(util.format, Array.prototype.slice.call(Array.from(args).map(x=>typeof x === 'object'?JSON.stringify(x):x)))];
+    return [util.format.apply(util.format, Array.prototype.slice.call(Array.from(args).map(x=>x instanceof Error?x.toString():(typeof x === 'object'?JSON.stringify(x):x))))];
 }
 module.exports = {
     log: function() {
