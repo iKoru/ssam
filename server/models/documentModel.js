@@ -526,8 +526,8 @@ exports.deleteDocumentAttach = async (documentId, attachId) => {
 
 exports.createDocumentSurvey = async (documentId, surveyContents) => {
     let answer = [], i = 0;
-    while (i < surveyContents.length) {
-        answer.push(Array(surveyContents[i].choices.length).fill(0));
+    while (i < surveyContents.questions.length) {
+        answer.push(Array(surveyContents.questions[i].choices.length).fill(0));
         i++;
     }
     return await pool.executeQuery('createDocumentSurvey',
@@ -536,7 +536,7 @@ exports.createDocumentSurvey = async (documentId, surveyContents) => {
             .setFields({
                 'DOCUMENT_ID': documentId,
                 'SURVEY_CONTENTS': JSON.stringify(surveyContents),
-                'SURVEY_ANSWERS': JSON.stringify({})
+                'SURVEY_ANSWERS': JSON.stringify(answer)
             })
             .toParam()
     )
