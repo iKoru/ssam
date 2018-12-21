@@ -72,7 +72,7 @@ router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
     } else {
         const user = await userModel.getUser(userId);
         if (!Array.isArray(user) || user.length === 0) {
-            return res.status(404).json({ message: '존재하지 않는 아이디입니다.' });
+            return res.status(404).json({ target:'userId', message: '존재하지 않는 아이디입니다.' });
         } else if (user.length > 1) {
             logger.error('패스워드 리셋 중 중복아이디 에러 : ', user);
             return res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
@@ -93,7 +93,7 @@ router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
                 return res.status(200).json({ message: '새로운 패스워드를 이메일로 발송하였습니다. 메일을 확인해주세요!' });
             }
         } else {
-            return res.status(400).json({ message: '이메일이 일치하지 않습니다.' });
+            return res.status(400).json({ target:'email', message: 'ID에 등록된 이메일과 다릅니다.' });
         }
     }
 });
