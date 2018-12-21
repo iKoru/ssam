@@ -2,6 +2,7 @@ const router = require('express').Router();
 const visitorOnly = require('../middlewares/visitorOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
+    checkSignin = require('../middlewares/checkSignin'),
     { reserved, reservedNickName, boardTypeDomain, emailRegex } = require('../constants'),
     logger = require('../logger'),
     { moment } = require('../util');
@@ -95,7 +96,7 @@ router.post('/survey', requiredAuth, async (req, res) => {
     }
 });
 
-router.get('/best', requiredSignin, async (req, res) => {
+router.get('/best', checkSignin, async (req, res) => {
     let boardType = req.query.boardType;
     if (boardType !== 'L' && boardType !== 'T') {
         return res.status(400).json({ target: 'boardType', message: '게시판 타입이 올바르지 않습니다.' });
@@ -103,28 +104,28 @@ router.get('/best', requiredSignin, async (req, res) => {
 
     let since = moment(),
         result = {};
-    let today = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
-    if (Array.isArray(today)) {
-        result.today = today
+    let daily = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
+    if (Array.isArray(daily)) {
+        result.daily = daily
     } else {
-        logger.error('오늘 베스트 가져오기 에러 : ', today)
+        logger.error('오늘 베스트 가져오기 에러 : ', daily)
     }
     since.startOf('week');
-    let week = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
-    if (Array.isArray(week)) {
-        result.week = week
+    let weekly = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
+    if (Array.isArray(weekly)) {
+        result.weekly = weekly
     } else {
-        logger.error('이번주 베스트 가져오기 에러 : ', week)
+        logger.error('이번주 베스트 가져오기 에러 : ', weekly)
     }
     since.startOf('month');
-    let month = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
-    if (Array.isArray(month)) {
-        result.month = month
+    let monthly = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
+    if (Array.isArray(monthly)) {
+        result.monthly = monthly
     } else {
-        logger.error('이번달 베스트 가져오기 에러 : ', month)
+        logger.error('이번달 베스트 가져오기 에러 : ', monthly)
     }
 
-    if (result.today || result.week || result.month) {
+    if (result.daily || result.weekly || result.monthly) {
         return res.status(200).json(result);
     } else {
         logger.error('기간별 베스트 가져오기 에러 : ', boardType);
