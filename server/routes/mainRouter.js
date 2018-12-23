@@ -70,11 +70,11 @@ router.post('/survey', requiredAuth, async (req, res) => {
                 if (original[0].surveyContents.questions[i].allowMultipleChoice && Array.isArray(survey.answer[i])) {
                     j = 0;
                     while (j < survey.answer[i].length) {
-                        original[0].surveyAnswers[i][survey.answer[i][j] - 1]++;
+                        original[0].surveyAnswers[i][survey.answer[i][j]]++;
                         j++;
                     }
                 } else {
-                    original[0].surveyAnswers[i][survey.answer[i] - 1]++;
+                    original[0].surveyAnswers[i][survey.answer[i]]++;
                 }
                 i++;
             }
