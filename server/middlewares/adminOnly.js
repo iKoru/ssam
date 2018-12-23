@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../../config.js'),
     qs = require('querystring'),
     logger = require('../logger'),
-    {jwtErrorMessages} = require('../constants'),
+    { jwtErrorMessages } = require('../constants'),
     userModel = require('../models/userModel');
 
 const auth = (req, res, next) => {
@@ -18,21 +18,24 @@ const auth = (req, res, next) => {
 
     const p = new Promise((resolve, reject) => {
         jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {
-            if (err){
+            if (err) {
+                if (err.message === 'jwt expired') {
+                    err.statusCode = 401;
+                }
                 reject(err);
                 return;
-            } 
+            }
             resolve(result);
         });
     })
 
     const onError = (error) => {
         logger.info('signin trial failed')
-        res.status(401).json({
+        res.status(error.statusCode || 403).json({
             message: `잘못된 접근입니다.[${jwtErrorMessages[error.message] || error.message}]`
         })
     }
-    p.then(async(result) => {
+    p.then(async (result) => {
         req.userObject = (await userModel.getUser(result.userId))[0];
         if (req.userObject && req.userObject.isAdmin) {
             logger.info('signin trial success')
