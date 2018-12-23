@@ -363,6 +363,21 @@ router.get('/', requiredSignin, async (req, res) => {
         delete result.reserved3;
         delete result.reserved4;
     }
+    let result2 = await groupModel.getUserGroup(userId);
+    if (Array.isArray(result2)) {
+        result.major = result2.find(x => x.groupType === 'M');
+        if (result.major) {
+            result.major = result.major.groupId;
+        }
+        result.grade = result2.find(x => x.groupType === 'G');
+        if (result.grade) {
+            result.grade = result.grade.groupId;
+        }
+        result.region = result2.find(x => x.groupType === 'R');
+        if (result.region) {
+            result.region = result.region.groupName;
+        }
+    }
     return res.status(200).json(result);
 })
 
