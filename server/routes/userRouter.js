@@ -1,11 +1,12 @@
 const router = require('express').Router(),
-    path = require('path');
+    path = require('path'),
+    bcrypt = require('bcrypt');
 const constants = require('../constants'),
     util = require('../util'),
     logger = require('../logger'),
     config = require('../../config');
-const multer = require('multer')({ dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }), //max 200kB
-    bcrypt = require('bcrypt');
+let multer = require('multer');
+    multer = multer({dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, storage:multer.diskStorage({destination:config.profileBasePath + 'public/profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })});
 const adminOnly = require('../middlewares/adminOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
@@ -321,8 +322,10 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
 router.post('/picture', requiredSignin, multer.single('picture'), async (req, res) => { //사진 업로드
     let userId = req.userObject.userId,
         result;
+        console.log(req.file);
+        console.log(req.file.originalname, req.file.filename, req.file.path);
     if (typeof req.file === 'object' && req.file.filename) {
-        const originalFilePath = req.userObject.picturePath;
+        const originalFilePath = config.profileBasePath + 'public/'+req.userObject.picturePath;
         try {
             await util.unlink(originalFilePath);
         } catch (error) {

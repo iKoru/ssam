@@ -5,8 +5,9 @@ const boardModel = require('../models/boardModel'),
     documentModel = require('../models/documentModel'),
     util = require('../util'),
     path = require('path'),
-    logger = require('../logger'),
-    multer = require('multer')({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) //max 4MB
+    logger = require('../logger');
+let multer = require('multer')
+    multer = multer({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, storage:multer.diskStorage({filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) }}) }) //max 4MB)
     //based on /document
 
 router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
