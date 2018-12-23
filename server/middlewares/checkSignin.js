@@ -24,7 +24,7 @@ const auth = (req, res, next) => {
         logger.error('로그인 에러(checkSignin) : ', error.message);
         next();
     }
-    p.then(async(result) => {
+    p.then(async (result) => {
         if (result.userId) {
             let user = await userModel.getUser(result.userId);
             if (user && user[0]) {

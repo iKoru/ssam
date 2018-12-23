@@ -1,11 +1,11 @@
 const router = require('express').Router(),
     path = require('path');
-const multer = require('multer')({ dest: 'profiles/', limits: { fileSize: 1024 * 200 }, filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }), //max 200kB
-    bcrypt = require('bcrypt');
 const constants = require('../constants'),
     util = require('../util'),
     logger = require('../logger'),
     config = require('../../config');
+const multer = require('multer')({ dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }), //max 200kB
+    bcrypt = require('bcrypt');
 const adminOnly = require('../middlewares/adminOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
@@ -20,9 +20,10 @@ const userModel = require('../models/userModel'),
 //based on /user
 router.put('/', requiredSignin, async (req, res) => {
     let user = { ...req.body };
+    user.userId = req.userObject.isAdmin ? user.userId || req.userObject.userId : req.userObject.userId;
     let parameters = { userId: user.userId };
     let processed = false;
-    if (!req.userObject.isAdmin && (!user.userId || req.userObject.userId !== user.userId)) {
+    if (!user.userId) {
         return res.status(400).json({ messagae: '잘못된 접근입니다.' });
     } else {
         let original;
@@ -160,12 +161,15 @@ router.put('/', requiredSignin, async (req, res) => {
             processed = true;
         }
         if (user.picturePath === '' && original.picturePath) {
-            result = await util.unlink(original.picturePath);
-            if (result !== 'ENOENT') {
-                logger.error('프로필사진 삭제 중 에러 : ', result, user.userId, original.userId);
-                return res.status(500).json({ target: 'picturePath', message: `이미지를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.[${result}]` })
+            try {
+                result = await util.unlink(`${process.env.PWD}/${config.profileBasePath}/public${original.picturePath}`);
+            } catch (error) {
+                if (error.code !== 'ENOENT') {//이미 삭제할 내용이 없는 경우는 에러 아니게 처리
+                    logger.error('프로필사진 삭제 중 에러 : ', error, user.userId, original.userId);
+                    return res.status(500).json({ target: 'picturePath', message: `이미지를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.[${error.errno}]` })
+                }
             }
-            parameters.picturePath = user.picturePath;
+            parameters.picturePath = null;
         }
 
         if (typeof parameters.isAdmin === 'boolean') {
@@ -319,13 +323,18 @@ router.post('/picture', requiredSignin, multer.single('picture'), async (req, re
         result;
     if (typeof req.file === 'object' && req.file.filename) {
         const originalFilePath = req.userObject.picturePath;
-        result = await util.uploadFile([req.file], 'profiles', userId, userModel.updateUserPicture);
-        if (result.status === 200 && originalFilePath) {
+        try {
             await util.unlink(originalFilePath);
-            return res.status(200).json({ message: '정상적으로 반영되었습니다.' })
+        } catch (error) {
+            logger.error(error);
+        }
+        result = await userModel.updateUserPicture(userId, null, null, null, `/profiles/${req.file.filename}`)
+        //result = await util.uploadFile([req.file], 'dev/public/profiles', userId, userModel.updateUserPicture);
+        if (result > 0) {
+            return res.status(200).json({ message: '정상적으로 반영되었습니다.', picturePath: `/profiles/${req.file.filename}` })
         } else {
-            logger.error('프로필 사진 저장 중 에러 : ', result, userId);
-            return res.status(500).json({ message: '사진 저장에 실패하였습니다. 다시 시도해주세요.' });
+            logger.error('프로필 이미지 저장 중 에러 : ', result, userId);
+            return res.status(500).json({ message: '이미지 저장에 실패하였습니다. 다시 시도해주세요.' });
         }
     } else {
         return res.status(400).json({ target: 'file', message: '업로드된 파일이 없거나, 최대 크기 200KB를 초과하였습니다.' });
@@ -353,6 +362,21 @@ router.get('/', requiredSignin, async (req, res) => {
         delete result.reserved2;
         delete result.reserved3;
         delete result.reserved4;
+    }
+    let result2 = await groupModel.getUserGroup(userId);
+    if (Array.isArray(result2)) {
+        result.major = result2.find(x => x.groupType === 'M');
+        if (result.major) {
+            result.major = result.major.groupId;
+        }
+        result.grade = result2.find(x => x.groupType === 'G');
+        if (result.grade) {
+            result.grade = result.grade.groupId;
+        }
+        result.region = result2.find(x => x.groupType === 'R');
+        if (result.region) {
+            result.region = result.region.groupName;
+        }
     }
     return res.status(200).json(result);
 })

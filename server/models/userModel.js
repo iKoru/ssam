@@ -40,7 +40,7 @@ exports.checkEmail = async (email) => {
     );
 }
 
-exports.checkUserAuth = async(userId) => {
+exports.checkUserAuth = async (userId) => {
     return await pool.executeQuery('checkUserAuth',
         builder.select()
             .field('GGROUP.GROUP_ID', '"groupId"')
@@ -55,32 +55,32 @@ exports.checkUserAuth = async(userId) => {
                 .where('USER_ID = ?', userId)
                 .where('DGROUP.GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_GROUP WHERE PARENT_GROUP_ID = ?)', config.authDeniedParentGroupId)
             )
-        .toParam()
+            .toParam()
     )
 }
 
 exports.createUser = async (user) => {
     let query = builder.insert()
-            .into('SS_MST_USER')
-            .setFields({
-                USER_ID: user.userId,
-                EMAIL: user.email,
-                LOUNGE_NICKNAME: user.nickName,
-                TOPIC_NICKNAME: user.nickName,
-                PASSWORD: user.password,
-                INVITE_CODE: util.partialUUID(),
-                INVITER: user.inviter
-            });
-    if(user.status){
+        .into('SS_MST_USER')
+        .setFields({
+            USER_ID: user.userId,
+            EMAIL: user.email,
+            LOUNGE_NICKNAME: user.nickName,
+            TOPIC_NICKNAME: user.nickName,
+            PASSWORD: user.password,
+            INVITE_CODE: util.partialUUID(),
+            INVITER: user.inviter
+        });
+    if (user.status) {
         query.set('STATUS', user.status)
     }
-    if(user.memo){
+    if (user.memo) {
         query.set('MEMO', user.memo)
     }
-    if(typeof user.isAdmin === 'boolean'){
+    if (typeof user.isAdmin === 'boolean') {
         query.set('IS_ADMIN', user.isAdmin)
     }
-    let result = await pool.executeQuery('createUser' + (user.status?'st':'') + (user.memo?'mem':'') + (typeof user.isAdmin === 'boolean'?'ad':''),
+    let result = await pool.executeQuery('createUser' + (user.status ? 'st' : '') + (user.memo ? 'mem' : '') + (typeof user.isAdmin === 'boolean' ? 'ad' : ''),
         query
             .toParam()
     );
@@ -112,23 +112,23 @@ exports.updateUserInfo = async (param) => {
             query.set('TOPIC_NICKNAME', user.topicNickName)
                 .set('TOPIC_NICKNAME_MODIFIED_DATE', user.topicNickNameModifiedDate)
         }
-        if (user.picturePath) {
+        if (user.picturePath !== undefined) {
             query.set('PICTURE_PATH', user.picturePath)
         }
         if (typeof user.isOpenInfo === 'boolean') {
             query.set('IS_OPEN_INFO', user.isOpenInfo)
         }
-        if (user.grade || user.major || user.region) {
+        if ((user.grade !== undefined) || (user.major !== undefined) || (user.region !== undefined)) {
             user.infoModifiedDate = util.getYYYYMMDD()
             query.set('INFO_MODIFIED_DATE', user.infoModifiedDate)
         }
-        if (user.memo) {
+        if (user.memo !== undefined) {
             query.set('MEMO', user.memo)
         }
-        if (user.email) {
+        if (user.email !== undefined) {
             query.set('EMAIL', user.email)
         }
-        if (user.status) {
+        if (user.status !== undefined) {
             query.set('STATUS', user.status)
         }
         let result = await pool.executeQuery(null,
@@ -137,7 +137,7 @@ exports.updateUserInfo = async (param) => {
                 .toParam()
         );
         if (result > 0) {
-            if (user.grade) {
+            if (user.grade !== undefined) {
                 await pool.executeQuery('deleteUserGrade',
                     builder.delete()
                         .from('SS_MST_USER_GROUP')
@@ -145,11 +145,11 @@ exports.updateUserInfo = async (param) => {
                         .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'G\''))
                         .toParam()
                 );
-                if (user.grade !== '') {
+                if (user.grade !== null) {
                     result += await groupModel.createUserGroup(user.userId, user.grade);
                 }
             }
-            if (user.major) {
+            if (user.major !== undefined) {
                 await pool.executeQuery('deleteUserMajor',
                     builder.delete()
                         .from('SS_MST_USER_GROUP')
@@ -157,11 +157,11 @@ exports.updateUserInfo = async (param) => {
                         .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'M\''))
                         .toParam()
                 );
-                if (user.major !== '') {
+                if (user.major !== null) {
                     result += await groupModel.createUserGroup(user.userId, user.major);
                 }
             }
-            if (user.region) {
+            if (user.region !== undefined) {
                 await pool.executeQuery('deleteUserRegion',
                     builder.delete()
                         .from('SS_MST_USER_GROUP')
@@ -169,7 +169,7 @@ exports.updateUserInfo = async (param) => {
                         .where('GROUP_ID IN ?', builder.select().field('GROUP_ID').from('SS_MST_GROUP').where('GROUP_TYPE = \'R\''))
                         .toParam()
                 );
-                if (user.region !== '') {
+                if (user.region !== null) {
                     result += await groupModel.createUserGroup(user.userId, user.region);
                 }
             }
@@ -183,22 +183,22 @@ exports.updateUserInfo = async (param) => {
                     cachedData.topicNickName = user.topicNickName
                     cachedData.topicNickNameModifiedDate = user.topicNickNameModifiedDate
                 }
-                if (user.picturePath) {
+                if (user.picturePath !== undefined) {
                     cachedData.picturePath = user.picturePath
                 }
                 if (typeof user.isOpenInfo === 'boolean') {
                     cachedData.isOpenInfo = user.isOpenInfo
                 }
-                if (user.grade || user.major || user.region) {
+                if ((user.grade !== undefined) || (user.major !== undefined) || (user.region !== undefined)) {
                     cachedData.infoModifiedDate = user.infoModifiedDate
                 }
-                if (user.memo) {
+                if (user.memo !== undefined) {
                     cachedData.memo = user.memo
                 }
-                if (user.email) {
+                if (user.email !== undefined) {
                     cachedData.email = user.email
                 }
-                if (user.status) {
+                if (user.status !== undefined) {
                     cachedData.status = user.status
                 }
                 cache.setAsync('[user]' + user.userId, cachedData, 3600);
