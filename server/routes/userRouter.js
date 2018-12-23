@@ -5,8 +5,8 @@ const constants = require('../constants'),
     util = require('../util'),
     logger = require('../logger'),
     config = require('../../config');
-let multer = require('multer');
-    multer = multer({dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, storage:multer.diskStorage({destination:config.profileBasePath + 'public/profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })});
+let multerLib = require('multer');
+    multer = multerLib({dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, storage:multerLib.diskStorage({destination:config.profileBasePath + 'public/profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })});
 const adminOnly = require('../middlewares/adminOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
@@ -319,29 +319,50 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
     }
 });
 
-router.post('/picture', requiredSignin, multer.single('picture'), async (req, res) => { //사진 업로드
-    let userId = req.userObject.userId,
-        result;
-        console.log(req.file);
-        console.log(req.file.originalname, req.file.filename, req.file.path);
-    if (typeof req.file === 'object' && req.file.filename) {
-        const originalFilePath = config.profileBasePath + 'public/'+req.userObject.picturePath;
-        try {
-            await util.unlink(originalFilePath);
-        } catch (error) {
-            logger.error(error);
+router.post('/picture', requiredSignin, async (req, res) => { //사진 업로드
+    multer.single('picture')(req, res, async function(error){
+        if(error instanceof multerLib.MulterError){
+            switch(error.code){
+                case 'LIMIT_FILE_SIZE':
+                return res.status(400).json({ target: 'picture', message: '최대 크기 200KB를 초과하였습니다.' });
+                case 'LIMIT_PART_COUNT':
+                return res.status(400).json({ target: 'picture', message: '최대 분할크기를 초과하였습니다.' });
+                case 'LIMIT_FILE_COUNT':
+                return res.status(400).json({ target: 'picture', message: '프로필 이미지는 1개만 등록해주세요.' });
+                case 'LIMIT_FIELD_KEY':
+                return res.status(400).json({target:'picture', message:'파일 이름의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.'})
+                case 'LIMIT_FIELD_VALUE':
+                return res.status(400).json({target:'picture', message:'파일 필드의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.'})
+                case 'LIMIT_FIELD_COUNT':
+                return res.status(400).json({target:'picture', message:'파일 필드가 너무 많습니다. 필드 수를 줄여주세요.'})
+                case 'LIMIT_UNEXPECTED_FILE':
+                return res.status(400).json({target:'picture', message:'업로드할 수 없는 파일 종류입니다.'})
+            }
+        }else if(error){
+            logger.error('프로필 이미지 업로드 중 에러!! ', error);
+            return res.status(500).json({target:'picture', message:`이미지를 업로드하는 도중 오류가 발생하였습니다.[${error.message || ''}]`})
         }
-        result = await userModel.updateUserPicture(userId, null, null, null, `/profiles/${req.file.filename}`)
-        //result = await util.uploadFile([req.file], 'dev/public/profiles', userId, userModel.updateUserPicture);
-        if (result > 0) {
-            return res.status(200).json({ message: '정상적으로 반영되었습니다.', picturePath: `/profiles/${req.file.filename}` })
+        let userId = req.userObject.userId,
+            result;
+        if (typeof req.file === 'object' && req.file.filename) {
+            const originalFilePath = config.profileBasePath + 'public/'+req.userObject.picturePath;
+            try {
+                await util.unlink(originalFilePath);
+            } catch (error) {
+                logger.error(error);
+            }
+            result = await userModel.updateUserPicture(userId, null, null, null, `/profiles/${req.file.filename}`)
+            //result = await util.uploadFile([req.file], 'dev/public/profiles', userId, userModel.updateUserPicture);
+            if (result > 0) {
+                return res.status(200).json({ message: '정상적으로 반영되었습니다.', picturePath: `/profiles/${req.file.filename}` })
+            } else {
+                logger.error('프로필 이미지 저장 중 에러 : ', result, userId);
+                return res.status(500).json({ message: '이미지 저장에 실패하였습니다. 다시 시도해주세요.' });
+            }
         } else {
-            logger.error('프로필 이미지 저장 중 에러 : ', result, userId);
-            return res.status(500).json({ message: '이미지 저장에 실패하였습니다. 다시 시도해주세요.' });
+            return res.status(400).json({ target: 'file', message: '업로드된 파일이 없거나, 최대 크기 200KB를 초과하였습니다.' });
         }
-    } else {
-        return res.status(400).json({ target: 'file', message: '업로드된 파일이 없거나, 최대 크기 200KB를 초과하였습니다.' });
-    }
+    }) 
 });
 
 router.get('/', requiredSignin, async (req, res) => {
