@@ -133,45 +133,64 @@ router.get('/best', checkSignin, async (req, res) => {
     }
 })
 
-router.get('/userId', async(req,res)=>{
-    if(typeof req.query.userId === 'string'){
-        if(req.query.userId.length < 50){
-            if(reserved.includes(req.query.userId) || reservedNickName.includes(req.query.userId)){
-                return res.status(400).json({target:'userId', message:'사용할 수 없는 ID입니다.'})
+router.get('/userId', async (req, res) => {
+    if (typeof req.query.userId === 'string') {
+        if (req.query.userId.length < 50) {
+            if (reserved.includes(req.query.userId) || reservedNickName.includes(req.query.userId)) {
+                return res.status(400).json({ target: 'userId', message: '사용할 수 없는 ID입니다.' })
             }
             let check = await userModel.checkUserId(req.query.userId)
-            if(Array.isArray(check) && check[0].count === 0){
-                return res.status(200).json({message:'사용 가능한 ID입니다.'})
-            }else{
-                return res.status(409).json({message:'이미 사용중인 ID입니다.'})
+            if (Array.isArray(check) && check[0].count === 0) {
+                return res.status(200).json({ message: '사용 가능한 ID입니다.' })
+            } else {
+                return res.status(409).json({ message: '이미 사용중인 ID입니다.' })
             }
-        }else{
-            return res.status(400).json({target:'userId', message:'ID가 너무 깁니다.(최대 50자)'})
+        } else {
+            return res.status(400).json({ target: 'userId', message: 'ID가 너무 깁니다.(최대 50자)' })
         }
-    }else{
-        return res.status(400).json({target:'userId', message:'체크할 ID를 입력해주세요.'})
+    } else {
+        return res.status(400).json({ target: 'userId', message: '체크할 ID를 입력해주세요.' })
     }
 })
 
-router.get('/email', async(req,res)=>{
-    if(typeof req.query.email === 'string'){
-        if(req.query.email.length < 100){
+router.get('/email', async (req, res) => {
+    if (typeof req.query.email === 'string') {
+        if (req.query.email.length < 100) {
             const email = emailRegex.exec(req.query.email);
             if (email) { //matched email
                 let check = await userModel.checkEmail(req.query.email)
-                if(Array.isArray(check) && check[0].count === 0){
-                    return res.status(200).json({message:'사용 가능한 이메일입니다.'})
-                }else{
-                    return res.status(409).json({message:'이미 사용중인 이메일입니다.'})
+                if (Array.isArray(check) && check[0].count === 0) {
+                    return res.status(200).json({ message: '사용 가능한 이메일입니다.' })
+                } else {
+                    return res.status(409).json({ message: '이미 사용중인 이메일입니다.' })
                 }
             } else {
                 return res.status(400).json({ target: 'email', message: '유효한 이메일 주소가 아니거나, 인증에 사용할 수 없는 이메일주소입니다.' });
             }
-        }else{
-            return res.status(400).json({target:'email', message:'이메일 주소가 너무 깁니다.(최대 100자)'})
+        } else {
+            return res.status(400).json({ target: 'email', message: '이메일 주소가 너무 깁니다.(최대 100자)' })
         }
-    }else{
-        return res.status(400).json({target:'email', message:'체크할 이메일 주소를 입력해주세요.'})
+    } else {
+        return res.status(400).json({ target: 'email', message: '체크할 이메일 주소를 입력해주세요.' })
+    }
+})
+
+router.get('/nickName', requiredSignin, async (req, res) => {
+    let userId = req.userObject.isAdmin ? req.query.userId || req.userObject.userId : req.userObject.userId;
+    if (typeof req.query.nickName === 'string') {
+        let nickName = req.query.nickName;
+        if (nickName.length > 3 && nickName.length < 100) {
+            let check = await userModel.checkNickName(userId, nickName)
+            if (Array.isArray(check) && check[0].count === 0) {
+                return res.status(200).json({ message: '사용 가능한 닉네임/필명입니다.' })
+            } else {
+                return res.status(409).json({ message: '이미 사용중인 닉네임/필명입니다.' })
+            }
+        } else {
+            return res.status(400).json({ target: 'email', message: '4~50자로 입력해주세요.' })
+        }
+    } else {
+        return res.status(400).json({ target: 'email', message: '체크할 닉네임/필명을 입력해주세요.' })
     }
 })
 
