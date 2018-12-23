@@ -87,7 +87,7 @@ router.put('/', requiredSignin, async (req, res) => {
             }
             parameters.status = user.status;
         }
-        if ((user.grade && user.grade !== original.grade) || (user.major && user.major !== original.major) || (user.email && user.email !== original.email)) {
+        if ((user.grade !== undefined && user.grade !== original.grade) || (user.major !== undefined && user.major !== original.major) || (user.email !== undefined && user.email !== original.email)) {
             if (process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && util.moment().month() !== 2) { //month() === 2 is March
                 return res.status(400).json({ message: '학년, 전공, 이메일은 매년 3월에만 변경이 가능합니다.' })
             }
@@ -96,23 +96,23 @@ router.put('/', requiredSignin, async (req, res) => {
                     return res.status(400).json({ message: '올해 이미 내역을 변경하셨습니다.' });
                 }
             }
-            if (user.grade && (user.grade !== original.grade)) {
-                if (user.grade !== '') {
+            if (user.grade !== undefined && (user.grade !== original.grade)) {
+                if (user.grade !== null) {
                     const grade = await groupModel.getGroup(user.grade, ['G']);
                     if (!(grade && grade[0] && (req.userObject.isAdmin || grade[0].isOpenToUsers))) {
                         return res.status(400).json({ target: 'grade', message: '선택된 학년 값이 올바르지 않습니다.' });
                     }
-                    parameters.grade = user.grade;
                 }
+                parameters.grade = user.grade;
             }
-            if (user.major && (user.major !== original.major)) {
-                if (user.major !== '') {
+            if (user.major !== undefined && (user.major !== original.major)) {
+                if (user.major !== null) {
                     const major = await groupModel.getGroup(user.major, ['M']);
                     if (!(major && major[0] && (req.userObject.isAdmin || major[0].isOpenToUsers))) {
                         return res.status(400).json({ target: 'major', message: '선택된 전공과목 값이 올바르지 않습니다.' });
                     }
-                    parameters.major = user.major;
                 }
+                parameters.major = user.major;
             }
             if (user.email && (user.email !== original.email)) {
                 const email = constants.emailRegex.exec(user.email);
