@@ -53,3 +53,4 @@ jwtErrorMessages['invalid signature'] = '비정상적인 경로의 접근입니�
 jwtErrorMessages['jwt not active'] = '세션이 아직 구성되지 않았습니다.';
 
 exports.jwtErrorMessages = jwtErrorMessages;
+exports.imageExtensions = ['jpg', 'jpeg', 'gif', 'png', 'tiff', 'tif'];

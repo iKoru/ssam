@@ -6,7 +6,10 @@ const constants = require('../constants'),
     logger = require('../logger'),
     config = require('../../config');
 let multerLib = require('multer');
-    multer = multerLib({dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, storage:multerLib.diskStorage({destination:config.profileBasePath + 'public/profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })});
+    multer = multerLib({dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, fileFilter: function(req,file, cb){
+        let ext = path.extname(file.originalname).substring(1).toLowerCase();
+        cb(null, constants.imageExtensions.includes(ext)); 
+    }, storage:multerLib.diskStorage({destination:config.profileBasePath + 'public/profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })});
 const adminOnly = require('../middlewares/adminOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
@@ -360,7 +363,7 @@ router.post('/picture', requiredSignin, async (req, res) => { //사진 업로드
                 return res.status(500).json({ message: '이미지 저장에 실패하였습니다. 다시 시도해주세요.' });
             }
         } else {
-            return res.status(400).json({ target: 'file', message: '업로드된 파일이 없거나, 최대 크기 200KB를 초과하였습니다.' });
+            return res.status(400).json({ target: 'file', message: '허용된 이미지 파일이 아닙니다. 확장자를 확인해주세요.' });
         }
     }) 
 });
