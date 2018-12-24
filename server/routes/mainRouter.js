@@ -3,7 +3,7 @@ const visitorOnly = require('../middlewares/visitorOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
     checkSignin = require('../middlewares/checkSignin'),
-    { reserved, reservedNickName, boardTypeDomain, emailRegex } = require('../constants'),
+    { reserved, reservedNickName, boardTypeDomain, emailRegex, boardIdRegex } = require('../constants'),
     logger = require('../logger'),
     { moment } = require('../util');
 const documentModel = require('../models/documentModel'),
@@ -191,6 +191,36 @@ router.get('/nickName', requiredSignin, async (req, res) => {
         }
     } else {
         return res.status(400).json({ target: 'email', message: '체크할 닉네임/필명을 입력해주세요.' })
+    }
+})
+
+router.get('/boardId', requiredAuth, async (req, res) => {
+    if (typeof req.query.boardId === 'string') {
+        let boardId = req.query.boardId;
+        if (boardId.length > 3 && boardId.length < 16) {
+            if (!boardIdRegex[0].test(boardId)) {
+                return res.status(400).json({ target: 'boardId', message: '토픽ID의 길이가 너무 길거나, [_, -] 이외의 특수문자가 있습니다.' })
+            } else if (!boardIdRegex[1].test(boardId)) {
+                return res.status(400).json({ target: 'boardId', message: '토픽ID에 연속된 [_, -]가 있습니다.' })
+            }
+            let i = 0;
+            while (i < reserved.length) {
+                if (boardId.indexOf(reserved[i]) >= 0) {
+                    return res.status(403).json({ target: 'boardId', message: `토픽ID가 허용되지 않는 문자(${reserved[i]})를 포함합니다.` })
+                }
+                i++;
+            }
+            let check = await boardModel.getBoard(boardId);
+            if (Array.isArray(check) && check.length === 0) {
+                return res.status(200).json({ target: 'boardId', message: '사용 가능한 토픽ID입니다.' })
+            } else {
+                return res.status(409).json({ target: 'boardId', message: '이미 사용중인 토픽ID입니다.' })
+            }
+        } else {
+            return res.status(400).json({ target: 'boardId', message: '4~15자로 입력해주세요.' })
+        }
+    } else {
+        return res.status(400).json({ target: 'boardId', message: '체크할 토픽ID를 입력해주세요.' })
     }
 })
 
