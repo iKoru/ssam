@@ -79,6 +79,9 @@ router.put('/', requiredAuth, async (req, res) => {
     if (typeof req.body.allowAnonymous === 'boolean' && req.body.allowAnonymous !== board[0].allowAnonymous) {
         reservedContents.allowAnonymous = req.body.allowAnonymous
     }
+    if (typeof req.body.useCategory === 'boolean' && req.body.allowAnonymous !== board[0].useCategory) {
+        reservedContents.useCategory = req.body.useCategory
+    }
     if (typeof req.body.status === 'string' && ['NORMAL', 'DELETED'].indexOf(req.body.status) >= 0 && req.body.status !== board[0].status) {
         reservedContents.status = req.body.status;
     }
@@ -198,6 +201,7 @@ router.post('/', requiredAuth, async (req, res) => {
         boardName: req.body.boardName,
         boardDescription: req.body.boardDescription,
         allowAnonymous: req.body.allowAnonymous,
+        useCategory: req.body.useCategory,
         allGroupAuth: req.body.allGroupAuth,
         boardType: req.body.boardType,
         groups: req.body.allowedGroups
@@ -212,7 +216,9 @@ router.post('/', requiredAuth, async (req, res) => {
     } else if (board.boardDescription !== undefined && typeof board.boardDescription !== 'string') {
         return res.status(400).json({ target: 'boardDescription', message: '설명 값이 올바르지 않습니다.' });
     } else if (board.allowAnonymous !== undefined && typeof board.allowAnonymous !== 'boolean') {
-        return res.status(400).json({ target: 'allowAnonymous', message: '익명 허용 여부가 올바르지 않습니다.' })
+        return res.status(400).json({ target: 'allowAnonymous', message: '익명글 허용 여부가 올바르지 않습니다.' })
+    } else if (board.useCategory !== undefined && typeof board.useCategory !== 'boolean') {
+        return res.status(400).json({ target: 'useCategory', message: '카테고리 사용여부가 올바르지 않습니다.' })
     } else if (!['NONE', 'READONLY', 'READWRITE'].includes(board.allGroupAuth)) {
         return res.status(400).json({ target: 'allGroupAuth', message: '전체 허용 여부 값이 올바르지 않습니다.' });
     } else {
@@ -264,7 +270,7 @@ router.post('/', requiredAuth, async (req, res) => {
         let userGroups = await groupModel.getUserGroup(board.ownerId);
         if (Array.isArray(userGroups)) {
             if (!groups.some(x => x.authType === 'READWRITE' && userGroups.some(y => y.groupId === x.groupId))) {
-                return res.statusCode(400).json({ target: 'groups', message: `내가 구독할 수 없는 ${constants.boardTypeDomain[board.boardType] + (board.boardType === 'T' ? '은' : '는')} 생성할 수 없습니다.` })
+                return res.status(400).json({ target: 'groups', message: `내가 구독할 수 없는 ${constants.boardTypeDomain[board.boardType] + (board.boardType === 'T' ? '은' : '는')} 생성할 수 없습니다.` })
             }
         } else {
             return res.status(500).json({ message: `${constants.boardTypeDomain[board.boardType]} 생성에 실패하였습니다.[${userGroups.code || ''}]` })
@@ -282,7 +288,7 @@ router.post('/', requiredAuth, async (req, res) => {
         await boardModel.createUserBoard(board.ownerId, board.boardId);
         if (req.userObject.isAdmin && Array.isArray(req.body.categories) && req.body.categories.length > 0) {
             await boardModel.createBoardCategory(board.boardId, req.body.categories);
-        } else if (board.boardType === 'T') {
+        } else if (board.boardType === 'T' && board.useCategory) {
             await boardModel.createBoardCategory(board.boardId, constants.defaultTopicCategories);
         }
         return res.status(200).json({ message: `${constants.boardTypeDomain[board.boardType]}을 만들었습니다.` })

@@ -28,6 +28,7 @@ exports.getBoards = async (searchQuery, boardType, page = 1, searchTarget = "boa
         'STATUS': '"status"',
         'ALL_GROUP_AUTH': '"allGroupAuth"',
         'ALLOW_ANONYMOUS': '"allowAnonymous"',
+        'USE_CATEGORY': '"useCategory"',
         'RESERVED_DATE': '"reservedDate"',
         'RESERVED_CONTENTS': '"reservedContents"',
         'array_agg(DISTINCT CAT.CATEGORY_NAME)': '"categories"'
@@ -120,6 +121,7 @@ exports.getReservedBoard = async () => {
                 'STATUS': '"status"',
                 'ALL_GROUP_AUTH': '"allGroupAuth"',
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
+                'USE_CATEGORY': '"useCategory"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
                 'array_agg(CAT.CATEGORY_NAME)': 'categories'
@@ -148,6 +150,7 @@ const getBoard = async (boardId) => {
                 'STATUS': '"status"',
                 'ALL_GROUP_AUTH': '"allGroupAuth"',
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
+                'USE_CATEGORY': '"useCategory"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
                 'array_agg(CAT.CATEGORY_NAME)': 'categories'
@@ -321,6 +324,7 @@ exports.createBoard = async (board) => {
                 'OWNER_ID': board.ownerId,
                 'BOARD_DESCRIPTION': board.boardDescription,
                 'BOARD_TYPE': board.boardType,
+                'USE_CATEGORY': !!board.useCategory,
                 'ALLOW_ANONYMOUS': !!board.allowAnonymous,
                 'ALL_GROUP_AUTH': board.allGroupAuth
             })
@@ -371,6 +375,9 @@ exports.updateBoard = async (board) => {
     }
     if (board.allowAnonymous !== undefined) {
         query.set('ALLOW_ANONYMOUS', board.allowAnonymous)
+    }
+    if (board.useCategory !== undefined) {
+        query.set('USE_CATEGORY', board.useCategory)
     }
     if (board.reservedDate !== undefined) {
         query.set('RESERVED_DATE', board.reservedDate)
