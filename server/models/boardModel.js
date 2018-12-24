@@ -99,7 +99,7 @@ exports.getUserBoard = async (userId, boardId, isAdmin) => {
     }
     if (!isAdmin) {
         query.where('STATUS <> \'DELETED\'')
-        .where('BOARD_TYPE = \'T\'')
+        .where('BOARD_TYPE = \'T\' OR WRITE_RESTRICT_DATE IS NOT NULL OR READ_RESTRICT_DATE IS NOT NULL')
     }
     return await pool.executeQuery('getUserBoard' + (boardId? 'board':'')+ (isAdmin ? 'admin' : ''),
         query.order('USERBOARD.ORDER_NUMBER').toParam()
