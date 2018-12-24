@@ -91,17 +91,18 @@ exports.getUserBoard = async (userId, boardId, isAdmin) => {
             'WRITE_RESTRICT_DATE': '"writeRestrictDate"',
             'READ_RESTRICT_DATE': '"readRestrictDate"'
         })
+        .field(builder.case().when('OWNER_ID = ?', userId).then(true).else(false), '"isOwner"')
         .from('SS_MST_USER_BOARD', 'USERBOARD')
         .join('SS_MST_BOARD', 'BOARD', 'BOARD.BOARD_ID = USERBOARD.BOARD_ID')
         .where('USERBOARD.USER_ID = ?', userId);
-    if(boardId){
+    if (boardId) {
         query.where('USERBOARD.BOARD_ID = ?', boardId)
     }
     if (!isAdmin) {
         query.where('STATUS <> \'DELETED\'')
-        .where('BOARD_TYPE = \'T\' OR WRITE_RESTRICT_DATE IS NOT NULL OR READ_RESTRICT_DATE IS NOT NULL')
+            .where('BOARD_TYPE = \'T\' OR WRITE_RESTRICT_DATE IS NOT NULL OR READ_RESTRICT_DATE IS NOT NULL')
     }
-    return await pool.executeQuery('getUserBoard' + (boardId? 'board':'')+ (isAdmin ? 'admin' : ''),
+    return await pool.executeQuery('getUserBoard' + (boardId ? 'board' : '') + (isAdmin ? 'admin' : ''),
         query.order('USERBOARD.ORDER_NUMBER').toParam()
     )
 }
@@ -261,20 +262,20 @@ exports.deleteUserBoard = deleteUserBoard;
 
 exports.createUserBoard = async (userId, boardId, writeRestrictDate, readRestrictDate) => {
     let query = builder.insert()
-            .into('SS_MST_USER_BOARD')
-            .setFields({
-                'USER_ID': userId,
-                'BOARD_ID': boardId,
-                'JOIN_DATE': util.getYYYYMMDD(),
-                'ORDER_NUMBER': builder.str('SELECT COALESCE(MAX(ORDER_NUMBER), 0) + 1 FROM SS_MST_USER_BOARD WHERE USER_ID = ?', userId)
-            })
-    if(writeRestrictDate){
+        .into('SS_MST_USER_BOARD')
+        .setFields({
+            'USER_ID': userId,
+            'BOARD_ID': boardId,
+            'JOIN_DATE': util.getYYYYMMDD(),
+            'ORDER_NUMBER': builder.str('SELECT COALESCE(MAX(ORDER_NUMBER), 0) + 1 FROM SS_MST_USER_BOARD WHERE USER_ID = ?', userId)
+        })
+    if (writeRestrictDate) {
         query.set('WRITE_RESTRICT_DATE', writeRestrictDate)
     }
-    if(readRestrictDate){
+    if (readRestrictDate) {
         query.set('READ_RESTRICT_DATE', readRestrictDate)
     }
-    let result = await pool.executeQuery('createUserBoard' + (writeRestrictDate? 'write': '') + (readRestrictDate?'read':''),
+    let result = await pool.executeQuery('createUserBoard' + (writeRestrictDate ? 'write' : '') + (readRestrictDate ? 'read' : ''),
         query.toParam()
     )
     if (result > 0) {
@@ -285,27 +286,27 @@ exports.createUserBoard = async (userId, boardId, writeRestrictDate, readRestric
 }
 
 exports.updateUserBoard = async (userId, boardId, orderNumber, writeRestrictDate, readRestrictDate) => {
-    if(!writeRestrictDate && !readRestrictDate && !orderNumber){
+    if (!writeRestrictDate && !readRestrictDate && !orderNumber) {
         return 0;
     }
     let query = builder.update().table('SS_MST_USER_BOARD')
-    if(writeRestrictDate){
+    if (writeRestrictDate) {
         query.set('WRITE_RESTRICT_DATE', writeRestrictDate)
     }
-    if(readRestrictDate){
+    if (readRestrictDate) {
         query.set('READ_RESTRICT_DATE', readRestrictDate)
     }
-    if(orderNumber){
+    if (orderNumber) {
         query.set('ORDER_NUMBER', orderNumber)
     }
-    let result = await pool.executeQuery('updateUserBoard'+ (orderNumber?'ord':'') + (writeRestrictDate?'wri':'') + (readRestrictDate?'read':''),
+    let result = await pool.executeQuery('updateUserBoard' + (orderNumber ? 'ord' : '') + (writeRestrictDate ? 'wri' : '') + (readRestrictDate ? 'read' : ''),
         query.where('USER_ID = ?', userId)
-        .where('BOARD_ID = ?', boardId)
-        .toParam()
-        )
-    if(result > 0 && (writeRestrictDate || readRestrictDate)){
-        cache.delAsync('[readUserBoard]'+userId + '@'+boardId);
-        cache.delAsync('[writeUserBoard]'+userId+'@'+boardId);
+            .where('BOARD_ID = ?', boardId)
+            .toParam()
+    )
+    if (result > 0 && (writeRestrictDate || readRestrictDate)) {
+        cache.delAsync('[readUserBoard]' + userId + '@' + boardId);
+        cache.delAsync('[writeUserBoard]' + userId + '@' + boardId);
     }
     return result;
 }
