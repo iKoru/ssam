@@ -6,10 +6,12 @@ const constants = require('../constants'),
     logger = require('../logger'),
     config = require('../../config');
 let multerLib = require('multer');
-    multer = multerLib({dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, fileFilter: function(req,file, cb){
+multer = multerLib({
+    dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, fileFilter: function (req, file, cb) {
         let ext = path.extname(file.originalname).substring(1).toLowerCase();
-        cb(null, constants.imageExtensions.includes(ext)); 
-    }, storage:multerLib.diskStorage({destination:config.profileBasePath + 'public/profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })});
+        cb(null, constants.imageExtensions.includes(ext));
+    }, storage: multerLib.diskStorage({ destination: config.profileBasePath + 'public/profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })
+});
 const adminOnly = require('../middlewares/adminOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
@@ -323,32 +325,32 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
 });
 
 router.post('/picture', requiredSignin, async (req, res) => { //사진 업로드
-    multer.single('picture')(req, res, async function(error){
-        if(error instanceof multerLib.MulterError){
-            switch(error.code){
+    multer.single('picture')(req, res, async function (error) {
+        if (error instanceof multerLib.MulterError) {
+            switch (error.code) {
                 case 'LIMIT_FILE_SIZE':
-                return res.status(400).json({ target: 'picture', message: '최대 크기 200KB를 초과하였습니다.' });
+                    return res.status(400).json({ target: 'picture', message: '최대 크기 200KB를 초과하였습니다.' });
                 case 'LIMIT_PART_COUNT':
-                return res.status(400).json({ target: 'picture', message: '최대 분할크기를 초과하였습니다.' });
+                    return res.status(400).json({ target: 'picture', message: '최대 분할크기를 초과하였습니다.' });
                 case 'LIMIT_FILE_COUNT':
-                return res.status(400).json({ target: 'picture', message: '프로필 이미지는 1개만 등록해주세요.' });
+                    return res.status(400).json({ target: 'picture', message: '프로필 이미지는 1개만 등록해주세요.' });
                 case 'LIMIT_FIELD_KEY':
-                return res.status(400).json({target:'picture', message:'파일 이름의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.'})
+                    return res.status(400).json({ target: 'picture', message: '파일 이름의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
                 case 'LIMIT_FIELD_VALUE':
-                return res.status(400).json({target:'picture', message:'파일 필드의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.'})
+                    return res.status(400).json({ target: 'picture', message: '파일 필드의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
                 case 'LIMIT_FIELD_COUNT':
-                return res.status(400).json({target:'picture', message:'파일 필드가 너무 많습니다. 필드 수를 줄여주세요.'})
+                    return res.status(400).json({ target: 'picture', message: '파일 필드가 너무 많습니다. 필드 수를 줄여주세요.' })
                 case 'LIMIT_UNEXPECTED_FILE':
-                return res.status(400).json({target:'picture', message:'업로드할 수 없는 파일 종류입니다.'})
+                    return res.status(400).json({ target: 'picture', message: '업로드할 수 없는 파일 종류입니다.' })
             }
-        }else if(error){
+        } else if (error) {
             logger.error('프로필 이미지 업로드 중 에러!! ', error);
-            return res.status(500).json({target:'picture', message:`이미지를 업로드하는 도중 오류가 발생하였습니다.[${error.message || ''}]`})
+            return res.status(500).json({ target: 'picture', message: `이미지를 업로드하는 도중 오류가 발생하였습니다.[${error.message || ''}]` })
         }
         let userId = req.userObject.userId,
             result;
         if (typeof req.file === 'object' && req.file.filename) {
-            const originalFilePath = config.profileBasePath + 'public/'+req.userObject.picturePath;
+            const originalFilePath = config.profileBasePath + 'public/' + req.userObject.picturePath;
             try {
                 await util.unlink(originalFilePath);
             } catch (error) {
@@ -365,7 +367,7 @@ router.post('/picture', requiredSignin, async (req, res) => { //사진 업로드
         } else {
             return res.status(400).json({ target: 'file', message: '허용된 이미지 파일이 아닙니다. 확장자를 확인해주세요.' });
         }
-    }) 
+    })
 });
 
 router.get('/', requiredSignin, async (req, res) => {
@@ -485,9 +487,7 @@ router.delete('/:userId', adminOnly, async (req, res) => {
 });
 
 router.get('/document', requiredSignin, async (req, res) => {
-    if (req.query.userId !== req.userObject.userId && !req.userObject.isAdmin) {
-        return res.status(400).json({ message: '잘못된 접근입니다.' });
-    }
+    let userId = req.userObject.isAdmin ? (req.query.userId || req.userObject.userId) : req.userObject.userId;
     if (typeof req.query.page === 'string') {
         req.query.page = 1 * req.query.page
     }
@@ -496,7 +496,7 @@ router.get('/document', requiredSignin, async (req, res) => {
     } else if (req.query.page === undefined || req.query.page < 1) {
         req.query.page = 1;
     }
-    let result = await documentModel.getUserDocument(req.query.userId, req.userObject.isAdmin, req.query.page);
+    let result = await documentModel.getUserDocument(userId, req.userObject.isAdmin, req.query.page);
     if (Array.isArray(result)) {
         if (!req.userObject.isAdmin) {
             let i = 0;
@@ -508,15 +508,13 @@ router.get('/document', requiredSignin, async (req, res) => {
         }
         return res.status(200).json(result);
     } else {
-        logger.error('사용자 작성 게시물 조회 중 에러 : ', result, req.query.userId);
+        logger.error('사용자 작성 게시물 조회 중 에러 : ', result, userId);
         return res.status(500).json({ message: '정보를 읽어오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
 
 router.get('/comment', requiredSignin, async (req, res) => {
-    if (req.query.userId !== req.userObject.userId && !req.userObject.isAdmin) {
-        return res.status(400).json({ message: '잘못된 접근입니다.' });
-    }
+    let userId = req.userObject.isAdmin ? (req.query.userId || req.userObject.userId) : req.userObject.userId;
     if (typeof req.query.page === 'string') {
         req.query.page = 1 * req.query.page
     }
@@ -525,7 +523,7 @@ router.get('/comment', requiredSignin, async (req, res) => {
     } else if (req.query.page === undefined || req.query.page < 1) {
         req.query.page = 1;
     }
-    let result = await commentModel.getUserComment(req.query.userId, req.userObject.isAdmin, req.query.page);
+    let result = await commentModel.getUserComment(userId, req.userObject.isAdmin, req.query.page);
     if (Array.isArray(result)) {
         if (!req.userObject.isAdmin) {
             let i = 0;
@@ -536,7 +534,7 @@ router.get('/comment', requiredSignin, async (req, res) => {
         }
         return res.status(200).json(result);
     } else {
-        logger.error('사용자 작성 댓글 조회 중 에러 : ', result, req.query.userId);
+        logger.error('사용자 작성 댓글 조회 중 에러 : ', result, userId);
         return res.status(500).json({ message: '정보를 읽어오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
