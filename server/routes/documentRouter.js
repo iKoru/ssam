@@ -107,7 +107,7 @@ router.put('/', requiredAuth, async(req, res) => {
     } else if (typeof document.title !== 'string' || document.title.length > 300) {
         return res.status(400).json({ target: 'title', message: '입력된 제목이 올바르지 않습니다.' })
     }
-    if (typeof document.contents !== 'string' || document.contents === '') {
+    if (!document.isDeleted && typeof document.contents !== 'string' || document.contents === '') {
         return res.status(400).json({ target: 'contents', message: '게시물 내용을 입력해주세요.' })
     }
 
@@ -116,6 +116,9 @@ router.put('/', requiredAuth, async(req, res) => {
     }
     if (document.isDeleted === original.isDeleted) {
         delete document.isDeleted;
+    }
+    if(document.isDeleted){
+        delete document.contents;
     }
     let result;
     if (document.hasSurvey === false && original.hasSurvey && req.userObject.isAdmin) {

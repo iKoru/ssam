@@ -214,6 +214,9 @@ router.put('/', requiredAuth, async (req, res) => {
         if (comment.isDeleted === result[0].isDeleted) {
             delete comment.isDeleted;
         }
+        if(comment.isDeleted){
+            delete comment.contents;
+        }
         if ((comment.contents === undefined) && (comment.isDeleted === undefined)) {
             return res.status(400).json({ message: '수정할 내역이 없습니다.' });
         }
