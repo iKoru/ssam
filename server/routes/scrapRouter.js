@@ -55,34 +55,93 @@ router.delete(/\/group\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async (req, res) 
 })
 
 router.put('/group', requiredSignin, async (req, res) => {
-    let scrapGroupName = req.body.scrapGroupName,
-        scrapGroupId = req.body.scrapGroupId;
-    if (typeof scrapGroupName !== 'string' || scrapGroupName === '') {
-        return res.status(400).json({ target: 'scrapGroupName', message: '스크랩 그룹 이름을 입력해주세요.' });
-    } else if (scrapGroupName.length > 50) {
-        return res.status(400).json({ target: 'scrapGroupName', message: '스크랩 그룹 이름은 50자 이내로 해주세요.' });
-    } else if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {
-        return res.status(400).json({ target: 'scrapGroupId', message: '변경할 스크랩 그룹을 선택해주세요.' })
-    }
-
-    let result = await scrapModel.updateScrapGroup(req.userObject.userId, scrapGroupId, scrapGroupName)
-    if (typeof result === 'object') {
-        logger.error('스크랩 그룹 이름 변경 중 에러 : ', result, req.userObject.userId, scrapGroupId, scrapGroupName);
-        return res.status(500).json({ message: `스크랩 그룹 이름을 변경하지 못했습니다.[${result.code || ''}]` })
-    } else if (result === 0) {
-        return res.status(404).json({ target: 'scrapGroupId', message: '존재하지 않는 스크랩 그룹입니다.' })
-    } else {
-        return res.status(200).json({ message: '스크랩 그룹 이름을 변경하였습니다.' });
+    let result;
+    if(req.body.scrapGroups && Array.isArray(req.body.scrapGroups)){//일괄 처리
+        let currentScrapGroups = await scrapModel.getScrapGroupByUserId(req.userObject.userId);
+        let scrapGroups = req.body.scrapGroups;
+        let failedScrapGroup = [], processed = 0;
+        if (Array.isArray(currentScrapGroups)) {
+            let i = 0;
+            while (i < scrapGroups.length) {
+                if ((!scrapGroups[i].scrapGroupId || !currentScrapGroups.some(x=>x.scrapGroupId === scrapGroups[i].scrapGroupId))) { //new board
+                    if(typeof scrapGroups[i].scrapGroupName !== 'string' || scrapGroups[i].scrapGroupName === '' || scrapGroups[i].scrapGroupName.length > 50){
+                        failedScrapGroup.push(i+1);
+                    }else{
+                        result = await scrapModel.createScrapGroup(req.userObject.userId, scrapGroups[i].scrapGroupName)
+                        if (!(result.rowCount === 1 && result.rows && result.rows.length > 0 && result.rows[0].scrapGroupId > 0)) {
+                            logger.error('스크랩 그룹 생성 에러 : ', result, req.userObject.userId, scrapGroups[i].scrapGroupName);
+                        }else{
+                            processed ++;
+                        }
+                    }
+                } else if (scrapGroups[i].status !== 'DELETED' && currentScrapGroups.some(x => x.scrapGroupId === scrapGroups[i].scrapGroupId) && currentScrapGroups.find(x=>x.scrapGroupId === scrapGroups[i].scrapGroupId).scrapGroupName !== scrapGroups[i].scrapGroupName) {//update group name check
+                    if(typeof scrapGroups[i].scrapGroupName !== 'string' || scrapGroups[i].scrapGroupName === '' || scrapGroups[i].scrapGroupName.length > 50){
+                        failedScrapGroup.push(i+1);
+                    }else{
+                        result = await scrapModel.updateScrapGroup(req.userObject.userId, scrapGroups[i].scrapGroupId, scrapGroups[i].scrapGroupName)
+                        if (typeof result === 'object') {
+                            logger.error('스크랩 그룹 이름 변경 중 에러 : ', result, req.userObject.userId, scrapGroups[i]);
+                            failedScrapGroup.push(i+1);
+                        } else if (result === 0) {
+                            failedScrapGroup.push(i+1);
+                        } else{
+                            processed ++;
+                        }
+                    }
+                } else if(scrapGroups[i].status === 'DELETED' && currentScrapGroups.some(x => x.scrapGroupId === scrapGroups[i].scrapGroupId)){
+                    result = await scrapModel.deleteScrapGroup(req.userObject.userId, scrapGroups[i].scrapGroupId)
+                    if (typeof result === 'object') {
+                        logger.error('스크랩 그룹 삭제 중 에러 : ', result, req.userObject.userId, scrapGroups[i])
+                        failedScrapGroup.push(i+1);
+                    } else if (result === 0) {
+                        failedScrapGroup.push(i+1);
+                    } else{
+                        processed ++;
+                    }
+                }
+                i++;
+            }
+            if(failedScrapGroup.length > 0){
+                return res.status(200).json({message:`변경 내용 중 ${processed}건은 반영하였으나, 일부 항목은 반영하지 못했습니다.`, failedGroup:failedScrapGroup})
+            }else if(processed === 0){
+                return res.status(400).json({message:'변경된 내용이 없습니다.'})
+            }else{
+                return res.status(200).json({message:'변경 내용을 반영하였습니다.'})
+            }
+        } else {
+            logger.error('스크랩그룹 조회 중 에러 : ', result, req.userObject.userId)
+            return res.status(500).json({ message: `스크랩 정보를 가져오지 못했습니다. 잠시 후 다시 시도해주세요.[${result.code || ''}]` })
+        }
+    }else{//개별 처리
+        let scrapGroupName = req.body.scrapGroupName,
+            scrapGroupId = req.body.scrapGroupId;
+        if (typeof scrapGroupName !== 'string' || scrapGroupName === '') {
+            return res.status(400).json({ target: 'scrapGroupName', message: '스크랩 그룹 이름을 입력해주세요.' });
+        } else if (scrapGroupName.length > 50) {
+            return res.status(400).json({ target: 'scrapGroupName', message: '스크랩 그룹 이름은 50자 이내로 해주세요.' });
+        } else if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {
+            return res.status(400).json({ target: 'scrapGroupId', message: '변경할 스크랩 그룹을 선택해주세요.' })
+        }
+    
+        result = await scrapModel.updateScrapGroup(req.userObject.userId, scrapGroupId, scrapGroupName)
+        if (typeof result === 'object') {
+            logger.error('스크랩 그룹 이름 변경 중 에러 : ', result, req.userObject.userId, scrapGroupId, scrapGroupName);
+            return res.status(500).json({ message: `스크랩 그룹 이름을 변경하지 못했습니다.[${result.code || ''}]` })
+        } else if (result === 0) {
+            return res.status(404).json({ target: 'scrapGroupId', message: '존재하지 않는 스크랩 그룹입니다.' })
+        } else {
+            return res.status(200).json({ message: '스크랩 그룹 이름을 변경하였습니다.' });
+        }
     }
 })
 
-router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async (req, res) => { //scrap in scrapgroup
-    let scrapGroupId = req.params[0];
+router.get('/', requiredSignin, async (req, res) => { //scrap in scrapgroup
+    let scrapGroupId = req.query.scrapGroupId;///\/(\d+)(?:\/.*|\?.*)?$/params[0];
     if (typeof scrapGroupId === 'string') {
         scrapGroupId = 1 * scrapGroupId;
     }
     if (!Number.isInteger(scrapGroupId) || scrapGroupId > 32767 || scrapGroupId === 0) {
-        return res.status(400).json({ target: 'scrapGroupId', message: '스크랩 그룹이 올바르지 않습니다.' });
+        return res.status(400).json({ target: 'scrapGroupId', message: '선택된 스크랩 그룹이 올바르지 않습니다.' });
     }
     let page = req.query.page;
     if (typeof page === 'string') {
