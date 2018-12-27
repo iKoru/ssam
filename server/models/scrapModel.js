@@ -16,14 +16,15 @@ exports.getScraps = async(userId, scrapGroupId, page = 1) => {
             'RESERVED1': '"reserved1"',
             'RESERVED2': '"reserved2"',
             'RESERVED3': '"reserved3"',
-            'RESERVED4': '"reserved4"'
+            'RESERVED4': '"reserved4"',
+            'count(*) OVER()': '"totalCount"'
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from(builder.select().fields(['DOCUMENT_ID']).from('SS_HST_USER_SCRAP').where('USER_ID = ?', userId).where('SCRAP_GROUP_ID = ?', scrapGroupId), 'SUSER')
         .join('SS_MST_DOCUMENT', 'DOCUMENT', 'DOCUMENT.DOCUMENT_ID = SUSER.DOCUMENT_ID')
         .order('SUSER.DOCUMENT_ID', false)
-        .limit(10)
-        .offset((page - 1) * 10)
+        .limit(15)
+        .offset((page - 1) * 15)
         .toParam()
     )
 }
