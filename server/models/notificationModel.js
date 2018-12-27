@@ -7,7 +7,7 @@ exports.getNotification = async (notificationId) => {
         builder.select()
             .fields({
                 'NOTIFICATION_ID': '"notificationId"',
-                'CREATED_DATETIME': '"createdDatetime"',
+                'CREATED_DATETIME': '"createdDateTime"',
                 'TYPE': '"type"',
                 'USER_ID': '"userId"',
                 'TEMPLATE': '"template"',
@@ -28,7 +28,7 @@ exports.getNotifications = async (userId, datetimeBefore = null, type = null, ta
     let query = builder.select()
         .fields({
             'NOTIFICATION_ID': '"notificationId"',
-            'CREATED_DATETIME': '"createdDatetime"',
+            'CREATED_DATETIME': '"createdDateTime"',
             'TYPE': '"type"',
             'USER_ID': '"userId"',
             'TEMPLATE': '"template"',
@@ -37,10 +37,12 @@ exports.getNotifications = async (userId, datetimeBefore = null, type = null, ta
             'VARIABLE3': '"variable3"',
             'VARIABLE4': '"variable4"',
             'IS_READ': '"isRead"',
-            'HREF': '"href"'
+            'HREF': '"href"',
+            'count(*) OVER()': '"totalCount"'
         })
         .from('SS_HST_USER_NOTIFICATION')
-        .where('USER_ID = ?', userId);
+        .where('USER_ID = ?', userId)
+        .where('IS_READ = false');
     if (datetimeBefore) {
         query.where('CREATED_DATETIME < ?', datetimeBefore);
     }
@@ -53,7 +55,7 @@ exports.getNotifications = async (userId, datetimeBefore = null, type = null, ta
     return await pool.executeQuery('getNotifications' + (datetimeBefore ? 'date' : '') + (type ? 'type' : '') + (target ? 'target' : ''),
         query.order('CREATED_DATETIME', false)
             .order('IS_READ', true)
-            .limit(10)
+            .limit(5)
             .toParam()
     );
 }
