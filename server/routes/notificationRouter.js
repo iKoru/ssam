@@ -13,7 +13,7 @@ router.get('/', requiredSignin, async (req, res) => {
         type = undefined;
     }
     let dateTimeBefore = req.query.dateTimeBefore;
-    if (typeof dateTimeBefore !== 'string' || !moment(dateTimeBefore, 'YYYYMMDDHH24MISS').isValid()) {
+    if (typeof dateTimeBefore !== 'string' || !moment(dateTimeBefore, 'YYYYMMDDHHmmss').isValid()) {
         dateTimeBefore = undefined;
     }
 
@@ -148,7 +148,6 @@ router.post('/', adminOnly, async (req, res) => {
             return res.status(500).json({ message: `알림을 만들지 못했습니다.[${result.code || ''}]` })
         }
     }
-    console.log(notification);
     let result;
     if (notification.userId) {
         result = await notificationModel.createNotification(notification);
