@@ -46,25 +46,30 @@ exports.getChatsAdmin = async(user1Id, user2Id, chatType, page = 1) => {
 
 exports.getChats = async(user1Id, user2Id, chatType, page = 1) => {
     if (!user1Id) return [];
-    let query = builder.select()
+    let query = builder.selectWindow()
+        .distinct('CHAT.CHAT_ID')
         .fields({
-            'CHAT_ID': '"chatId"',
-            'CHAT_TYPE': '"chatType"',
-            'USER1_ID': '"user1Id"',
-            'USER2_ID': '"user2Id"',
-            'USER1_STATUS': '"user1Status"',
-            'USER2_STATUS': '"user2Status"'
+            'CHAT.CHAT_ID':'"chatId"',
+            'CHAT_TYPE':'"chatType"',
+            'USER1_ID':'"user1Id"',
+            'USER2_ID':'"user2Id"',
+            'USER1_STATUS':'"user1Status"',
+            'USER2_STATUS':'"user2Status"',
+            'TO_CHAR(FIRST_VALUE(SEND_TIMESTAMP) OVER w, \'YYYYMMDDHH24MISS\')':'"lastSendTimestamp"',
+            'FIRST_VALUE(CONTENTS) OVER w':'"lastContents"'
         })
-        .from('SS_MST_CHAT')
-        .where('(USER1_ID = ? AND USER1_STATUS <> \'DELETED\') OR (USER2_ID = ? AND USER2_STATUS <> \'DELETED\')', user1Id, user1Id);
+        .from('SS_MST_CHAT', 'CHAT')
+        .left_join('SS_HST_MESSAGE', 'MESSAGE', 'CHAT.CHAT_ID = MESSAGE.CHAT_ID')
+        query.where('(USER1_ID = ? AND USER1_STATUS <> \'DELETED\') OR (USER2_ID = ? AND USER2_STATUS <> \'DELETED\')', user1Id, user1Id);
     if (user2Id) {
         query.where('(USER1_ID = ? AND USER1_STATUS <> \'DELETED\') OR (USER2_ID = ? AND USER2_STATUS <> \'DELETED\')', user2Id, user2Id);
     }
     if (chatType) {
         query.where('CHAT_TYPE = ?', chatType);
     }
+        query.window('CHAT.CHAT_ID', 'SEND_TIMESTAMP', false, 'w')
     return await pool.executeQuery('findChat' + (user2Id ? '2' : '') + (chatType ? 'type' : ''),
-        query.limit(10).offset((page - 1) * 10).order('CHAT_ID').toParam()
+        builder.select().field('count(*) OVER()', '"totalCount"').field('*').from(query, 'MST').limit(10).offset((page - 1) * 10).order('"lastSendTimestamp"', false).toParam()
     );
 }
 
