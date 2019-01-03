@@ -49,7 +49,57 @@ if (Object.getOwnPropertySymbols(global).indexOf(pool_key) <= -1) {
     global[pool_key] = pool;
 }
 if (Object.getOwnPropertySymbols(global).indexOf(builder_key) <= -1) {
-    global[builder_key] = require('squel').useFlavour('postgres');
+    const builder = require('squel').useFlavour('postgres');
+
+    class WindowBlock extends builder.cls.Block {
+      constructor (options) {
+        super(options);
+        this._field = null;
+      }
+     
+      /** The method exposed by the query builder */
+      window (partition, order, isAscending, name) {
+        this._field = {
+          partition, order, isAscending, name
+        };
+      }
+     
+      /** The method which generates the output */
+      _toParamString (options = {}) {
+        let {  buildParameterized } = options;
+        
+        let str, ret = [];
+        if(this._field === null){
+          str = '';
+        }else{
+          str = `WINDOW ${this._field.name} AS (PARTITION BY ? ORDER BY ? ${this._field.isAscending? 'ASC':'DESC'})`;
+          ret = this._buildString(str, [this._field.partition, this._field.order], {
+            buildParameterized: options.buildParameterized
+          });
+        } ;
+     
+        return {
+          text: `${str}`,
+          values: ret.values,   /* values for paramterized queries */
+        };
+      }
+    }
+     
+    builder.selectWindow = function(options, block){
+        return new builder.select(options, block || [
+            new builder.cls.StringBlock(options, 'SELECT'),
+            new builder.cls.DistinctBlock(options),
+            new builder.cls.GetFieldBlock(options),
+            new builder.cls.FromTableBlock(options),
+            new builder.cls.JoinBlock(options),
+            new builder.cls.WhereBlock(options),
+            new WindowBlock(),
+            new builder.cls.OrderByBlock(options),
+            new builder.cls.LimitBlock(options),
+            new builder.cls.OffsetBlock(options)
+        ]);
+    }
+    global[builder_key] = builder;
 }
 Object.defineProperty(singleton, "instance", {
     get: function () {
