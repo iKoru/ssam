@@ -89,7 +89,7 @@ exports.getMessages = async (chatId, timestampBefore, timestampAfter) => {
         query.where('SEND_TIMESTAMP > ?', builder.rstr('TO_TIMESTAMP(?, \'YYYYMMDDHH24MISS\')', timestampAfter))
     }
     return await pool.executeQuery('getMessages' + timestampBefore ? 'Before' : '' + timestampAfter ? 'After' : '',
-        query.order('SEND_TIMESTAMP', false).limit(15).toParam()
+        query.order('SEND_TIMESTAMP', false).order('SEND_TIMESTAMP', false).limit(15).toParam()
     )
 }
 
