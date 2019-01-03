@@ -1,6 +1,6 @@
 const pool = require('./db').instance,
     builder = require('./db').builder;
-const util = require('../util');
+const cache = require('../cache'), util = require('../util');
 
 const getGroup = async (groupId, groupType) => {
     let query = builder.select()
@@ -185,6 +185,12 @@ exports.deleteExpiredUserGroup = async () => {
 }
 
 exports.getUserGroup = async (userId, groupType) => {
+    if (!groupType) {
+        let cachedData = await cache.getAsync('[getUserGroup]@' + util.getYYYYMMDD() + userId);
+        if (cachedData) {
+            return cachedData;
+        }
+    }
     let query = builder.select()
         .fields({
             'MGROUP.GROUP_ID': '"groupId"',
@@ -203,11 +209,15 @@ exports.getUserGroup = async (userId, groupType) => {
     } else {
         query.join('SS_MST_GROUP', 'MGROUP', 'MGROUP.GROUP_ID = USERGROUP.GROUP_ID')
     }
-    return await pool.executeQuery('getUserGroup' + (groupType ? groupType.length : ''),
+    let result = await pool.executeQuery('getUserGroup' + (groupType ? groupType.length : ''),
         query
             .order('MGROUP.ORDER_NUMBER')
             .toParam()
     );
+    if (!groupType && Array.isArray(result)) {
+        cache.setAsync('[getUserGroup]@' + util.getYYYYMMDD() + userId, result, 3600 * 12);
+    }
+    return result;
 }
 
 exports.getGroupByRegion = async (region) => {

@@ -19,6 +19,12 @@ exports.checkBoardId = async (boardId) => {
 }
 
 exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardName", sortTarget = "boardName", isAscending = true, isAdmin = false) => {
+    if (!searchQuery && !isAdmin && !boardType && !page && sortTarget === 'boardName' && isAscending) {
+        let cachedData = await cache.getAsync('[getBoardList]');
+        if (cachedData) {
+            return cachedData;
+        }
+    }
     let query = builder.select().fields({
         'BOARD.BOARD_ID': '"boardId"',
         'BOARD_NAME': '"boardName"',
@@ -74,10 +80,14 @@ exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardNa
     if (page) {
         query.limit(15).offset((page - 1) * 15)
     }
-    return await pool.executeQuery('getBoardss' + (isAdmin ? 'admin' : '') + (searchQuery ? searchTarget : '') + (boardType ? 'type' : ''),
+    let result = await pool.executeQuery('getBoards' + (isAdmin ? 'admin' : '') + (searchQuery ? searchTarget : '') + (boardType ? 'type' : '') + (page ? 'page' : '') + sortTarget,
         query.group('BOARD.BOARD_ID')
             .toParam()
     )
+    if (Array.isArray(result) && !searchQuery && !isAdmin && !boardType && !page && sortTarget === 'boardName' && isAscending) {
+        cache.setAsync('[getBoardList]', result, 3600);
+    }
+    return result;
 }
 
 exports.getUserBoard = async (userId, boardId, isAdmin) => {

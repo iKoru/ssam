@@ -41,7 +41,11 @@ exports.checkEmail = async (email) => {
 }
 
 exports.checkUserAuth = async (userId) => {
-    return await pool.executeQuery('checkUserAuth',
+    let cachedData = await cache.getAsync('[checkUserAuth]@' + userId);
+    if (cachedData) {
+        return cachedData;
+    }
+    cachedData = await pool.executeQuery('checkUserAuth',
         builder.select()
             .field('GGROUP.GROUP_ID', '"groupId"')
             .field("'AUTH_GRANTED'", '"type"')
@@ -57,6 +61,10 @@ exports.checkUserAuth = async (userId) => {
             )
             .toParam()
     )
+    if (Array.isArray(cachedData)) {
+        cache.setAsync('[checkUserAuth]@' + userId, cachedData, 3600 * 24);
+    }
+    return cachedData;
 }
 
 exports.createUser = async (user) => {
