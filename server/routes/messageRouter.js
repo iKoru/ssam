@@ -82,14 +82,14 @@ router.get('/', requiredSignin, async (req, res) => {
     if (!Number.isInteger(query.chatId) || query.chatId === 0) {
         return res.status(400).json({ target: 'chatId', message: '채팅을 찾을 수 없습니다.' });
     }
-    if (query.timestampBefore && !moment(query.timestampBefore, 'YYYYMMDDHH24MISS').isValid()) {
+    if (query.timestampBefore && !moment(query.timestampBefore, 'YYYYMMDDHHmmss').isValid()) {
         return res.status(400).json({ target: 'timestampBefore', message: '조회 조건이 올바르지 않습니다.' });
     }
-    if (query.timestampAfter && !moment(query.timestampAfter, 'YYYYMMDDHH24MISS').isValid()) {
+    if (query.timestampAfter && !moment(query.timestampAfter, 'YYYYMMDDHHmmss').isValid()) {
         return res.status(400).json({ target: 'timestampAfter', message: '조회 조건이 올바르지 않습니다.' });
     }
     if (!query.timestampAfter && !query.timestampBefore) {
-        query.timestampBefore = moment().format('YYYYMMDDHH24MISS');
+        query.timestampBefore = moment().format('YYYYMMDDHHmmss');
     }
     let result = await messageModel.getChat(query.chatId);
     if (!Array.isArray(result) || result.length < 1) {
@@ -117,9 +117,9 @@ router.post('/', requiredSignin, async (req, res) => {
         message.chatId = 1 * message.chatId;
     }
     if (!Number.isInteger(message.chatId) || message.chatId === 0) {
-        return res.status(400).json({ target: 'chatId', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'chatId', message: '메시지를 보낼 채팅을 선택해주세요.' });
     } else if (typeof message.contents !== 'string' || message.contents === '') {
-        return res.status(400).json({ target: 'contents', message: '작업 진행에 필요한 값이 올바르지 않거나 누락되었습니다.' });
+        return res.status(400).json({ target: 'contents', message: '메시지 내용을 입력해주세요.' });
     }
     let result = await messageModel.getChat(message.chatId);
     if (!Array.isArray(result) || result.length < 1) {
@@ -136,7 +136,20 @@ router.post('/', requiredSignin, async (req, res) => {
     } else if (result === 0) {
         return res.status(404).json({ message: '메시지를 보내지 못했습니다. 다시 시도해주세요.' });
     } else {
-        return res.status(200).json({ message: '메시지를 보냈습니다.' });
+        if(message.lastSendTimestamp){
+            result = await messageModel.getMessages(message.chatId, null, message.lastSendTimestamp, true);
+            if(Array.isArray(result)){
+                result.forEach(x => {
+                    x.isSender = (x.senderUserId === req.userObject.userId);
+                    delete x.senderUserId;
+                })
+                return res.status(200).json({message:'메시지를 보냈습니다.', messageList:result})
+            }else{
+                return res.status(200).json({ message: '메시지를 보냈습니다.', messageList:[]});
+            }
+        }else{
+            return res.status(200).json({ message: '메시지를 보냈습니다.' });
+        }
     }
 });
 
