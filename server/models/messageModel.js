@@ -73,7 +73,7 @@ exports.getChats = async (user1Id, user2Id, chatType, page = 1) => {
     );
 }
 
-exports.getMessages = async (chatId, timestampBefore, timestampAfter) => {
+exports.getMessages = async (chatId, timestampBefore, timestampAfter, getUnlimited) => {
     let query = builder.select()
         .fields({
             'SENDER_USER_ID': '"senderUserId"',
@@ -88,8 +88,12 @@ exports.getMessages = async (chatId, timestampBefore, timestampAfter) => {
     if (timestampAfter) {
         query.where('SEND_TIMESTAMP > ?', builder.rstr('TO_TIMESTAMP(?, \'YYYYMMDDHH24MISS\')', timestampAfter))
     }
-    return await pool.executeQuery('getMessages' + timestampBefore ? 'Before' : '' + timestampAfter ? 'After' : '',
-        query.order('SEND_TIMESTAMP', false).order('SEND_TIMESTAMP', false).limit(15).toParam()
+    query.order('SEND_TIMESTAMP', false).order('SEND_TIMESTAMP', false)
+    if(!getUnlimited){
+        query.limit(15)
+    }
+    return await pool.executeQuery('getMessages' + (timestampBefore ? 'Before' : '') + (timestampAfter ? 'After' : '') + (getUnlimited?'unlim':''),
+        query.toParam()
     )
 }
 
