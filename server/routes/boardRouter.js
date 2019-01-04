@@ -158,11 +158,11 @@ router.put('/', requiredAuth, async (req, res) => {
             let i = 0;
             while (i < reservedContents.auth.length) {
                 if (reservedContents.auth[i].command === 'INSERT') {
-                    boardModel.createBoardAuth(boardId, reservedContents.auth[i].groupId, reservedContents.auth[i].authType)
+                    await boardModel.createBoardAuth(boardId, reservedContents.auth[i].groupId, reservedContents.auth[i].authType)
                 } else if (reservedContents.auth[i].command === 'UPDATE') {
-                    boardModel.updateBoardAuth(boardId, reservedContents.auth[i].groupId, reservedContents.auth[i].authType)
+                    await boardModel.updateBoardAuth(boardId, reservedContents.auth[i].groupId, reservedContents.auth[i].authType)
                 } else if (reservedContents.auth[i].command === 'DELETE') {
-                    boardModel.deleteBoardAuth(boardId, reservedContents.auth[i].groupId)
+                    await boardModel.deleteBoardAuth(boardId, reservedContents.auth[i].groupId)
                 }
                 i++;
             }
