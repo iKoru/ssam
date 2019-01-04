@@ -3,6 +3,9 @@ const pool = require('./db').instance,
 const cache = require('../cache'), util = require('../util');
 
 const getGroup = async (groupId, groupType) => {
+    if(!groupId){
+        return [];
+    }
     let query = builder.select()
         .fields({
             'GROUP_ID': '"groupId"',
@@ -198,7 +201,8 @@ exports.getUserGroup = async (userId, groupType) => {
             'MGROUP.GROUP_DESCRIPTION': '"groupDescription"',
             'MGROUP.GROUP_ICON_PATH': '"groupIconPath"',
             'MGROUP.GROUP_TYPE': '"groupType"',
-            'MGROUP.PARENT_GROUP_ID': '"parentGroupId"'
+            'MGROUP.PARENT_GROUP_ID': '"parentGroupId"',
+            'MGROUP.IS_OPEN_TO_USERS':'"isOpenToUsers"'
         })
         .from(builder.select().fields(['USER_ID', 'GROUP_ID']).from('SS_MST_USER_GROUP').where('USER_ID = ?', userId).where('EXPIRE_DATE > ?', util.getYYYYMMDD()), 'USERGROUP');
     if (groupType) {

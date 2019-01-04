@@ -6,7 +6,7 @@ const constants = require('../constants'),
     logger = require('../logger'),
     config = require('../../config');
 let multerLib = require('multer');
-multer = multerLib({
+let multer = multerLib({
     dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, fileFilter: function (req, file, cb) {
         let ext = path.extname(file.originalname).substring(1).toLowerCase();
         cb(null, constants.imageExtensions.includes(ext));
@@ -406,6 +406,7 @@ router.get('/', requiredSignin, async (req, res) => {
         if (result.region) {
             result.region = result.region.groupName;
         }
+        result.groups = result2.filter(x=>x.isOpenToUsers).map(x=>x.groupId)
     }
     return res.status(200).json(result);
 })
