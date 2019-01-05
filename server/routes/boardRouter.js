@@ -353,8 +353,9 @@ router.get('/list', requiredSignin, async (req, res) => {
     if (['L', 'T', 'D', 'E'].includes(req.query.boardType)) {
         boardType = req.query.boardType;
     }
-    if (Number.isInteger(req.query.page) && req.query.page > 0) {
-        page = req.query.page
+    page = req.query.page * 1
+    if (!Number.isInteger(page) || page <= 0) {
+        page = undefined
     }
     let result = await boardModel.getBoards(searchQuery, boardType, page, searchTarget, sortTarget, isAscending, req.userObject.isAdmin);
     if (Array.isArray(result)) {
