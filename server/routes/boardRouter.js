@@ -149,6 +149,13 @@ router.put('/', requiredAuth, async (req, res) => {
             delete reservedContents.categories;
         }
     }
+    if (req.userObject.isAdmin && req.body.parentBoardId && req.body.parentBoardId !== board[0].parentBoardId) {
+        check = await boardModel.getBoard(req.body.parentBoardId);
+        if (!Array.isArray(check) || check.length === 0) {
+            return res.status(409).json({ target: 'parentBoardId', message: '존재하지 않는 상위 게시판ID입니다.' });
+        }
+        reservedContents.parentBoardId = req.body.parentBoardId;
+    }
 
     if (Object.keys(reservedContents).length === 0 && !(req.body.overwrite && Object.keys(board[0].reservedContents).length !== 0)) {
         return res.status(400).json({ message: '변경될 내용이 없습니다. 입력한 값이 올바른지 확인해주세요.' });
@@ -204,7 +211,8 @@ router.post('/', requiredAuth, async (req, res) => {
         useCategory: req.body.useCategory,
         allGroupAuth: req.body.allGroupAuth,
         boardType: req.body.boardType,
-        groups: req.body.allowedGroups
+        groups: req.body.allowedGroups,
+        parentBoardId: req.userObject.isAdmin ? req.body.parentBoardId : undefined
     };
 
     if (!constants.boardTypeDomain.hasOwnProperty(board.boardType) || (board.boardType !== 'T' && !req.userObject.isAdmin)) {
@@ -239,6 +247,12 @@ router.post('/', requiredAuth, async (req, res) => {
     let check = await boardModel.getBoard(board.boardId);
     if (Array.isArray(check) && check.length > 0) {
         return res.status(409).json({ target: 'boardId', message: `이미 존재하는 ${constants.boardTypeDomain[board.boardType]} ID입니다.` });
+    }
+    if (board.parentBoardId) {
+        check = await boardModel.getBoard(board.parentBoardId);
+        if (!Array.isArray(check) || check.length === 0) {
+            return res.status(409).json({ target: 'parentBoardId', message: '존재하지 않는 상위 게시판ID입니다.' });
+        }
     }
     board.ownerId = req.userObject.isAdmin ? (req.body.ownerId ? req.body.ownerId : req.userObject.userId) : req.userObject.userId;
     let isAdmin = false;
@@ -303,10 +317,18 @@ router.delete('/:boardId([a-zA-z]+)', adminOnly, async (req, res) => {
     if (typeof boardId !== 'string' || boardId === '') {
         return res.status(400).json({ target: 'boardId', message: '삭제할 게시판 ID값이 없습니다.' });
     }
-    let result = await boardModel.deleteBoard(boardId);
+    let result = await boardModel.getBoardByParentBoardId(boardId);
+    if (!Array.isArray(result)) {
+        logger.error('게시판 삭제 확인 중 에러 : ', result, req.userObject.userId, boardId)
+        return res.status(500).json({ message: `게시판을 삭제하는 중에 오류가 발생했습니다.[${result.code || ''}]` });
+    } else if (result.length > 0) {
+        return res.status(400).json({ target: 'boardId', message: `삭제하려는 게시판의 하위 게시판(${result[0].boardName} 등 ${result.length}개)이 존재합니다.` })
+    }
+
+    result = await boardModel.deleteBoard(boardId);
     if (typeof result === 'object') {
         logger.error('게시판 삭제 중 에러 : ', result, req.userObject.userId, boardId)
-        return res.status(500).json({ message: '게시판을 삭제하는 중에 오류가 발생했습니다.' });
+        return res.status(500).json({ message: `게시판을 삭제하는 중에 오류가 발생했습니다.[${result.code || ''}]` });
     } else if (result === 0) {
         return res.status(404).json({ target: 'boardId', message: '존재하지 않는 게시판입니다.' });
     } else {

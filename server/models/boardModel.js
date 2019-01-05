@@ -35,6 +35,7 @@ exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardNa
         'ALL_GROUP_AUTH': '"allGroupAuth"',
         'ALLOW_ANONYMOUS': '"allowAnonymous"',
         'USE_CATEGORY': '"useCategory"',
+        'PARENT_BOARD_ID': '"parentBoardId"',
         'RESERVED_DATE': '"reservedDate"',
         'RESERVED_CONTENTS': '"reservedContents"',
         'array_agg(DISTINCT CAT.CATEGORY_NAME)': '"categories"'
@@ -134,6 +135,7 @@ exports.getReservedBoard = async () => {
                 'ALL_GROUP_AUTH': '"allGroupAuth"',
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
                 'USE_CATEGORY': '"useCategory"',
+                'PARENT_BOARD_ID': '"parentBoardId"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
                 'array_agg(CAT.CATEGORY_NAME)': 'categories'
@@ -163,6 +165,7 @@ const getBoard = async (boardId) => {
                 'ALL_GROUP_AUTH': '"allGroupAuth"',
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
                 'USE_CATEGORY': '"useCategory"',
+                'PARENT_BOARD_ID': '"parentBoardId"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
                 'array_agg(CAT.CATEGORY_NAME)': 'categories'
@@ -338,7 +341,8 @@ exports.createBoard = async (board) => {
                 'BOARD_TYPE': board.boardType,
                 'USE_CATEGORY': !!board.useCategory,
                 'ALLOW_ANONYMOUS': !!board.allowAnonymous,
-                'ALL_GROUP_AUTH': board.allGroupAuth
+                'ALL_GROUP_AUTH': board.allGroupAuth,
+                'PARENT_BOARD_ID': board.parentBoardId
             })
             .toParam()
     );
@@ -396,6 +400,9 @@ exports.updateBoard = async (board) => {
     }
     if (board.reservedContents !== undefined) {
         query.set('RESERVED_CONTENTS', JSON.stringify(board.reservedContents))
+    }
+    if (board.parentBoardId !== undefined) {
+        query.set('PARENT_BOARD_ID', board.parentBoardId)
     }
     let result = await pool.executeQuery(null,
         query.where('BOARD_ID = ?', board.boardId)
@@ -535,6 +542,28 @@ exports.getBoardByOwnerId = async (ownerId) => {
             })
             .from('SS_MST_BOARD')
             .where('OWNER_ID = ?', ownerId)
+            .toParam()
+    )
+}
+
+exports.getBoardByParentBoardId = async (parentBoardId) => {
+    return await pool.executeQuery('getBoardByParentBoardId',
+        builder.select()
+            .fields({
+                'BOARD_ID': '"boardId"',
+                'BOARD_NAME': '"boardName"',
+                'OWNER_ID': '"ownerId"',
+                'BOARD_DESCRIPTION': '"boardDescription"',
+                'BOARD_TYPE': '"boardType"',
+                'STATUS': '"status"',
+                'ALL_GROUP_AUTH': '"allGroupAuth"',
+                'ALLOW_ANONYMOUS': '"allowAnonymous"',
+                'PARENT_BOARD_ID': '"parentBoardId"',
+                'RESERVED_DATE': '"reservedDate"',
+                'RESERVED_CONTENTS': '"reservedContents"'
+            })
+            .from('SS_MST_BOARD')
+            .where('PARENT_BOARD_ID = ?', parentBoardId)
             .toParam()
     )
 }

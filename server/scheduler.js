@@ -3,7 +3,7 @@ const logger = require('./logger');
 const groupModel = require('./models/groupModel'),
     boardModel = require('./models/boardModel')
 
-scheduler.scheduleJob('0 0 3 * * *', async() => { //trigger 03:00am everyday
+scheduler.scheduleJob('0 0 3 * * *', async () => { //trigger 03:00am everyday
     logger.log('start schedule job for deleting expired userGroup');
     let result = await groupModel.deleteExpiredUserGroup();
     if (typeof result === 'number') {
@@ -32,7 +32,7 @@ scheduler.scheduleJob('0 0 3 * * *', async() => { //trigger 03:00am everyday
             } else if (check === 0) {
                 logger.error(`변경 예약된 ${result[i].boardId} 게시판 내용 반영 안됨 : 내용 확인 필요`, result[i].reservedContents)
             } else {
-                logger.error(`변경 예약된 ${result[i].boardId}게시판 내용 반영 중 에러 [${check.code || ''}]`, check, result[i].reservedContents)
+                logger.error(`변경 예약된 ${result[i].boardId} 게시판 내용 반영 중 에러 [${check.code || ''}]`, check, result[i].reservedContents)
             }
             i++;
         }
