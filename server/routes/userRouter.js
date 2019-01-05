@@ -91,6 +91,12 @@ router.put('/', requiredSignin, async (req, res) => {
             if (user.status !== 'NORMAL' && user.status !== 'AUTHORIZED' && user.status !== 'BLOCKED' && user.status !== 'DELETED') {
                 return res.status(400).json({ target: 'status', message: '선택된 상태 값이 올바르지 않습니다.' });
             }
+            if (user.status === 'DELETED') {
+                result = await boardModel.getBoardByOwnerId(user.userId);
+                if (Array.isArray(result) && result.length > 0) {
+                    return res.status(400).json({ message: '내가 토픽지기인 토픽이 존재합니다. 토픽 양도 후 탈퇴해주세요.' })
+                }
+            }
             parameters.status = user.status;
         }
         if ((user.grade !== undefined && user.grade !== original.grade) || (user.major !== undefined && user.major !== original.major) || (user.email !== undefined && user.email !== original.email)) {
@@ -406,7 +412,7 @@ router.get('/', requiredSignin, async (req, res) => {
         if (result.region) {
             result.region = result.region.groupName;
         }
-        result.groups = result2.filter(x=>x.isOpenToUsers).map(x=>x.groupId)
+        result.groups = result2.filter(x => x.isOpenToUsers).map(x => x.groupId)
     }
     return res.status(200).json(result);
 })
@@ -557,16 +563,16 @@ router.post('/board', requiredAuth, async (req, res) => {
     if (typeof boardId !== 'string') {
         return res.status(400).json({ target: 'boardId', message: '구독할 토픽을 선택해주세요.' })
     }
-    result = await boardModel.getBoard(boardId);
-    if (!Array.isArray(result) || result.length === 0 || result[0].status === 'DELETED') {
+    const board = await boardModel.getBoard(boardId);
+    if (!Array.isArray(board) || board.length === 0 || board[0].status === 'DELETED') {
         return res.status(404).json({ target: 'boardId', message: '구독할 토픽을 찾을 수 없습니다.' })
-    } else if (result[0].boardType !== 'T') {
+    } else if (board[0].boardType !== 'T') {
         return res.status(400).json({ target: 'boardId', message: '구독할 수 없는 게시판입니다.' })
     }
     result = await boardModel.getUserBoard(userId, boardId, req.userObject.isAdmin);
     if (Array.isArray(result) && result.length > 0) {
         return res.status(409).json({ target: 'boardId', message: '이미 구독중인 토픽입니다.' })
-    } else if (result[0].allGroupAuth !== 'READWRITE') {//모든 그룹 구독 가능하지 않은 경우 체크
+    } else if (board[0].allGroupAuth !== 'READWRITE') {//모든 그룹 구독 가능하지 않은 경우 체크
         result = await boardModel.checkUserBoardSubscribable(userId, boardId);
         if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
             logger.warn('구독할 수 없는 토픽 구독 시도. ', userId, boardId, result)
@@ -582,7 +588,47 @@ router.post('/board', requiredAuth, async (req, res) => {
     }
 })
 
-router.put('/board', requiredSignin, async (req, res) => {
+router.delete('/board/:boardId([a-zA-z]+)', requiredSignin, async (req, res) => {
+    let boardId = req.params.boardId
+    if (typeof boardId !== 'string' || boardId === '') {
+        return res.status(400).json({ target: 'boardId', message: '구독을 해제할 토픽이 없습니다.' });
+    }
+    let result = await boardModel.getBoard(boardId);
+    if (Array.isArray(result)) {
+        if (result.length === 0) {
+            return res.status(404).json({ target: 'boardId', message: '존재하지 않는 게시판입니다.' });
+        } else if (result[0].boardType !== 'T') {
+            return res.status(400).json({ target: 'boardId', message: '토픽만 구독을 해제할 수 있습니다.' });
+        } else {
+            if (result[0].ownerId === req.userObject.userId) {
+                return res.status(400).json({ target: 'boardId', message: '내가 토픽지기인 토픽은 구독 해제할 수 없습니다. 토픽을 양도 혹은 삭제해주세요.' });
+            }
+            result = await boardModel.getUserBoard(req.userObject.userId, boardId);
+            if (Array.isArray(result)) {
+                if (result.length === 0) {
+                    return res.status(400).json({ target: 'boardId', message: '현재 구독중인 토픽이 아닙니다.' });
+                } else if ((result[0].readRestrictDate && util.moment(result[0].readRestrictDate, 'YYYYMMDD').isSameOrBefore(util.moment())) || (result[0].writeRestrictDate && util.moment(result[0].writeRestrictDate, 'YYYYMMDD').isSameOrBefore(util.moment()))) {
+                    return res.status(400).json({ target: 'boardId', message: '현재 읽기/쓰기가 제한된 토픽은 구독 해제할 수 없습니다.' });
+                }
+                result = await boardModel.deleteUserBoard(req.userObject.userId, boardId);
+                if (typeof result === 'object' || result === 0) {
+                    logger.error('토픽 구독 해제 중 에러(3) : ', result, req.userObject.userId, boardId)
+                    return res.status(500).json({ message: '토픽 구독을 해제하는 중에 오류가 발생했습니다.' });
+                } else {
+                    return res.status(200).json({ message: '토픽을 구독 해제하였습니다.' })
+                }
+            } else {
+                logger.error('토픽 구독 해제 중 에러(2) : ', result, req.userObject.userId, boardId)
+                return res.status(500).json({ message: '토픽 구독을 해제하는 중에 오류가 발생했습니다.' });
+            }
+        }
+    } else {
+        logger.error('토픽 구독 해제 중 에러 : ', result, req.userObject.userId, boardId)
+        return res.status(500).json({ message: '토픽 구독을 해제하는 중에 오류가 발생했습니다.' });
+    }
+})
+
+router.put('/board', requiredAuth, async (req, res) => {
     let boards = req.body.boards;
     if (!boards) {
         return res.status(400).json({ target: 'boards', message: '구독할 게시판을 선택해주세요.' });
