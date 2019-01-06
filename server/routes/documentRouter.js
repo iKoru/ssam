@@ -5,7 +5,7 @@ const boardModel = require('../models/boardModel'),
     documentModel = require('../models/documentModel'),
     util = require('../util'),
     path = require('path'),
-    logger = require('../logger');
+    logger = require('../logger')
 let multer = require('multer')
     multer = multer({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, storage:multer.diskStorage({filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) }}) }) //max 4MB)
     //based on /document
@@ -16,8 +16,8 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
         boardId: req.body.boardId,
         title: req.body.title,
         contents: req.body.contents,
-        isAnonymous: req.body.isAnonymous,
-        allowAnonymous: req.body.isAnonymous === true ? true : req.body.allowAnonymous,
+        isAnonymous: req.body.isAnonymous === 'true',
+        allowAnonymous: req.body.isAnonymous === 'true' ? true : req.body.allowAnonymous === 'true',
         restriction: req.body.restriction,
         survey: req.body.survey
     };
