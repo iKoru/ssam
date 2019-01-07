@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const requiredAuth = require('../middlewares/requiredAuth'),
+    requiredSignin = require('../middlewares/requiredSignin'),
     adminOnly = require('../middlewares/adminOnly');
 const boardModel = require('../models/boardModel'),
     documentModel = require('../models/documentModel'),
@@ -265,22 +266,47 @@ router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredAuth, async(req
     }
 
     let result;
-    result = await util.unlink(attach.attachPath);
-    if (result && result !== 'ENOENT') {
-        logger.error('첨부파일 삭제 중 에러 : ', result, documentId);
-        return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result || ''}]` })
-    } else {
-        let result = await documentModel.deleteDocumentAttach(documentId, attachId);
-        if (typeof result !== 'object') {
-            result = await documentModel.getDocumentAttach(documentId);
-            if (Array.isArray(result) && result.length === 0) { //no more attachments
-                await documentModel.updateDocument({ documentId: documentId, hasAttach: false });
-            }
-            return res.status(200).json({ message: '첨부파일을 삭제하였습니다.' })
-        } else {
-            logger.error('첨부파일 삭제 중 에러 : ', result, documentId);
-            return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code || ''}]` })
+    try{
+        result = await util.unlink(attach.attachPath);
+    }catch(error){
+        if (result && result !== 'ENOENT') {
+            logger.error('첨부파일 삭제 중 에러 : ', error, documentId);
+            return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result || ''}]` })
         }
+    }
+    result = await documentModel.deleteDocumentAttach(documentId, attachId);
+    if (typeof result !== 'object') {
+        result = await documentModel.getDocumentAttach(documentId);
+        if (Array.isArray(result) && result.length === 0) { //no more attachments
+            await documentModel.updateDocument({ documentId: documentId, hasAttach: false });
+        }
+        return res.status(200).json({ message: '첨부파일을 삭제하였습니다.' })
+    } else {
+        logger.error('첨부파일 삭제 중 에러 : ', result, documentId);
+        return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code || ''}]` })
+    }
+})
+
+router.get('/', requiredSignin, async (req, res) => {
+    //search document list
+    let {boardId, searchQuery, searchTarget, page} = req.query;
+    if (typeof page === 'string') {
+        page = 1 * page
+    }
+    if (page !== undefined && !Number.isInteger(page) || page === 0) {
+        return res.status(400).json({ target: 'page', message: '게시물을 찾을 수 없습니다.' });
+    } else if (page < 1 || page === undefined) {
+        page = 1;
+    }
+    if(!['title', 'contents', 'titleContents'].includes(searchTarget)){
+        return res.status(400).json({target:'searchTarget', message:'검색할 대상을 선택해주세요.'})
+    }
+    let result = await documentModel.getDocuments(boardId, null, searchQuery, searchTarget, null, null, page);
+    if(Array.isArray(result)){
+        return res.status(200).json(result);
+    }else{
+        logger.error('게시물 검색 중 에러 : ', result, boardId, searchQuery, searchTarget, page, req.userObject.userId);
+        return res.status(500).json({message:'게시물을 찾지 못했습니다. 잠시 후 다시 시도해주세요.'})
     }
 })
 module.exports = router;

@@ -22,8 +22,8 @@ router.get('/', requiredAuth, async (req, res) => {
         page = 1 * page
     }
     if (page !== undefined && !Number.isInteger(page) || page === 0) {
-        return res.status(400).json({ target: 'page', message: '게시물을 찾을 수 없습니다.' });
-    } else if (page < 1) {
+        return res.status(400).json({ target: 'page', message: '댓글 페이지가 올바르지 않습니다.' });
+    } else if (page < 1 || page === undefined) {
         page = 1;
     }
     let result = await documentModel.getDocument(documentId);
