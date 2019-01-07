@@ -60,6 +60,11 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
     } else {
         req.body.documentId = result.rows[0].documentId;
         if (document.survey) {
+            try{
+                document.survey = JSON.parse(document.survey);
+            }catch(error){
+                return res.status(200).json({ target: 'survey', message: '게시물을 등록하였으나, 설문조사는 형식이 올바르지 않아 등록하지 못했습니다.' });
+            }
             result = await documentModel.createDocumentSurvey(req.body.documentId, document.survey);
             if (typeof result === 'object' || result === 0) {
                 return res.status(200).json({ target: 'survey', message: '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' });
