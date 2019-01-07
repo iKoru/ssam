@@ -16,8 +16,8 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
         boardId: req.body.boardId,
         title: req.body.title,
         contents: req.body.contents,
-        isAnonymous: req.body.isAnonymous === 'true',
-        allowAnonymous: req.body.isAnonymous === 'true' ? true : req.body.allowAnonymous === 'true',
+        isAnonymous: (req.body.isAnonymous === 'true'),
+        allowAnonymous: req.body.isAnonymous === 'true' ? true : (req.body.allowAnonymous === 'true'),
         restriction: req.body.restriction,
         survey: req.body.survey
     };
@@ -35,6 +35,14 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
         return res.status(400).json({ target: 'allowAnonymous', message: '익명댓글 허용여부가 올바르지 않습니다.' })
     } else if (document.survey !== undefined && Array.isArray(document.survey)) {
         return res.status(400).json({ target: 'survey', message: '설문조사 내용이 올바르지 않습니다.' })
+    }
+    if(typeof document.restriction === 'string' && document.restriction !== ''){
+        try{
+            document.restriction = JSON.parse(document.restriction)
+        }catch(error){
+            logger.error('게시물 제한조건 파싱 중 에러 : '. document.restriction, error);
+            return res.status(400).json({target:'restriction', message:'첨부파일 다운로드 조건 형식이 올바르지 않습니다.'})
+        }
     }
 
     let result = await boardModel.getBoard(document.boardId);
@@ -59,22 +67,25 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
         return res.status(500).json({ message: `게시물을 저장하던 도중 오류가 발생했습니다.[${result.code || ''}]` })
     } else {
         req.body.documentId = result.rows[0].documentId;
+        let survey = false;
         if (document.survey) {
             try{
                 document.survey = JSON.parse(document.survey);
+                result = await documentModel.createDocumentSurvey(req.body.documentId, document.survey);
+                if (typeof result === 'object' || result === 0) {
+                    logger.error('설문조사 등록 중 에러 : ', document.survey, result);
+                    survey = true;
+                }
             }catch(error){
-                return res.status(200).json({ target: 'survey', message: '게시물을 등록하였으나, 설문조사는 형식이 올바르지 않아 등록하지 못했습니다.' });
-            }
-            result = await documentModel.createDocumentSurvey(req.body.documentId, document.survey);
-            if (typeof result === 'object' || result === 0) {
-                return res.status(200).json({ target: 'survey', message: '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' });
+                logger.error('설문조사 파싱 및 등록 중 에러 : ', document.survey, error);
+                survey = true;
             }
         }
         if (document.attach) {
             result = await util.uploadFile(req.files, 'attach', req.body.documentId, documentModel.createDocumentAttach);
-            return res.status(200).json({ target: 'attach', message: result.status === 200 ? '게시물을 등록하였습니다.' : '게시물을 등록하였으나, 첨부파일을 업로드하지 못했습니다.', documentId: req.body.documentId });
+            return res.status(200).json({ target: 'attach', message: result.status === 200 ? (survey?'게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.':'게시물을 등록하였습니다.') : (survey?'게시물을 등록했으나, 첨부파일과 설문조사를 등록하지 못했습니다.':'게시물을 등록했으나, 첨부파일을 업로드하지 못했습니다.'), documentId: req.body.documentId });
         } else {
-            return res.status(200).json({ message: '게시물을 등록하였습니다.', documentId: req.body.documentId })
+            return res.status(200).json({ message: (survey?'게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.':'게시물을 등록하였습니다.'), documentId: req.body.documentId })
         }
     }
 });
