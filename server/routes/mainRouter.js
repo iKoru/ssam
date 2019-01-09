@@ -133,6 +133,16 @@ router.get('/best', checkSignin, async (req, res) => {
     }
 })
 
+router.get('/recent', checkSignin, async (req, res) => {
+    let result = await boardModel.getRecentBoards();
+    if (Array.isArray(result)) {
+        return res.status(200).json(result);
+    } else {
+        logger.error('최근 게시물 설정 게시판 가져오기 에러 : ', result);
+        return res.status(500).json({message:`최근 게시물을 가져오지 못했습니다.[${result.code || ''}]`})
+    }
+})
+
 router.get('/userId', async (req, res) => {
     if (typeof req.query.userId === 'string') {
         if (req.query.userId.length < 50) {

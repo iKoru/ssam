@@ -149,14 +149,22 @@ router.put('/', requiredAuth, async (req, res) => {
             delete reservedContents.categories;
         }
     }
-    if (req.userObject.isAdmin && req.body.parentBoardId && req.body.parentBoardId !== board[0].parentBoardId) {
-        check = await boardModel.getBoard(req.body.parentBoardId);
-        if (!Array.isArray(check) || check.length === 0) {
-            return res.status(409).json({ target: 'parentBoardId', message: '존재하지 않는 상위 게시판ID입니다.' });
+    if (req.userObject.isAdmin && (req.body.parentBoardId !== undefined) && req.body.parentBoardId !== board[0].parentBoardId) {
+        if(!req.body.parentBoardId){
+            reservedContents.parentBoardId = null;
+        }else{
+            check = await boardModel.getBoard(req.body.parentBoardId);
+            if (!Array.isArray(check) || check.length === 0) {
+                return res.status(409).json({ target: 'parentBoardId', message: '존재하지 않는 상위 게시판ID입니다.' });
+            }else if(check[0].parentBoardId){
+                return res.status(400).json({target:'parentBoardId', message:'이미 상위 게시판이 존재하는 게시판을 중복하여 지정할 수 없습니다.'});
+            }
+            reservedContents.parentBoardId = req.body.parentBoardId;
         }
-        reservedContents.parentBoardId = req.body.parentBoardId;
     }
-
+    if(req.userObject.isAdmin && (req.body.recentOrder !== undefined) && req.body.recentOrder !== board[0].recentOrder){
+        reservedContents.recentOrder = req.body.recentOrder > 30000? 30000 : req.body.recentOrder;
+    }
     if (Object.keys(reservedContents).length === 0 && !(req.body.overwrite && Object.keys(board[0].reservedContents).length !== 0)) {
         return res.status(400).json({ message: '변경될 내용이 없습니다. 입력한 값이 올바른지 확인해주세요.' });
     } else {
@@ -212,7 +220,8 @@ router.post('/', requiredAuth, async (req, res) => {
         allGroupAuth: req.body.allGroupAuth,
         boardType: req.body.boardType,
         groups: req.body.allowedGroups,
-        parentBoardId: req.userObject.isAdmin ? req.body.parentBoardId : undefined
+        parentBoardId: req.userObject.isAdmin ? req.body.parentBoardId : undefined,
+        recentOrder: req.userObject.isAdmin? (req.body.recentOrder > 30000? 30000 : req.body.recentOrder) : undefined
     };
 
     if (!constants.boardTypeDomain.hasOwnProperty(board.boardType) || (board.boardType !== 'T' && !req.userObject.isAdmin)) {
@@ -229,6 +238,11 @@ router.post('/', requiredAuth, async (req, res) => {
         return res.status(400).json({ target: 'useCategory', message: '카테고리 사용여부가 올바르지 않습니다.' })
     } else if (!['NONE', 'READONLY', 'READWRITE'].includes(board.allGroupAuth)) {
         return res.status(400).json({ target: 'allGroupAuth', message: '전체 허용 여부 값이 올바르지 않습니다.' });
+    } else if (typeof board.recentOrder !== 'number') {
+        board.recentOrder = board.recentOrder * 1;
+        if(!Number.isInteger(board.recentOrder)){
+            return res.status(400).json({ target: 'recentOrder', message: '최근글 노출순서 값이 올바르지 않습니다.' });
+        }
     } else {
         if (!constants.boardIdRegex[0].test(board.boardId)) {
             return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID의 길이가 너무 길거나, [_, -] 이외의 특수문자가 있습니다.` })
@@ -252,6 +266,8 @@ router.post('/', requiredAuth, async (req, res) => {
         check = await boardModel.getBoard(board.parentBoardId);
         if (!Array.isArray(check) || check.length === 0) {
             return res.status(409).json({ target: 'parentBoardId', message: '존재하지 않는 상위 게시판ID입니다.' });
+        }else if(check[0].parentBoardId){
+            return res.status(400).json({target:'parentBoardId', message:'이미 상위 게시판이 존재하는 게시판을 중복하여 지정할 수 없습니다.'});
         }
     }
     board.ownerId = req.userObject.isAdmin ? (req.body.ownerId ? req.body.ownerId : req.userObject.userId) : req.userObject.userId;
