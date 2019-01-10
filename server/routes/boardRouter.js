@@ -238,7 +238,7 @@ router.post('/', requiredAuth, async (req, res) => {
         return res.status(400).json({ target: 'useCategory', message: '카테고리 사용여부가 올바르지 않습니다.' })
     } else if (!['NONE', 'READONLY', 'READWRITE'].includes(board.allGroupAuth)) {
         return res.status(400).json({ target: 'allGroupAuth', message: '전체 허용 여부 값이 올바르지 않습니다.' });
-    } else if (typeof board.recentOrder !== 'number') {
+    } else if (board.recentOrder !== null && typeof board.recentOrder !== 'number') {
         board.recentOrder = board.recentOrder * 1;
         if(!Number.isInteger(board.recentOrder)){
             return res.status(400).json({ target: 'recentOrder', message: '최근글 노출순서 값이 올바르지 않습니다.' });
