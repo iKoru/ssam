@@ -5,7 +5,7 @@ const util = require('util'),
     logger = require('./logger');
 const fs = require('fs'),
     path = require('path'),
-    {attachBasePath} = require('../config');
+    { attachBasePath } = require('../config');
 
 const rename = util.promisify(fs.rename)
     , mkdir = util.promisify(fs.mkdir)
@@ -52,12 +52,12 @@ exports.UUID = () => {
     return partialUUID() + partialUUID() + '-' + partialUUID() + '-' + partialUUID() + '-' + partialUUID() + '-' + partialUUID() + partialUUID() + partialUUID();
 }
 
-exports.getYYYYMMDD = function(target = moment()) {
+exports.getYYYYMMDD = function (target = moment()) {
     return target.format('YMMDD');
     //return `${target.getFullYear()}${(target.getMonth()<9?'0'+(1+target.getMonth()):(1+target.getMonth()))}${target.getDate()<10?'0'+target.getDate():target.getDate()}`;
 }
 
-exports.getYYYYMMDDHH24MISS = function(target = moment()) {
+exports.getYYYYMMDDHH24MISS = function (target = moment()) {
     return target.format('YMMDDHHmmss');
     //return `${target.getFullYear()}${(target.getMonth()<9?'0'+(1+target.getMonth()):(1+target.getMonth()))}${target.getDate()<10?'0'+target.getDate():target.getDate()}${(target.getHours()<9?'0'+target.getHours():target.getHours())}${(target.getMinutes()<9?'0'+target.getMinutes():target.getMinutes())}${(target.getSeconds()<9?'0'+target.getSeconds():target.getSeconds())}`;
 }
@@ -68,62 +68,62 @@ exports.safeStringLength = (string, length) => {
     return string ? (string.length > length ? string.substring(0, length) : string) : string;
 }
 
-exports.uploadFile = async(files, targetPath, targetDirectory, saveFunction) => {
+exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction) => {
     if (files && files.length > 0) {
         let i = 0,
             result, errors = [];
-        try{
+        try {
             while (i < files.length) {
                 console.log(files[i], process.env.PWD)
                 console.log(files[i].path, targetPath, targetDirectory, files[i].filename)
-                try{
+                try {
                     result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
-                }catch(error){
+                } catch (error) {
                     if (error.code === 'ENOENT') {
-                        try{
+                        try {
                             result = await mkdir(attachBasePath + targetPath + '/' + targetDirectory, 0o744);
-                        }catch(error2){
+                        } catch (error2) {
                             logger.error('파일 저장경로 생성 중 에러 : ', error2)
                             errors.push({ index: i, message: '파일 저장경로 생성에 실패하였습니다.' });
-                            try{
+                            try {
                                 await unlink(files[i].path);
-                            }catch(error3){
+                            } catch (error3) {
                                 logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
                             }
                             i++;
                             continue;
                         }
-                        try{
+                        try {
                             result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
-                        }catch(error2){
+                        } catch (error2) {
                             logger.error('파일 이동 중 에러 : ', error2)
                             errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
-                            try{
+                            try {
                                 await unlink(files[i].path);
-                            }catch(error3){
+                            } catch (error3) {
                                 logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
                             }
                             i++;
                             continue;
                         }
                     } else if (error.code === 'EACCES') {
-                        try{
+                        try {
                             result = await chmod(attachBasePath + targetPath + '/' + targetDirectory, 0o744);
-                        }catch(error2){
+                        } catch (error2) {
                             logger.error('파일 업로드를 위한 권한 변경 중 에러 : ', error2)
                             errors.push({ index: i, message: '파일 저장경로 접근에 실패하였습니다.' });
                             await unlink(files[i].path);
                             i++;
                             continue;
                         }
-                        try{
+                        try {
                             result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
-                        }catch(error2){
+                        } catch (error2) {
                             logger.error('파일 업로드 후 이동 중 에러 : ', error2)
                             errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
-                            try{
+                            try {
                                 await unlink(files[i].path);
-                            }catch(error3){
+                            } catch (error3) {
                                 logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
                             }
                             i++;
@@ -132,39 +132,39 @@ exports.uploadFile = async(files, targetPath, targetDirectory, saveFunction) => 
                     } else {
                         logger.error('파일 업로드 실패 : ', error)
                         errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
-                        try{
+                        try {
                             await unlink(files[i].path);
-                        }catch(error2){
+                        } catch (error2) {
                             logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error2)
                         }
                         i++;
                         continue;
                     }
                 }
-                console.log('r',result)
-                try{
+                console.log('r', result)
+                try {
                     result = await saveFunction(targetDirectory, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `${targetPath}/${targetDirectory}/${files[i].filename}`);
                     if (typeof result === 'object' || result === 0) {
                         logger.error('파일 업로드 이후 save function 실행 중 에러 : ', result)
                         errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
-                        try{
+                        try {
                             await unlink(attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
-                        }catch(error3){
+                        } catch (error3) {
                             logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
                         }
                     }
-                }catch(error){
+                } catch (error) {
                     logger.error('파일 업로드 이후 save function 실행 중 에러 : ', error)
                     errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
-                    try{
+                    try {
                         await unlink(attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
-                    }catch(error3){
+                    } catch (error3) {
                         logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
                     }
                 }
                 i++;
             }
-        }catch(error){
+        } catch (error) {
             logger.error('파일 업로드 중 에러 :', error);
             throw error;
         }
@@ -175,4 +175,11 @@ exports.uploadFile = async(files, targetPath, targetDirectory, saveFunction) => 
     } else {
         return { status: 200, message: '저장할 파일이 없습니다.' };
     }
+}
+
+exports.shallowArrayEquals = (a, b) => {
+    if (a.length !== b.length) {
+        return false
+    }
+    return a.every(x => b.includes(x));
 }

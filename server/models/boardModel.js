@@ -36,7 +36,8 @@ exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardNa
         'ALLOW_ANONYMOUS': '"allowAnonymous"',
         'USE_CATEGORY': '"useCategory"',
         'PARENT_BOARD_ID': '"parentBoardId"',
-        'RECENT_ORDER':'"recentOrder"',
+        'RECENT_ORDER': '"recentOrder"',
+        'STATUS_AUTH': '"statusAuth"',
         'RESERVED_DATE': '"reservedDate"',
         'RESERVED_CONTENTS': '"reservedContents"',
         'array_agg(DISTINCT CAT.CATEGORY_NAME)': '"categories"'
@@ -137,7 +138,8 @@ exports.getReservedBoard = async () => {
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
                 'USE_CATEGORY': '"useCategory"',
                 'PARENT_BOARD_ID': '"parentBoardId"',
-                'RECENT_ORDER':'"recentOrder"',
+                'RECENT_ORDER': '"recentOrder"',
+                'STATUS_AUTH': '"statusAuth"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
                 'array_agg(CAT.CATEGORY_NAME)': 'categories'
@@ -168,7 +170,8 @@ const getBoard = async (boardId) => {
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
                 'USE_CATEGORY': '"useCategory"',
                 'PARENT_BOARD_ID': '"parentBoardId"',
-                'RECENT_ORDER':'"recentOrder"',
+                'RECENT_ORDER': '"recentOrder"',
+                'STATUS_AUTH': '"statusAuth"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
                 'array_agg(CAT.CATEGORY_NAME)': 'categories'
@@ -346,7 +349,8 @@ exports.createBoard = async (board) => {
                 'ALLOW_ANONYMOUS': !!board.allowAnonymous,
                 'ALL_GROUP_AUTH': board.allGroupAuth,
                 'PARENT_BOARD_ID': board.parentBoardId,
-                'RECENT_ORDER':board.recentOrder
+                'RECENT_ORDER': board.recentOrder,
+                'STATUS_AUTH': board.statusAuth,
             })
             .toParam()
     );
@@ -408,8 +412,11 @@ exports.updateBoard = async (board) => {
     if (board.parentBoardId !== undefined) {
         query.set('PARENT_BOARD_ID', board.parentBoardId)
     }
-    if(board.recentOrder !== undefined){
+    if (board.recentOrder !== undefined) {
         query.set('RECENT_ORDER', board.recentOrder)
+    }
+    if (board.statusAuth !== undefined) {
+        query.set('STATUS_AUTH', board.statusAuth)
     }
     let result = await pool.executeQuery(null,
         query.where('BOARD_ID = ?', board.boardId)
@@ -610,80 +617,80 @@ exports.getBoardCategory = async (boardId) => {
     )
 }
 
-exports.getRecentBoards = async() => {
+exports.getRecentBoards = async () => {
     let cachedData = await cache.getAsync('[getRecentBoards]');
     if (cachedData) {
         return cachedData;
     }
-    
+
     cachedData = await pool.executeQuery('getRecentBoards',
         builder.select()
-        .fields({
-            'BOARD.BOARD_ID':'"boardId"',
-            'BOARD.BOARD_NAME':'"boardName"',
-            'array_agg(BOARD2.BOARD_ID)':'"targetBoards"'
-        })
-        .from(builder.select().fields(['BOARD_ID', 'BOARD_NAME', 'RECENT_ORDER']).from('SS_MST_BOARD').where('RECENT_ORDER IS NOT NULL'), 'BOARD')
-        .left_join('SS_MST_BOARD', 'BOARD2', 'BOARD2.PARENT_BOARD_ID = BOARD.BOARD_ID')
-        .group('BOARD.BOARD_ID')
-        .group('BOARD.BOARD_NAME')
-        .order('MAX(BOARD.RECENT_ORDER)')
-        .toParam()
+            .fields({
+                'BOARD.BOARD_ID': '"boardId"',
+                'BOARD.BOARD_NAME': '"boardName"',
+                'array_agg(BOARD2.BOARD_ID)': '"targetBoards"'
+            })
+            .from(builder.select().fields(['BOARD_ID', 'BOARD_NAME', 'RECENT_ORDER']).from('SS_MST_BOARD').where('RECENT_ORDER IS NOT NULL'), 'BOARD')
+            .left_join('SS_MST_BOARD', 'BOARD2', 'BOARD2.PARENT_BOARD_ID = BOARD.BOARD_ID')
+            .group('BOARD.BOARD_ID')
+            .group('BOARD.BOARD_NAME')
+            .order('MAX(BOARD.RECENT_ORDER)')
+            .toParam()
     );
-    if(Array.isArray(cachedData)){
+    if (Array.isArray(cachedData)) {
         let hot = await cache.getAsync('[getHotTopics]');
-        if(!hot){
+        if (!hot) {
             hot = await pool.executeQuery('getHotTopics',
                 builder.select()
-                .fields({
-                    'MBOARD.BOARD_ID':'"boardId"',
-                    'MBOARD.BOARD_NAME':'"boardName"',
-                })
-                .from(builder.select()
-                    .fields({'BOARD.BOARD_ID':'BOARD_ID', 'BOARD.BOARD_NAME':'BOARD_NAME', 'COUNT(*)':'DOCUMENT_COUNT'})
-                    .from('SS_MST_DOCUMENT', 'DOCUMENT')
-                    .join(builder.select().fields(['BOARD_ID', 'BOARD_NAME']).from('SS_MST_BOARD', 'CBOARD').where('BOARD_TYPE = \'T\'').where('ALL_GROUP_AUTH <> \'NONE\''), 'BOARD', 'BOARD.BOARD_ID = DOCUMENT.BOARD_ID')
-                    .where('WRITE_DATETIME >= ?', util.moment().add(-7, 'days').format('YYYYMMDDHHmmss'))
-                    .group('BOARD.BOARD_ID')
-                    .group('BOARD.BOARD_NAME'), 'MBOARD')
-                .order('DOCUMENT_COUNT', false)
-                .limit(10)
-                .toParam()
+                    .fields({
+                        'MBOARD.BOARD_ID': '"boardId"',
+                        'MBOARD.BOARD_NAME': '"boardName"',
+                    })
+                    .from(builder.select()
+                        .fields({ 'BOARD.BOARD_ID': 'BOARD_ID', 'BOARD.BOARD_NAME': 'BOARD_NAME', 'COUNT(*)': 'DOCUMENT_COUNT' })
+                        .from('SS_MST_DOCUMENT', 'DOCUMENT')
+                        .join(builder.select().fields(['BOARD_ID', 'BOARD_NAME']).from('SS_MST_BOARD', 'CBOARD').where('BOARD_TYPE = \'T\'').where('ALL_GROUP_AUTH <> \'NONE\''), 'BOARD', 'BOARD.BOARD_ID = DOCUMENT.BOARD_ID')
+                        .where('WRITE_DATETIME >= ?', util.moment().add(-7, 'days').format('YMMDDHHmmss'))
+                        .group('BOARD.BOARD_ID')
+                        .group('BOARD.BOARD_NAME'), 'MBOARD')
+                    .order('DOCUMENT_COUNT', false)
+                    .limit(10)
+                    .toParam()
             )
-            if(Array.isArray(hot)){
+            if (Array.isArray(hot)) {
                 hot = hot[Math.floor(Math.random() * hot.length)]
-                cache.setAsync('[getHotTopics]', hot, 60*60*24);
+                cache.setAsync('[getHotTopics]', hot, 60 * 60 * 24);
             }
         }
-        if(hot){
-            if(cachedData.length > 0){
-                cachedData.splice(1, 0, {...hot, hot:true, targetBoards:[hot.boardId]})
-            }else{
-                cachedData.push({...hot, hot:true, targetBoards:[hot.boardId]})
+        if (hot) {
+            if (cachedData.length > 0) {
+                cachedData.splice(1, 0, { ...hot, hot: true, targetBoards: [hot.boardId] })
+            } else {
+                cachedData.push({ ...hot, hot: true, targetBoards: [hot.boardId] })
             }
         }
-        let documents, i=0;
-        while(i<cachedData.length){
+        let documents, i = 0;
+        while (i < cachedData.length) {
             documents = await pool.executeQuery('getRecentDocuments' + (cachedData[i].targetBoards.length),
                 builder.select()
-                .fields({
-                    'DOCUMENT_ID':'"documentId"',
-                    'TITLE':'"title"',
-                    'BOARD_ID':'"boardId"',
-                    'VOTE_UP_COUNT':'"voteUpCount"',
-                    'COMMENT_COUNT':'"commentCount"',
-                    'WRITE_DATETIME':'"writeDateTime"'
-                })
-                .from('SS_MST_DOCUMENT')
-                .where('BOARD_ID IN ?', cachedData[i].targetBoards[0] === null?[cachedData[i].boardId]:cachedData[i].targetBoards)
-                .order('WRITE_DATETIME', false)
-                .limit(10)
-                .toParam()
+                    .fields({
+                        'DOCUMENT_ID': '"documentId"',
+                        'TITLE': '"title"',
+                        'BOARD_ID': '"boardId"',
+                        'VOTE_UP_COUNT': '"voteUpCount"',
+                        'COMMENT_COUNT': '"commentCount"',
+                        'WRITE_DATETIME': '"writeDateTime"'
+                    })
+                    .from('SS_MST_DOCUMENT')
+                    .where('BOARD_ID IN ?', cachedData[i].targetBoards[0] === null ? [cachedData[i].boardId] : cachedData[i].targetBoards)
+                    .order('WRITE_DATETIME', false)
+                    .limit(10)
+                    .toParam()
             )
             cachedData[i].documents = documents;
             i++;
         }
-        cache.setAsync('[getRecentBoards]', cachedData, 60*30);
+        cache.setAsync('[getRecentBoards]', cachedData, 60 * 30);
     }
     return cachedData;
 }

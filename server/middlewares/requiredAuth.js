@@ -34,9 +34,10 @@ const auth = (req, res, next) => {
   }
   p.then(async (result) => {
     if (result.userId) {
-      let user = await userModel.checkUserAuth(result.userId);
-      if (Array.isArray(user)) {
-        if (!user.some(x.groupType === 'D') && user.some(x => x.groupType === 'A')) {
+      let auth = await userModel.checkUserAuth(result.userId),
+        user = await userModel.getUser(result.userId);
+      if (Array.isArray(auth)) {
+        if ((!auth.some(x => x.groupType === 'D') && auth.some(x => x.groupType === 'A')) || (Array.isArray(user) && user.length > 0 && user[0].isAdmin)) {
           req.userObject = user[0];
           next();
         } else {

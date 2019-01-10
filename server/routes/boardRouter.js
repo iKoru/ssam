@@ -5,8 +5,8 @@ const requiredAuth = require('../middlewares/requiredAuth'),
 const boardModel = require('../models/boardModel'),
     userModel = require('../models/userModel'),
     groupModel = require('../models/groupModel')
-const { safeStringLength, moment } = require('../util'),
-    logger = require('../logger'), { reserved } = require('../constants'),
+const { safeStringLength, moment, shallowArrayEquals } = require('../util'),
+    logger = require('../logger'),
     constants = require('../constants');
 
 //based on /board
@@ -49,7 +49,7 @@ router.put('/', requiredAuth, async (req, res) => {
     } else if (board[0].ownerId !== req.userObject.userId && !req.userObject.isAdmin) {
         return res.status(403).json({ target: 'boardId', message: '라운지/토픽 정보를 변경할 수 있는 권한이 없습니다.' });
     } else if (board[0].reservedContents && !req.body.overwrite && !immediate) {
-        return res.status(403).json({ message: `이미 ${moment(board[0].reservedDate, 'YYYYMMDD').format('YYYY년 M월 D일')}에 예약된 변경내용이 존재합니다.` });
+        return res.status(403).json({ message: `이미 ${moment(board[0].reservedDate, 'YYYYMMDD').format('Y년 M월 D일')}에 예약된 변경내용이 존재합니다.` });
     }
 
     if (!board[0].reservedContents) {
@@ -121,49 +121,69 @@ router.put('/', requiredAuth, async (req, res) => {
         }
     }
 
-    if (req.userObject.isAdmin && req.body.categories) {
-        let categories = req.body.categories;
-        if (!Array.isArray(categories)) {
-            categories = [categories];
-        }
-        reservedContents.categories = [];
-        let currentBoardCategory = await boardModel.getBoardCategory(boardId);
-        let i = 0;
-        if (Array.isArray(currentBoardCategory)) {
-            while (i < categories.length) {
-                categories[i] = safeStringLength(categories[i], 30);
-                if (!currentBoardCategory.some(x => x.categoryName === categories[i])) { //new category
-                    reservedContents.categories.push({ category: categories[i], command: 'INSERT' });
+    if (req.userObject.isAdmin) {
+        if (req.body.categories) {
+            let categories = req.body.categories;
+            if (!Array.isArray(categories)) {
+                categories = [categories];
+            }
+            reservedContents.categories = [];
+            let currentBoardCategory = await boardModel.getBoardCategory(boardId);
+            let i = 0;
+            if (Array.isArray(currentBoardCategory)) {
+                while (i < categories.length) {
+                    categories[i] = safeStringLength(categories[i], 30);
+                    if (!currentBoardCategory.some(x => x.categoryName === categories[i])) { //new category
+                        reservedContents.categories.push({ category: categories[i], command: 'INSERT' });
+                    }
+                    i++;
                 }
-                i++;
-            }
-            i = 0;
-            while (i < currentBoardCategory.length) {
-                if (!(categories.some(x => x === currentBoardCategory[i].categoryName))) { //deleted category
-                    reservedContents.categories.push({ category: currentBoardCategory[i].categoryName, command: 'DELETE' })
+                i = 0;
+                while (i < currentBoardCategory.length) {
+                    if (!(categories.some(x => x === currentBoardCategory[i].categoryName))) { //deleted category
+                        reservedContents.categories.push({ category: currentBoardCategory[i].categoryName, command: 'DELETE' })
+                    }
+                    i++;
                 }
-                i++;
+            }
+            if (reservedContents.categories.length === 0) {
+                delete reservedContents.categories;
             }
         }
-        if (reservedContents.categories.length === 0) {
-            delete reservedContents.categories;
-        }
-    }
-    if (req.userObject.isAdmin && (req.body.parentBoardId !== undefined) && req.body.parentBoardId !== board[0].parentBoardId) {
-        if(!req.body.parentBoardId){
-            reservedContents.parentBoardId = null;
-        }else{
-            check = await boardModel.getBoard(req.body.parentBoardId);
-            if (!Array.isArray(check) || check.length === 0) {
-                return res.status(409).json({ target: 'parentBoardId', message: '존재하지 않는 상위 게시판ID입니다.' });
-            }else if(check[0].parentBoardId){
-                return res.status(400).json({target:'parentBoardId', message:'이미 상위 게시판이 존재하는 게시판을 중복하여 지정할 수 없습니다.'});
+        if ((req.body.parentBoardId !== undefined) && req.body.parentBoardId !== board[0].parentBoardId) {
+            if (!req.body.parentBoardId) {
+                reservedContents.parentBoardId = null;
+            } else {
+                check = await boardModel.getBoard(req.body.parentBoardId);
+                if (!Array.isArray(check) || check.length === 0) {
+                    return res.status(409).json({ target: 'parentBoardId', message: '존재하지 않는 상위 게시판ID입니다.' });
+                } else if (check[0].parentBoardId) {
+                    return res.status(400).json({ target: 'parentBoardId', message: '이미 상위 게시판이 존재하는 게시판을 중복하여 지정할 수 없습니다.' });
+                }
+                reservedContents.parentBoardId = req.body.parentBoardId;
             }
-            reservedContents.parentBoardId = req.body.parentBoardId;
         }
-    }
-    if(req.userObject.isAdmin && (req.body.recentOrder !== undefined) && req.body.recentOrder !== board[0].recentOrder){
-        reservedContents.recentOrder = req.body.recentOrder > 30000? 30000 : req.body.recentOrder;
+        if ((req.body.recentOrder !== undefined) && req.body.recentOrder !== board[0].recentOrder) {
+            reservedContents.recentOrder = req.body.recentOrder > 30000 ? 30000 : req.body.recentOrder;
+        }
+        if (req.body.statusAuth) {
+            let statusAuth = board[0].statusAuth, changed = false;
+            if (Array.isArray(req.body.statusAuth.read) && !shallowArrayEquals(req.body.statusAuth.read, statusAuth.read)) {
+                statusAuth.read = req.body.statusAuth.read
+                changed = true;
+            }
+            if (Array.isArray(req.body.statusAuth.write) && !shallowArrayEquals(req.body.statusAuth.write, statusAuth.write)) {
+                statusAuth.write = req.body.statusAuth.write
+                changed = true;
+            }
+            if (Array.isArray(req.body.statusAuth.comment) && !shallowArrayEquals(req.body.statusAuth.comment, statusAuth.comment)) {
+                statusAuth.comment = req.body.statusAuth.comment
+                changed = true;
+            }
+            if (changed) {
+                reservedContents.statusAuth = JSON.stringify(statusAuth);
+            }
+        }
     }
     if (Object.keys(reservedContents).length === 0 && !(req.body.overwrite && Object.keys(board[0].reservedContents).length !== 0)) {
         return res.status(400).json({ message: '변경될 내용이 없습니다. 입력한 값이 올바른지 확인해주세요.' });
@@ -197,14 +217,14 @@ router.put('/', requiredAuth, async (req, res) => {
             result = 1;//all done
         } else {//reservedDate : admin이 아니고 예약내용이 존재하지 않으면 null, 예약내용이 존재하면 1달뒤, admin이고 예약내용이 존재하지 않으면 null, 예약내용이 존재하고 예약날짜가 있으면 그 날짜로, 없으면 1달뒤
             const hasContents = Object.keys(reservedContents).length > 0;
-            result = await boardModel.updateBoard({ boardId: boardId, reservedDate: (req.userObject.isAdmin ? (hasContents ? (req.body.reservedDate ? req.body.reservedDate.replace(/\-/gi, '') : moment().add(1, 'months').format('YYYYMMDD')) : null) : (hasContents ? moment().add(1, 'months').format('YYYYMMDD') : null)), reservedContents: (Object.keys(reservedContents).length === 0 ? null : reservedContents) });
+            result = await boardModel.updateBoard({ boardId: boardId, reservedDate: (req.userObject.isAdmin ? (hasContents ? (req.body.reservedDate ? req.body.reservedDate.replace(/\-/gi, '') : moment().add(1, 'months').format('YMMDD')) : null) : (hasContents ? moment().add(1, 'months').format('YMMDD') : null)), reservedContents: (Object.keys(reservedContents).length === 0 ? null : reservedContents) });
         }
 
         if (typeof result === 'object' || result === 0) {
             logger.error('게시판 설정 변경 처리 중 에러 : ', result, req.userObject.userId, reservedContents)
             return res.status(500).json({ message: `변경될 내용을 저장하는 데 실패하였습니다.[${result.code || ''}] 다시 시도해주세요.` });
         } else {
-            return res.status(200).json({ message: `정상적으로 변경${immediate ? '' : '예약'}되었습니다.${immediate ? '' : ' 변경 내용은 ' + (req.userObject.isAdmin && req.body.reservedDate ? req.body.reservedDate : moment().add(1, 'months').format('YYYYMMDD')) + '에 반영됩니다.'}` })
+            return res.status(200).json({ message: `정상적으로 변경${immediate ? '' : '예약'}되었습니다.${immediate ? '' : ' 변경 내용은 ' + (req.userObject.isAdmin && req.body.reservedDate ? req.body.reservedDate : moment().add(1, 'months').format('YMMDD')) + '에 반영됩니다.'}` })
         }
     }
 
@@ -221,7 +241,7 @@ router.post('/', requiredAuth, async (req, res) => {
         boardType: req.body.boardType,
         groups: req.body.allowedGroups,
         parentBoardId: req.userObject.isAdmin ? req.body.parentBoardId : undefined,
-        recentOrder: req.userObject.isAdmin? (req.body.recentOrder > 30000? 30000 : req.body.recentOrder) : undefined
+        recentOrder: req.userObject.isAdmin ? (req.body.recentOrder > 30000 ? 30000 : req.body.recentOrder) : undefined
     };
 
     if (!constants.boardTypeDomain.hasOwnProperty(board.boardType) || (board.boardType !== 'T' && !req.userObject.isAdmin)) {
@@ -238,9 +258,9 @@ router.post('/', requiredAuth, async (req, res) => {
         return res.status(400).json({ target: 'useCategory', message: '카테고리 사용여부가 올바르지 않습니다.' })
     } else if (!['NONE', 'READONLY', 'READWRITE'].includes(board.allGroupAuth)) {
         return res.status(400).json({ target: 'allGroupAuth', message: '전체 허용 여부 값이 올바르지 않습니다.' });
-    } else if (board.recentOrder !== null && typeof board.recentOrder !== 'number') {
+    } else if (board.recentOrder !== undefined && board.recentOrder !== null && typeof board.recentOrder !== 'number') {
         board.recentOrder = board.recentOrder * 1;
-        if(!Number.isInteger(board.recentOrder)){
+        if (!Number.isInteger(board.recentOrder)) {
             return res.status(400).json({ target: 'recentOrder', message: '최근글 노출순서 값이 올바르지 않습니다.' });
         }
     } else {
@@ -250,9 +270,9 @@ router.post('/', requiredAuth, async (req, res) => {
             return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID에 연속된 [_, -]가 있습니다.` })
         }
         let i = 0;
-        while (i < reserved.length) {
-            if (board.boardId.indexOf(reserved[i]) >= 0) {
-                return res.status(403).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID가 허용되지 않는 문자(${reserved[i]})를 포함합니다.` })
+        while (i < constants.reserved.length) {
+            if (board.boardId.indexOf(constants.reserved[i]) >= 0) {
+                return res.status(403).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID가 허용되지 않는 문자(${constants.reserved[i]})를 포함합니다.` })
             }
             i++;
         }
@@ -266,13 +286,14 @@ router.post('/', requiredAuth, async (req, res) => {
         check = await boardModel.getBoard(board.parentBoardId);
         if (!Array.isArray(check) || check.length === 0) {
             return res.status(409).json({ target: 'parentBoardId', message: '존재하지 않는 상위 게시판ID입니다.' });
-        }else if(check[0].parentBoardId){
-            return res.status(400).json({target:'parentBoardId', message:'이미 상위 게시판이 존재하는 게시판을 중복하여 지정할 수 없습니다.'});
+        } else if (check[0].parentBoardId) {
+            return res.status(400).json({ target: 'parentBoardId', message: '이미 상위 게시판이 존재하는 게시판을 중복하여 지정할 수 없습니다.' });
         }
     }
     board.ownerId = req.userObject.isAdmin ? (req.body.ownerId ? req.body.ownerId : req.userObject.userId) : req.userObject.userId;
+    console.log('owner : ', board.ownerId)
     let isAdmin = false;
-    if (board.ownerId !== req.userObject.userId) {
+    if (board.ownerId !== req.userObject.userId && req.userObject.isAdmin) {
         check = await userModel.getUser(board.ownerId);
         if (!Array.isArray(check) || check.length === 0) {
             return res.status(404).json({ target: 'ownerId', message: '입력한 소유자 ID에 해당하는 회원ID가 존재하지 않습니다.' })
@@ -306,6 +327,20 @@ router.post('/', requiredAuth, async (req, res) => {
             return res.status(500).json({ message: `${constants.boardTypeDomain[board.boardType]} 생성에 실패하였습니다.[${userGroups.code || ''}]` })
         }
     }
+    if (req.userObject.isAdmin && typeof req.body.statusAuth === 'object') {
+        board.statusAuth = JSON.stringify({
+            read: Array.isArray(req.body.statusAuth.read) ? req.body.statusAuth.read : ['A'],
+            write: Array.isArray(req.body.statusAuth.read) ? req.body.statusAuth.write : ['A'],
+            comment: Array.isArray(req.body.statusAuth.read) ? req.body.statusAuth.comment : ['A']
+        })
+    } else {
+        board.statusAuth = JSON.stringify({
+            read: ['A'],
+            write: ['A'],
+            comment: ['A']
+        })
+    }
+    console.log(board);
     check = await boardModel.createBoard(board);
     if (check > 0) {
         if (groups.length > 0) {
@@ -366,7 +401,7 @@ router.get('/list', requiredSignin, async (req, res) => {
     if (typeof req.query.searchQuery === 'string' && req.query.searchQuery !== '') {
         searchQuery = req.query.searchQuery;
     }
-    if (['L', 'T', 'D', 'E'].includes(req.query.boardType)) {
+    if (constants.boardTypeDomain[req.query.boardType]) {
         boardType = req.query.boardType;
     }
     page = req.query.page * 1
