@@ -734,7 +734,7 @@ router.put('/group', adminOnly, async (req, res) => {
             if ((currentGroup.filter(x => x.groupId === groups[i])).length < 1) { //new group
                 result = await groupModel.getGroup(groups[i]);
                 if (result && result[0]) {
-                    if (result[0].groupType !== 'N') {
+                    if (['R', 'M', 'G'].includes(result[0].groupType)) {
                         let currentType = currentGroup.filter(x => x.groupType === result[0].groupType);
                         let j = 0;
                         while (j < currentType.length) {

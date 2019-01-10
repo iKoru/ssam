@@ -24,27 +24,27 @@ const logger = createLogger({
         myFormat
     ),
     transports: [
-        new(require('winston-daily-rotate-file'))({
+        new (require('winston-daily-rotate-file'))({
             filename: `${logDirectory}/ssam.log`,
             timestamp: timestamp,
         })
     ]
 });
 
-const formatArgs = function(args) {
-    return [util.format.apply(util.format, Array.prototype.slice.call(Array.from(args).map(x=>x instanceof Error?x.toString():(typeof x === 'object'?JSON.stringify(x):x))))];
+const formatArgs = function (args) {
+    return [util.format.apply(util.format, Array.prototype.slice.call(Array.from(args).map(x => x instanceof Error ? x.toString() + x.stack : (typeof x === 'object' ? JSON.stringify(x) : x))))];
 }
 module.exports = {
-    log: function() {
+    log: function () {
         logger.info(formatArgs(arguments));
     },
-    info: function() {
+    info: function () {
         logger.info(formatArgs(arguments));
     },
-    warn: function() {
+    warn: function () {
         logger.warn(formatArgs(arguments));
     },
-    error: function() {
+    error: function () {
         logger.error(formatArgs(arguments));
     }
 };

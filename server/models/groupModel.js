@@ -31,7 +31,7 @@ const getGroup = async (groupId, groupType) => {
 
 exports.getGroup = getGroup;
 
-exports.getGroups = async (isAdmin, groupType = ['N', 'M', 'G', 'R'], page) => {
+exports.getGroups = async (isAdmin, groupType = ['N', 'M', 'G', 'R', 'A', 'E', 'D'], page) => {
     let query = builder.select()
     if (isAdmin) {
         query.fields({
@@ -150,8 +150,7 @@ exports.createUserGroup = async (userId, groupId) => {
     group = group[0];
     let expireDate;
     if (group.expirePeriod > 0) {
-        expireDate = new Date();
-        expireDate.setDate(expireDate.getDate() + group.expirePeriod);
+        expireDate = util.moment().add(group.expirePeriod, 'days').format('YMMDD');
     } else {
         expireDate = '99991231';
     }
