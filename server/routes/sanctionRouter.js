@@ -147,17 +147,17 @@ router.post('/', adminOnly, async (req, res) => {
             return res.status(500).json({ message: `기존 제재 내역을 불러오지 못했습니다.[${result.code || ''}]` });
         } else if (result.length > 0) {
             if (sanction.writeRestrictDays && result[0].writeRestrictDate && moment(result[0].writeRestrictDate, 'YYYYMMDD').isAfter(moment())) {//아직 끝나지 않은 제한 내역이 존재하면 연장처리
-                writeRestrictDate = moment(result[0].writeRestrictDate, 'YYYYMMDD').add(sanction.writeRestrictDays, 'days').format('YYYYMMDD')
+                writeRestrictDate = moment(result[0].writeRestrictDate, 'YYYYMMDD').add(sanction.writeRestrictDays, 'days').format('YMMDD')
             }
             if (sanction.readRestrictDays && result[0].readRestrictDate && moment(result[0].readRestrictDate, 'YYYYMMDD').isAfter(moment())) {//아직 끝나지 않은 제한 내역이 존재하면 연장처리
-                readRestrictDate = moment(result[0].readRestrictDate, 'YYYYMMDD').add(sanction.readRestrictDays, 'days').format('YYYYMMDD')
+                readRestrictDate = moment(result[0].readRestrictDate, 'YYYYMMDD').add(sanction.readRestrictDays, 'days').format('YMMDD')
             }
         }
         if (sanction.writeRestrictDays && !writeRestrictDate) {
-            writeRestrictDate = moment().add(sanction.writeRestrictDays, 'days').format('YYYYMMDD')
+            writeRestrictDate = moment().add(sanction.writeRestrictDays, 'days').format('YMMDD')
         }
         if (sanction.readRestrictDays && !readRestrictDate) {
-            readRestrictDate = moment().add(sanction.readRestrictDays, 'days').format('YYYYMMDD')
+            readRestrictDate = moment().add(sanction.readRestrictDays, 'days').format('YMMDD')
         }
 
         if (result.length > 0) {//update
@@ -171,8 +171,8 @@ router.post('/', adminOnly, async (req, res) => {
                 const original = result.find(x => !x.isRead);
                 let parameters = {
                     notificationId: original.notificationId,
-                    variable1: sanction.writeRestrictDays ? moment(writeRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : original.value1,
-                    variable2: sanction.readRestrictDays ? moment(readRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : original.value2
+                    variable1: sanction.writeRestrictDays ? moment(writeRestrictDate, 'YYYYMMDD').format('Y-MM-DD') : original.value1,
+                    variable2: sanction.readRestrictDays ? moment(readRestrictDate, 'YYYYMMDD').format('Y-MM-DD') : original.value2
                 }
                 if ((sanction.writeRestrictDays && !original.variable1) || (sanction.readRestrictDays && !original.variable2)) {
                     parameters.template = `접수된 신고로 인하여 ${board[0].boardName}에 글쓰기가 $1까지, 글읽기가 $2까지 제한됩니다.`
@@ -184,8 +184,8 @@ router.post('/', adminOnly, async (req, res) => {
                     type: 'AN',
                     href: '/myPage',
                     template: `접수된 신고로 인하여 ${board[0].boardName}에 ${sanction.writeRestrictDays ? '글쓰기가 $1까지' + (sanction.readRestrictDays ? ', ' : '') : ''}${sanction.readRestrictDays ? '글읽기가 $2까지' : ''} 제한됩니다.`,
-                    variable1: sanction.writeRestrictDays ? moment(writeRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : undefined,
-                    variable2: sanction.readRestrictDays ? moment(readRestrictDate, 'YYYYMMDD').format('YYYY-MM-DD') : undefined,
+                    variable1: sanction.writeRestrictDays ? moment(writeRestrictDate, 'YYYYMMDD').format('Y-MM-DD') : undefined,
+                    variable2: sanction.readRestrictDays ? moment(readRestrictDate, 'YYYYMMDD').format('Y-MM-DD') : undefined,
                     target: board[0].boardId
                 })
             }

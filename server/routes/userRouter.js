@@ -47,7 +47,7 @@ router.put('/', requiredSignin, async (req, res) => {
         let result;
         if (typeof user.loungeNickName === 'string' && user.loungeNickName !== original.loungeNickName) {
             if (original.loungeNickNameModifiedDate && util.moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(util.moment()) && !req.userObject.isAdmin) {
-                return res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${util.moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
+                return res.status(400).json({ target: 'loungeNickName', message: `마지막으로 라운지 필명을 변경한 날(${util.moment(original.loungeNickNameModifiedDate, 'YYYYMMDD').format('Y.M.D')})로부터 1개월이 경과하지 않았습니다.` })
             }
             if (user.loungeNickName.length > 50) {
                 return res.status(400).json({ target: 'loungeNickName', message: '입력된 라운지 필명이 너무 깁니다. 최대 50자로 입력해주세요.' });
@@ -68,7 +68,7 @@ router.put('/', requiredSignin, async (req, res) => {
         }
         if (typeof user.topicNickName === 'string' && user.topicNickName !== original.topicNickName) {
             if (original.topicNickNameModifiedDate && util.moment(original.topicNickNameModifiedDate, 'YYYYMMDD').add(1, 'months').isAfter(util.moment()) && !req.userObject.isAdmin) {
-                return res.status(400).json({ target: 'topicNickName', message: `마지막으로 토픽 닉네임을 변경한 날(${util.moment(original.topicNickNameModifiedDate, 'YYYYMMDD').format('YYYY-MM-DD')})로부터 1개월이 경과하지 않았습니다.` })
+                return res.status(400).json({ target: 'topicNickName', message: `마지막으로 토픽 닉네임을 변경한 날(${util.moment(original.topicNickNameModifiedDate, 'YYYYMMDD').format('Y.M.D')})로부터 1개월이 경과하지 않았습니다.` })
             }
             if (user.topicNickName.length > 50) {
                 return res.status(400).json({ target: 'topicNickName', message: '입력된 토픽 닉네임이 너무 깁니다. 최대 50자로 입력해주세요.' });

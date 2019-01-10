@@ -104,21 +104,21 @@ router.get('/best', checkSignin, async (req, res) => {
 
     let since = moment(),
         result = {};
-    let daily = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
+    let daily = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YMMDD') + '000000');
     if (Array.isArray(daily)) {
         result.daily = daily
     } else {
         logger.error('오늘 베스트 가져오기 에러 : ', daily)
     }
     since.startOf('week');
-    let weekly = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
+    let weekly = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YMMDD') + '000000');
     if (Array.isArray(weekly)) {
         result.weekly = weekly
     } else {
         logger.error('이번주 베스트 가져오기 에러 : ', weekly)
     }
     since.startOf('month');
-    let monthly = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YYYYMMDD') + '000000');
+    let monthly = await documentModel.getPeriodicallyBestDocuments(boardType, since.format('YMMDD') + '000000');
     if (Array.isArray(monthly)) {
         result.monthly = monthly
     } else {
@@ -139,7 +139,7 @@ router.get('/recent', checkSignin, async (req, res) => {
         return res.status(200).json(result);
     } else {
         logger.error('최근 게시물 설정 게시판 가져오기 에러 : ', result);
-        return res.status(500).json({message:`최근 게시물을 가져오지 못했습니다.[${result.code || ''}]`})
+        return res.status(500).json({ message: `최근 게시물을 가져오지 못했습니다.[${result.code || ''}]` })
     }
 })
 

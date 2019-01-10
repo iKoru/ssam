@@ -17,7 +17,7 @@ router.post('/', requiredSignin, async (req, res) => {
         logger.error('인증 이메일 생성 도중 에러 : ', result, req.userObject.userId)
         return res.status(500).json({ message: `인증 도중 오류가 발생하였습니다.[${result.code || ''}]` })
     }
-    if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YMMDD').add(-1, 'months').isAfter(today))) && req.userObject.emailVerifiedDate && util.moment(req.userObject.emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isAfter(util.moment())) {
+    if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YYYYMMDD').add(-1, 'months').isAfter(today))) && req.userObject.emailVerifiedDate && util.moment(req.userObject.emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isAfter(util.moment())) {
         return res.status(403).json({ message: '이미 인증을 받으셨습니다.' });
     }
     let userId = req.userObject.userId;

@@ -49,7 +49,7 @@ exports.checkUserAuth = async (userId) => {
         builder.select()
             .fields({
                 'MGROUP.GROUP_ID': '"groupId"',
-                'GGROUP.EXPIRE_DATE': 'expireDate',
+                'GGROUP.EXPIRE_DATE': '"expireDate"',
                 'GROUP_TYPE': '"groupType"'
             })
             .from('SS_MST_USER_GROUP', 'GGROUP')
