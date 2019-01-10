@@ -34,16 +34,17 @@ const auth = (req, res, next) => {
   }
   p.then(async (result) => {
     if (result.userId) {
-      let user = await userModel.getUser(result.userId);
-      if (user && user[0]) {
-        if (user[0].status === 'AUTHORIZED' || user[0].isAdmin) {
+      let user = await userModel.checkUserAuth(result.userId);
+      if (Array.isArray(user)) {
+        if (!user.some(x.groupType === 'D') && user.some(x => x.groupType === 'A')) {
           req.userObject = user[0];
           next();
         } else {
-          onError({ message: '인증이 필요합니다.', statusCode: 403, redirectTo: '/auth' });
+          onError({ message: '인증이 필요합니다.', statusCode: 403, redirectTo: '/error?error=403' });
         }
       } else {
-        onError({ message: '존재하지 않는 ID입니다.', statusCode: 403 });
+        logger.error('인증 체크 중 에러 : ', user, result.userId)
+        onError({ message: `인증 정보를 불러올 수 없습니다.[${user.code || ''}]`, statusCode: 403 });
       }
     } else {
       onError({ message: '비정상적인 접근', statusCode: 401 });

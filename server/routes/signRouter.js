@@ -30,12 +30,16 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
         signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
         return res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
       } else if (await bcrypt.compare(password, user[0].password)) {
-        if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
+        if (user[0].status !== 'NORMAL') {
           signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
           return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
         }
         const auth = await userModel.checkUserAuth(userId);
-        if (Array.isArray(auth) && auth.length > 0 && auth.some(x => x.type === 'AUTH_DENIED')) {//영구 인증 불가 그룹
+        if (!Array.isArray(auth)) {
+          logger.error('로그인 시도 중 권한 그룹 조회 실패 에러 : ', auth, userId);
+          return res.status(500).json({ message: `로그인에 실패하였습니다.[${auth.code || ''}]` })
+        }
+        if (auth.length > 0 && auth.some(x => x.groupType === 'D')) {//인증 불가 그룹
           signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, false);
           return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
         }
@@ -47,13 +51,11 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
             return res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
           } else {
             signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, true);
-            if (Array.isArray(auth) && auth.length > 0 && auth.some(x => x.type === 'AUTH_GRANTED')) {//영구 인증 그룹
+            const today = util.moment();
+            if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YMMDD').add(-1, 'months').isAfter(today))) || auth.some(x => x.groupTyupe === 'E') && !user[0].emailVerifiedDate) {//인증 그룹이 존재하고, 인증 만료기간이 1달 이상 남은 인증그룹도 존재하거나, 전직교사로서 영구적으로 인증하지 않겠다고 선택한 경우(emailVerifiedDate가 없는 경우)
               return res.json({ token: token });
             }
-            if (user[0].status === 'NORMAL' || !user[0].emailVerifiedDate || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
-              return res.json({ token: token, redirectTo: '/auth', imminent: user[0].status !== 'NORMAL', needEmail: !user[0].email });
-            }
-            return res.json({ token: token });
+            return res.json({ token: token, redirectTo: '/auth', imminent: auth.some(x => x.groupType === 'A' && util.moment(x.expireDate, 'YMMDD').isAfter(today) && util.moment(x.expireDate, 'YMMDD').add(-1, "months").isBefore(today)), needEmail: !user[0].email });//인증 내역이 없거나 인증 만료 기간이 임박한 경우
           }
         })
       } else {
@@ -107,22 +109,20 @@ router.post('/refresh', (req, res) => {
         if (!Array.isArray(user) || user.length === 0) {
           return res.status(400).json({ message: '잘못된 접근입니다.' });
         } else {
-          if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
+          if (user[0].status !== 'NORMAL') {
             return res.status(400).json({ message: '잘못된 접근입니다.' });
           }
           const auth = await userModel.checkUserAuth(result.userId);
           if (Array.isArray(auth) && auth.length > 0) {
-            if (auth.some(x => x.type === 'AUTH_DENIED')) {//영구 인증 불가 그룹
+            if (auth.some(x => x.groupType === 'D')) {//영구 인증 불가 그룹
               return res.status(400).json({ message: '잘못된 접근입니다.' });
             }
-            if (auth.some(x => x.type === 'AUTH_GRANTED')) {//영구 인증 그룹
-              return res.json({ token: token });
-            }
           }
-          if (user[0].status === 'NORMAL' || !user[0].emailVerifiedDate || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
-            return res.json({ token: token, redirectTo: '/auth', imminent: user[0].status !== 'NORMAL', needEmail: !user[0].email });
+          const today = util.moment();
+          if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YMMDD').add(-1, 'months').isAfter(today))) || auth.some(x => x.groupTyupe === 'E') && !user[0].emailVerifiedDate) {//인증 그룹이 존재하고, 인증 만료기간이 1달 이상 남은 인증그룹도 존재하거나, 전직교사로서 영구적으로 인증하지 않겠다고 선택한 경우(emailVerifiedDate가 없는 경우)
+            return res.json({ token: token });
           }
-          return res.json({ token: token });
+          return res.json({ token: token, redirectTo: '/auth', imminent: auth.some(x => x.groupType === 'A' && util.moment(x.expireDate, 'YMMDD').isAfter(today) && util.moment(x.expireDate, 'YMMDD').add(-1, "months").isBefore(today)), needEmail: !user[0].email });//인증 내역이 없거나 인증 만료 기간이 임박한 경우
         }
       } else if (err.name === 'TokenExpiredError') { //token is valid except it's expired
         if ((new Date(err.expiredAt).getTime() + 3600000) >= (new Date().getTime())) { //기한 만료 및 만료시간부터 1시간이 지나지 않았다면 토큰 리프레시
@@ -132,12 +132,12 @@ router.post('/refresh', (req, res) => {
             if (!Array.isArray(user) || user.length === 0) {
               return res.status(400).json({ message: '잘못된 접근입니다.' });
             } else {
-              if (user[0].status !== 'NORMAL' && user[0].status !== 'AUTHORIZED') {
+              if (user[0].status !== 'NORMAL') {
                 return res.status(400).json({ message: '잘못된 접근입니다.' });
               }
               const auth = await userModel.checkUserAuth(decoded.userId);
               if (Array.isArray(auth) && auth.length > 0) {
-                if (auth.some(x => x.type === 'AUTH_DENIED')) {//영구 인증 불가 그룹
+                if (auth.some(x => x.groupType === 'D')) {//영구 인증 불가 그룹
                   return res.status(400).json({ message: '잘못된 접근입니다.' });
                 }
               }
@@ -145,13 +145,11 @@ router.post('/refresh', (req, res) => {
                 if (err) {
                   return res.status(500).json({ message: '로그인 연장에 실패하였습니다.' });
                 } else {
-                  if (Array.isArray(auth) && auth.length > 0 && auth.some(x => x.type === 'AUTH_GRANTED')) {//영구 인증 그룹
+                  const today = util.moment()
+                  if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YMMDD').add(-1, 'months').isAfter(today))) || auth.some(x => x.groupTyupe === 'E') && !user[0].emailVerifiedDate) {//인증 그룹이 존재하고, 인증 만료기간이 1달 이상 남은 인증그룹도 존재하거나, 전직교사로서 영구적으로 인증하지 않겠다고 선택한 경우(emailVerifiedDate가 없는 경우)
                     return res.json({ token: token });
                   }
-                  if (user[0].status === 'NORMAL' || !user[0].emailVerifiedDate || util.moment(user[0].emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isBefore(util.moment())) {
-                    return res.json({ token: token, redirectTo: '/auth', imminent: user[0].status !== 'NORMAL', needEmail: !user[0].email });
-                  }
-                  return res.json({ token: token });
+                  return res.json({ token: token, redirectTo: '/auth', imminent: auth.some(x => x.groupType === 'A' && util.moment(x.expireDate, 'YMMDD').isAfter(today) && util.moment(x.expireDate, 'YMMDD').add(-1, "months").isBefore(today)), needEmail: !user[0].email });//인증 내역이 없거나 인증 만료 기간이 임박한 경우
                 }
               })
             }

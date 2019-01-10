@@ -3,7 +3,7 @@ const pool = require('./db').instance,
 const cache = require('../cache'), util = require('../util');
 
 const getGroup = async (groupId, groupType) => {
-    if(!groupId){
+    if (!groupId) {
         return [];
     }
     let query = builder.select()
@@ -155,7 +155,7 @@ exports.createUserGroup = async (userId, groupId) => {
     } else {
         expireDate = '99991231';
     }
-    return await pool.executeQuery('createUserGroup',
+    let cachedData = await pool.executeQuery('createUserGroup',
         builder.insert()
             .into('SS_MST_USER_GROUP')
             .setFields({
@@ -165,26 +165,38 @@ exports.createUserGroup = async (userId, groupId) => {
             })
             .toParam()
     );
+    if (cachedData === 1) {
+        cache.delAsync('[getUserGroup]@' + util.getYYYYMMDD() + userId);
+    }
+    return cachedData;
 }
 
 exports.deleteUserGroup = async (userId, groupId) => {
-    return await pool.executeQuery('deleteUserGroup',
+    let result = await pool.executeQuery('deleteUserGroup',
         builder.delete()
             .from('SS_MST_USER_GROUP')
             .where('USER_ID = ?', userId)
             .where('GROUP_ID = ?', groupId)
             .toParam()
     );
+    if (result === 1) {
+        cache.delAsync('[getUserGroup]@' + util.getYYYYMMDD() + userId);
+    }
+    return result;
 }
 
 exports.deleteExpiredUserGroup = async () => {
     const yesterday = util.getYYYYMMDD(util.moment().add(-1, 'days'));
-    return await pool.executeQuery('deleteExpiredUserGroup',
+    let result = await pool.executeQuery('deleteExpiredUserGroup',
         builder.delete()
             .from('SS_MST_USER_GROUP')
-            .where('EXPIRE_DATE = ?', yesterday)
+            .where('EXPIRE_DATE <= ?', yesterday)
             .toParam()
     )
+    if (result === 1) {
+        cache.delAsync('[getUserGroup]@' + util.getYYYYMMDD() + userId);
+    }
+    return result;
 }
 
 exports.getUserGroup = async (userId, groupType) => {
@@ -202,7 +214,7 @@ exports.getUserGroup = async (userId, groupType) => {
             'MGROUP.GROUP_ICON_PATH': '"groupIconPath"',
             'MGROUP.GROUP_TYPE': '"groupType"',
             'MGROUP.PARENT_GROUP_ID': '"parentGroupId"',
-            'MGROUP.IS_OPEN_TO_USERS':'"isOpenToUsers"'
+            'MGROUP.IS_OPEN_TO_USERS': '"isOpenToUsers"'
         })
         .from(builder.select().fields(['USER_ID', 'GROUP_ID']).from('SS_MST_USER_GROUP').where('USER_ID = ?', userId).where('EXPIRE_DATE > ?', util.getYYYYMMDD()), 'USERGROUP');
     if (groupType) {

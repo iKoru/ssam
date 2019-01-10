@@ -88,8 +88,8 @@ router.put('/', requiredSignin, async (req, res) => {
             parameters.topicNickName = user.topicNickName;
         }
         if (user.status && user.status !== original.status) {
-            if (user.status !== 'NORMAL' && user.status !== 'AUTHORIZED' && user.status !== 'BLOCKED' && user.status !== 'DELETED') {
-                return res.status(400).json({ target: 'status', message: '선택된 상태 값이 올바르지 않습니다.' });
+            if (user.status !== 'NORMAL' && user.status !== 'DELETED') {
+                return res.status(400).json({ target: 'status', message: '선택된 삭제 데이터가 올바르지 않습니다.' });
             }
             if (user.status === 'DELETED') {
                 result = await boardModel.getBoardByOwnerId(user.userId);
@@ -140,9 +140,6 @@ router.put('/', requiredSignin, async (req, res) => {
                     if (region && region[0]) {
                         parameters.region = region[0].groupId;
                         parameters.email = user.email;
-                        if ((parameters.status === 'AUTHORIZED' || original.status === 'AUTHORIZED') && (parameters.status !== 'DELTED' && parameters.status !== 'BLOCKED')) {
-                            parameters.status = 'NORMAL'; //not authorized
-                        }
                     } else {
                         return res.status(400).json({ target: 'email', message: '해당 이메일 주소에 맞는 지역정보가 없습니다.' });
                     }
@@ -302,7 +299,7 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
         if (typeof req.body.isAdmin === 'boolean') {
             user.isAdmin = req.body.isAdmin;
         }
-        if (['NORMAL', 'AUTHORIZED', 'BLOCKED', 'DELETED'].includes(req.body.status)) {
+        if (['NORMAL', 'DELETED'].includes(req.body.status)) {
             user.status = req.body.status;
         }
         if (req.body.region) {

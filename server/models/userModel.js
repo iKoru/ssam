@@ -47,18 +47,15 @@ exports.checkUserAuth = async (userId) => {
     }
     cachedData = await pool.executeQuery('checkUserAuth',
         builder.select()
-            .field('GGROUP.GROUP_ID', '"groupId"')
-            .field("'AUTH_GRANTED'", '"type"')
+            .fields({
+                'MGROUP.GROUP_ID': '"groupId"',
+                'GGROUP.EXPIRE_DATE': 'expireDate',
+                'GROUP_TYPE': '"groupType"'
+            })
             .from('SS_MST_USER_GROUP', 'GGROUP')
+            .join('SS_MST_GROUP', 'MGROUP', 'GGROUP.GROUP_ID = MGROUP.GROUP_ID')
             .where('USER_ID = ?', userId)
-            .where('GGROUP.GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_GROUP WHERE PARENT_GROUP_ID = ?)', config.authGrantedParentGroupId)
-            .union(builder.select()
-                .field('DGROUP.GROUP_ID', '"groupId"')
-                .field("'AUTH_DENIED'", '"type"')
-                .from('SS_MST_USER_GROUP', 'DGROUP')
-                .where('USER_ID = ?', userId)
-                .where('DGROUP.GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_GROUP WHERE PARENT_GROUP_ID = ?)', config.authDeniedParentGroupId)
-            )
+            .where('GROUP_TYPE IN (\'A\', \'E\', \'D\')')//A:인증, E:인증만료(전직교사), D:인증취소(제재)
             .toParam()
     )
     if (Array.isArray(cachedData)) {

@@ -166,7 +166,6 @@ exports.createNotification = async (notification, users) => {
                 .fromQuery(array,
                     query
                         .from('SS_MST_USER')
-                        .where('STATUS <> \'BLOCKED\'')
                         .where('STATUS <> \'DELETED\'')
                 )
                 .toParam()

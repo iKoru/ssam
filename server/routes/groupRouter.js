@@ -23,7 +23,7 @@ router.get('/', checkSignin, async (req, res) => { //get group list
                 break;
         }
         if (groupType) {
-            groupType = groupType.filter(x => ['N', 'M', 'G', 'R'].includes(x));
+            groupType = groupType.filter(x => ['N', 'M', 'G', 'R', 'A', 'E', 'D'].includes(x));
             if (groupType.length < 1) {
                 return res.status(200).json([]);
             }
@@ -51,14 +51,14 @@ router.post('/', adminOnly, async (req, res) => { //create new group
         group.parentGroupId = 1 * group.parentGroupId;
     }
     if (typeof group.groupName !== 'string' || group.groupName === '' || group.groupName.length > 50) {
-        return res.status(400).json({ target: 'groupName', message: '그룹 이름 값이 너무 길거나(최대 50자) 올바르지 않습니다.'});
+        return res.status(400).json({ target: 'groupName', message: '그룹 이름 값이 너무 길거나(최대 50자) 올바르지 않습니다.' });
     } else if (group.groupDescription && (typeof group.groupDescription !== 'string' || group.groupDescription.length > 500)) {
         return res.status(400).json({ target: 'groupDescription', message: '그룹 설명 값이 너무 길거나(최대 500자) 올바르지 않습니다.' });
     } else if (group.groupIconPath && typeof group.groupIconPath !== 'string') {
         return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 올바르지 않습니다.' });
     } else if (group.groupIconPath && group.groupIconPath.length > 200) {
         return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 너무 깁니다(최대 200자). 관리자에게 문의해주세요.' });
-    } else if (!['N', 'M', 'G', 'R'].includes(group.groupType)) {
+    } else if (!['N', 'M', 'G', 'R', 'A', 'D', 'E'].includes(group.groupType)) {
         return res.status(400).json({ target: 'groupType', message: '그룹 종류 값이 올바르지 않습니다.' });
     } else if (group.parentGroupId !== null && group.parentGroupId !== undefined && (!Number.isInteger(group.parentGroupId) || group.parentGroupId < 1)) {
         return res.status(400).json({ target: 'parentGroupId', message: '상위 그룹 ID가 올바르지 않습니다.' });
@@ -72,7 +72,14 @@ router.post('/', adminOnly, async (req, res) => { //create new group
     group.groupName = util.safeStringLength(group.groupName, 50);
     group.groupDescription = util.safeStringLength(group.groupDescription, 500);
 
-    let result = await groupModel.createGroup(group)
+    let result;
+    if (group.groupType === 'E') {
+        result = await groupModel.getGroups(true, ['E']);
+        if (Array.isArray(result) && result.length > 0) {
+            return res.status(400).json({ target: 'groupType', message: '인증 만료 그룹은 반드시 한 개의 그룹만 지정할 수 있고, 현재 하나가 존재합니다.' })
+        }
+    }
+    result = await groupModel.createGroup(group)
     if ((typeof result === 'object' && result.code) || result.rowCount === 0) {
         logger.error('그룹 생성 중 에러 : ', result, req.userObject.userId, group)
         return res.status(500).json({ message: `그룹을 추가하던 중 오류가 발생했습니다.[${result.code || ''}]` });
@@ -103,7 +110,7 @@ router.put('/', adminOnly, async (req, res) => { //update current group
         return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 올바르지 않습니다.' });
     } else if (group.groupIconPath && group.groupIconPath.length > 200) {
         return res.status(400).json({ target: 'groupIconPath', message: '그룹 아이콘 경로가 너무 깁니다. 관리자에게 문의해주세요.' });
-    } else if (!['N', 'M', 'G', 'R'].includes(group.groupType)) {
+    } else if (!['N', 'M', 'G', 'R', 'A', 'E', 'D'].includes(group.groupType)) {
         return res.status(400).json({ target: 'groupType', message: '그룹 종류 값이 올바르지 않습니다.' });
     } else if (group.parentGroupId !== undefined && group.parentGroupId !== null && (!Number.isInteger(group.parentGroupId) || group.parentGroupId < 1)) {
         return res.status(400).json({ target: 'parentGroupId', message: '상위 그룹 ID가 올바르지 않습니다.' });
@@ -119,14 +126,25 @@ router.put('/', adminOnly, async (req, res) => { //update current group
     group.groupName = util.safeStringLength(group.groupName + '', 50);
     group.groupDescription = util.safeStringLength(group.groupDescription, 500);
 
-    let result = await groupModel.updateGroup(group)
-    if (typeof result === 'object') {
+    let result = await groupModel.getGroup(group.groupId);
+    if (!Array.isArray(result)) {
         logger.error('그룹 변경 중 에러 : ', result, req.userObject.userId, group)
         return res.status(500).json({ message: `그룹을 변경하던 중 오류가 발생했습니다.[${result.code || ''}]` });
-    } else if (result === 0) {
+    } else if (result.length === 0) {
         return res.status(404).json({ message: '존재하지 않는 그룹ID입니다.' });
     } else {
-        return res.status(200).json({ message: `그룹을 변경하였습니다.` });
+        if (result[0].groupType === 'E' && (group.groupType !== undefined && group.groupType !== 'E')) {
+            return res.status(400).json({ target: 'groupType', message: '인증만료 그룹은 다른 종류의 그룹으로 변경할 수 없습니다.' })
+        }
+        result = await groupModel.updateGroup(group)
+        if (typeof result === 'object') {
+            logger.error('그룹 변경 중 에러 : ', result, req.userObject.userId, group)
+            return res.status(500).json({ message: `그룹을 변경하던 중 오류가 발생했습니다.[${result.code || ''}]` });
+        } else if (result === 0) {
+            return res.status(404).json({ message: '존재하지 않는 그룹ID입니다.' });
+        } else {
+            return res.status(200).json({ message: `그룹을 변경하였습니다.` });
+        }
     }
 });
 
@@ -138,10 +156,20 @@ router.delete('/:groupId([0-9]+)', adminOnly, async (req, res) => { //delete exi
     if (!Number.isInteger(groupId) || groupId === 0) {
         return res.status(400).json({ target: 'groupId', message: '삭제할 그룹ID가 올바르지 않습니다.' });
     }
-    if (groupId === config.authGrantedParentGroupId || groupId === config.authDeniedParentGroupId) {
-        return res.status(400).json({ target: 'groupId', message: '영구 인증/불인증 상위그룹은 필수항목이므로 삭제할 수 없습니다.' });
+
+    let result;
+    result = await groupModel.getGroup(groupId);
+    if (!Array.isArray(result)) {
+        logger.error('그룹 삭제 중 에러 : ', result, req.userObject.userId, groupId)
+        return res.status(500).json({ message: `그룹을 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });
+    } else if (result.length === 0) {
+        return res.status(404).json({ target: 'groupId', message: '삭제할 그룹이 존재하지 않습니다.' });
     }
-    let result = await groupModel.deleteGroup(groupId);
+    if (result[0].groupType === 'E') {
+        return res.status(400).json({ target: 'groupId', message: '인증 만료 그룹은 삭제할 수 없습니다.1' })
+    }
+
+    result = await groupModel.deleteGroup(groupId);
     if (typeof result === 'object') {
         logger.error('그룹 삭제 중 에러 : ', result, req.userObject.userId, groupId)
         return res.status(500).json({ message: `그룹을 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });

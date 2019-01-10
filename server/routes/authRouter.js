@@ -3,20 +3,27 @@ const requiredSignin = require('../middlewares/requiredSignin');
 const authModel = require('../models/authModel'),
     userModel = require('../models/userModel'),
     util = require('../util'),
-    logger = require('../logger');
+    logger = require('../logger'),
+    { authGrantedGroupId } = require('../../config'),
+    { dbErrorCode } = require('../constants');
 //based on /auth
 router.get('/', requiredSignin, (req, res) => {
     res.status(501).end();
 });
 
-router.post('/', requiredSignin, async(req, res) => {
-    if (req.userObject.status === 'AUTHORIZED' && req.userObject.emailVerifiedDate && util.moment(req.userObject.emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isAfter(util.moment())) {
+router.post('/', requiredSignin, async (req, res) => {
+    let result = await userModel.checkUserAuth(req.userObject.userId);
+    if (!Array.isArray(result)) {
+        logger.error('인증 이메일 생성 도중 에러 : ', result, req.userObject.userId)
+        return res.status(500).json({ message: `인증 도중 오류가 발생하였습니다.[${result.code || ''}]` })
+    }
+    if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YMMDD').add(-1, 'months').isAfter(today))) && req.userObject.emailVerifiedDate && util.moment(req.userObject.emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isAfter(util.moment())) {
         return res.status(403).json({ message: '이미 인증을 받으셨습니다.' });
     }
     let userId = req.userObject.userId;
     let email = req.userObject.email;
     let authKey;
-    let result = await authModel.getUserAuth(userId, 'NORMAL');
+    result = await authModel.getUserAuth(userId, 'NORMAL');
     if (Array.isArray(result) && result.length > 0) {
         authKey = result[0].authKey;
         result = await authModel.updateUserAuth({
@@ -38,9 +45,9 @@ router.post('/', requiredSignin, async(req, res) => {
 
 });
 
-router.get('/submit', async(req, res) => { // get /auth/submit 
+router.get('/submit', async (req, res) => { // get /auth/submit 
     if (!req.query.userId || !req.query.authKey) {
-        return res.status(400).json({ message: '인증할 사용자를 찾을 수 없습니다.' }); //TODO : show failed page
+        return res.status(400).json({ message: '인증할 사용자를 찾을 수 없습니다.' });
     } else {
         let userId = req.query.userId,
             authKey = req.query.authKey;
@@ -54,23 +61,27 @@ router.get('/submit', async(req, res) => { // get /auth/submit
         if (history && history.length > 0) {
             let i = 0;
             while (i < history.length) {
-                if (history[i].authKey === authKey) {
+                if (history[i].authKey === authKey) {//found matched key
                     authModel.updateUserAuth({
                         userId: userId,
                         authKey: authKey,
                         status: 'DONE'
                     })
-                    if (await userModel.updateUserAuth(userId) === 1 && await userModel.updateUserInfo({ userId: userId, status: 'AUTHORIZED' }) === 1) {
-                        return res.status(200).json({ message: '정상적으로 인증되었습니다!' }); //TODO : show success page
-                    } else {
-                        logger.error('인증메일 응답으로 인증 처리 중 에러 : ', req.userObject.userId, req.userObject.email, req.query.authKey)
-                        return res.status(500).json({ message: '인증사항을 저장하는 데 실패하였습니다. 관리자에게 문의해주세요.' }); //TODO : show failed page
+                    history = await userModel.updateUserAuth(userId);
+                    if (history === 1) {
+                        await groupModel.deleteUserGroup(userId, authGrantedGroupId);
+                        history = await groupModel.createUserGroup(userId, authGrantedGroupId);
+                        if (history === 1) {
+                            return res.status(200).json({ message: '정상적으로 인증되었습니다.' });
+                        }
                     }
+                    logger.error('인증메일 응답으로 인증 처리 중 에러 : ', req.userObject.userId, req.userObject.email, req.query.authKey, history)
+                    return res.status(500).json({ message: '인증사항을 저장하는 데 실패하였습니다. 관리자에게 문의해주세요.' });
                 }
                 i++;
             }
         }
-        return res.status(400).json({ message: '인증 기간이 만료되었습니다. 인증 이메일을 다시 요청해주세요.' }); //TODO : show failed page
+        return res.status(400).json({ message: '인증 기간이 만료되었습니다. 인증 이메일을 다시 요청해주세요.' });
     }
 });
 
