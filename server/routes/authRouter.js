@@ -2,10 +2,10 @@ const router = require('express').Router();
 const requiredSignin = require('../middlewares/requiredSignin');
 const authModel = require('../models/authModel'),
     userModel = require('../models/userModel'),
+    groupModel = require('../models/groupModel'),
     util = require('../util'),
     logger = require('../logger'),
-    { authGrantedGroupId } = require('../../config'),
-    { dbErrorCode } = require('../constants');
+    { authGrantedGroupId, authExpiredGroupId } = require('../../config');
 //based on /auth
 router.get('/', requiredSignin, (req, res) => {
     res.status(501).end();
@@ -17,7 +17,8 @@ router.post('/', requiredSignin, async (req, res) => {
         logger.error('인증 이메일 생성 도중 에러 : ', result, req.userObject.userId)
         return res.status(500).json({ message: `인증 도중 오류가 발생하였습니다.[${result.code || ''}]` })
     }
-    if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YYYYMMDD').add(-1, 'months').isAfter(today))) && req.userObject.emailVerifiedDate && util.moment(req.userObject.emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isAfter(util.moment())) {
+    const today = util.moment();
+    if (result.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YYYYMMDD').add(-1, 'months').isAfter(today))) && req.userObject.emailVerifiedDate && util.moment(req.userObject.emailVerifiedDate, 'YYYYMMDD').add(11, 'months').isAfter(util.moment())) {
         return res.status(403).json({ message: '이미 인증을 받으셨습니다.' });
     }
     let userId = req.userObject.userId;
@@ -69,6 +70,7 @@ router.get('/submit', async (req, res) => { // get /auth/submit
                     })
                     history = await userModel.updateUserAuth(userId);
                     if (history === 1) {
+                        await groupModel.deleteUserGroup(userId, authExpiredGroupId);
                         await groupModel.deleteUserGroup(userId, authGrantedGroupId);
                         history = await groupModel.createUserGroup(userId, authGrantedGroupId);
                         if (history === 1) {
