@@ -1,6 +1,7 @@
 const pool = require('./db').instance,
     builder = require('./db').builder;
-const cache = require('../cache'), util = require('../util');
+const cache = require('../cache'), util = require('../util'), {groupTypeDomain} = require('../constants'), 
+    {authGrantedGroupId, authExpiredGroupId} = require('../../config');
 
 const getGroup = async (groupId, groupType) => {
     if (!groupId) {
@@ -31,7 +32,7 @@ const getGroup = async (groupId, groupType) => {
 
 exports.getGroup = getGroup;
 
-exports.getGroups = async (isAdmin, groupType = ['N', 'M', 'G', 'R', 'A', 'E', 'D'], page) => {
+exports.getGroups = async (isAdmin, groupType = groupTypeDomain, page) => {
     let query = builder.select()
     if (isAdmin) {
         query.fields({
@@ -141,7 +142,7 @@ exports.deleteGroup = async (groupId) => {
     );
 }
 
-exports.createUserGroup = async (userId, groupId) => {
+const createUserGroup = async (userId, groupId) => {
     let group = await getGroup(groupId);
     if (group.length === 0) {
         return 0;
@@ -169,8 +170,9 @@ exports.createUserGroup = async (userId, groupId) => {
     }
     return cachedData;
 }
+exports.createUserGroup = createUserGroup
 
-exports.deleteUserGroup = async (userId, groupId) => {
+const deleteUserGroup = async (userId, groupId) => {
     let result = await pool.executeQuery('deleteUserGroup',
         builder.delete()
             .from('SS_MST_USER_GROUP')
@@ -183,17 +185,31 @@ exports.deleteUserGroup = async (userId, groupId) => {
     }
     return result;
 }
+exports.deleteUserGroup = deleteUserGroup
 
 exports.deleteExpiredUserGroup = async () => {
     const yesterday = util.getYYYYMMDD(util.moment().add(-1, 'days'));
-    let result = await pool.executeQuery('deleteExpiredUserGroup',
-        builder.delete()
-            .from('SS_MST_USER_GROUP')
-            .where('EXPIRE_DATE <= ?', yesterday)
-            .toParam()
+    let result = await pool.executeQuery('getExpiredUserGroup',
+        builder.select()
+        .fields({
+            'MGROUP.GROUP_ID': '"groupId"',
+            'MGROUP.GROUP_TYPE':'"groupType"',
+            'USERGROUP.USER_ID':'"userId"'
+        })
+        .from('SS_MST_USER_GROUP', 'USERGROUP')
+        .left_join('SS_MST_GROUP', 'MGROUP', 'MGROUP.GROUP_ID = USERGROUP.GROUP_ID')
+        .where('USERGROUP.EXPIRE_DATE <= ?', yesterday)
+        .toParam()
     )
-    if (result === 1) {
-        cache.delAsync('[getUserGroup]@' + util.getYYYYMMDD() + userId);
+    if(Array.isArray(result)){
+        let i=0;
+        while(i < result.length){
+            if(result[i].groupId === authGrantedGroupId){
+                await createUserGroup(result[i].userId, authExpiredGroupId);
+            }
+            await deleteUserGroup(result[i].userId, result[i].groupId)
+            i++;
+        }
     }
     return result;
 }
