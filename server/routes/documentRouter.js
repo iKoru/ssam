@@ -11,7 +11,7 @@ let multer = require('multer')
     multer = multer({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, storage:multer.diskStorage({filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) }}) }) //max 4MB)
     //based on /document
 
-router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
+router.post('/', requiredSignin, multer.array('attach'), async(req, res) => {
     let document = {
         userId: req.userObject.userId,
         boardId: req.body.boardId,
@@ -48,6 +48,15 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
 
     let result = await boardModel.getBoard(document.boardId);
     if (Array.isArray(result) && result.length > 0) {
+        if(!result[0].statusAuth.write.includes(req.userObject.auth)){
+            const authString = {
+                'A':'인증',
+                'E':'전직교사',
+                'N':'예비교사',
+                'D':'인증제한'
+            }
+            return res.status(403).json({ target: 'documentId', message: `게시물을 쓸 수 있는 권한이 없습니다. ${result[0].statusAuth.read.map(x=>authString[x]).filter(x=>x).join(', ')} 회원만 쓰기가 가능합니다.` })
+        }
         if (result[0].boardType === 'T') {
             document.userNickName = req.userObject.topicNickName;
         } else {
@@ -91,7 +100,7 @@ router.post('/', requiredAuth, multer.array('attach'), async(req, res) => {
     }
 });
 
-router.put('/', requiredAuth, async(req, res) => {
+router.put('/', requiredSignin, async(req, res) => {
     let document = {
         documentId: req.body.documentId,
         isDeleted: req.body.isDeleted,
@@ -110,10 +119,8 @@ router.put('/', requiredAuth, async(req, res) => {
     }
 
     let original = await documentModel.getDocument(document.documentId)
-    if (!Array.isArray(original) || original.length < 1) {
+    if (!Array.isArray(original) || original.length < 1 || (original[0].isDeleted && !req.userObject.isAdmin)) {
         return res.status(404).json({ target: 'documentId', message: '변경할 게시물을 찾지 못했습니다.' })
-    } else if (original[0].isDeleted && !req.userObject.isAdmin) {
-        return res.status(404).json({ target: 'documentId', message: '이미 삭제된 게시물입니다.' })
     } else if (req.userObject.userId !== original[0].userId && !req.userObject.isAdmin) {
         return res.status(403).json({ target: 'documentId', message: '게시물을 변경할 권한이 없습니다.' })
     }
@@ -206,7 +213,7 @@ router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async(req, res) => {
     }
 });
 
-router.post('/attach', requiredAuth, multer.array('attach'), async(req, res) => {
+router.post('/attach', requiredSignin, multer.array('attach'), async(req, res) => {
     let documentId = req.body.documentId;
     if (typeof documentId === 'string') {
         documentId = 1*documentId
@@ -236,7 +243,7 @@ router.post('/attach', requiredAuth, multer.array('attach'), async(req, res) => 
     }
 });
 
-router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredAuth, async(req, res) => {
+router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredSignin, async(req, res) => {
     let documentId = req.params.documentId;
     let attachId = req.params.attachId;
     if (typeof documentId === 'string') {

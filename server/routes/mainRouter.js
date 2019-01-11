@@ -329,6 +329,15 @@ const getDocument = async (req, res) => {
     if (Array.isArray(result) && result.length > 0) {
         const board = await boardModel.getBoard(result[0].boardId);
         if (Array.isArray(board) && board.length > 0 && board[0].status === 'NORMAL') {
+            if(!board[0].statusAuth.read.includes(req.userObject.auth)){
+                const authString = {
+                    'A':'인증',
+                    'E':'전직교사',
+                    'N':'예비교사',
+                    'D':'인증제한'
+                }
+                return res.status(403).json({ target: 'documentId', message: `게시물을 읽을 수 있는 권한이 없습니다. ${board[0].statusAuth.read.map(x=>authString[x]).filter(x=>x).join(', ')} 회원만 읽기가 가능합니다.` })
+            }
             if (board[0].allGroupAuth === 'NONE') {
                 const check = await boardModel.checkUserBoardReadable(req.userObject.userId, result[0].boardId);
                 if (!Array.isArray(check) || check.length === 0 || check[0].count === 0) {
@@ -362,14 +371,14 @@ const getDocument = async (req, res) => {
             delete result[0].userId;
             return res.status(200).json(result[0]);
         } else {
-            return res.status(404).json({ target: 'documentId', message: `삭제된 ${boardTypeDomain[board[0].boardType]}입니다.` });
+            return res.status(404).json({ target: 'documentId', message: `존재하지 않는 ${board && board[0] && board[0].boardType? boardTypeDomain[board[0].boardType] || '게시판' : '게시판'}입니다.` });
         }
     } else {
         return res.status(404).json({ target: 'documentId', message: '존재하지 않는 게시물입니다.' })
     }
 }
 
-router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async (req, res, next) => {
+router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredSignin, async (req, res, next) => {
     if (typeof req.params.boardId === 'number' || reserved.includes(req.params.boardId)) {
         next();
         return;
@@ -385,7 +394,7 @@ router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredAuth, async (re
     return await getDocument(req, res);
 });
 
-router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredAuth, async (req, res, next) => {
+router.get(/\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async (req, res, next) => {
     let documentId = req.params[0];
     if (!Number.isInteger(documentId)) {
         documentId = 1 * documentId;

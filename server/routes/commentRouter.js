@@ -1,15 +1,16 @@
 const router = require('express').Router();
 const requiredAuth = require('../middlewares/requiredAuth'),
+    requiredSignin = require('../middlewares/requiredSignin'),
     adminOnly = require('../middlewares/adminOnly'),
     logger = require('../logger'),
-    { dbErrorCode, commentNotificationTemplate, childCommentNotificationTemplate } = require('../constants');
+    { dbErrorCode, commentNotificationTemplate, childCommentNotificationTemplate, boardTypeDomain } = require('../constants');
 const commentModel = require('../models/commentModel'),
     documentModel = require('../models/documentModel'),
     boardModel = require('../models/boardModel'),
     notificationModel = require('../models/notificationModel')
 //based on /comment
 
-router.get('/', requiredAuth, async (req, res) => {
+router.get('/', requiredSignin, async (req, res) => {
     let documentId = req.query.documentId,
         page = req.query.page;
     if (typeof documentId === 'string') {
@@ -28,6 +29,20 @@ router.get('/', requiredAuth, async (req, res) => {
     }
     let result = await documentModel.getDocument(documentId);
     if (Array.isArray(result) && result.length > 0) {
+        result = await boardModel.getBoard(result[0].boardId)
+        if(Array.isArray(result) && result.length > 0 && result[0].status === 'NORMAL'){
+            if(!result[0].statusAuth.read.includes(req.userObject.auth)){
+                const authString = {
+                    'A':'인증',
+                    'E':'전직교사',
+                    'N':'예비교사',
+                    'D':'인증제한'
+                }
+                return res.status(403).json({ target: 'documentId', message: `댓글을 볼 수 있는 권한이 없습니다. ${result[0].statusAuth.comment.map(x=>authString[x]).filter(x=>x).join(', ')} 회원만 읽기가 가능합니다.` })
+            }
+        }else{
+            return res.status(404).json({ target: 'documentId', message: `존재하지 않는 ${result && result[0] && result[0].boardType? boardTypeDomain[result[0].boardType] || '게시판' : '게시판'}입니다.` });
+        }
         result = await boardModel.checkUserBoardReadable(req.userObject.userId, result[0].boardId);
         if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
             return res.status(403).json({ target: 'documentId', message: '댓글을 볼 수 있는 권한이 없습니다.' })
@@ -60,7 +75,7 @@ router.get('/', requiredAuth, async (req, res) => {
     }
 });
 
-router.post('/', requiredAuth, async (req, res) => {
+router.post('/', requiredSignin, async (req, res) => {
     let comment = {
         documentId: req.body.documentId,
         parentCommentId: req.body.parentCommentId,
@@ -95,19 +110,29 @@ router.post('/', requiredAuth, async (req, res) => {
     } else if (!document[0].allowAnonymous) {
         comment.isAnonymous = false;
     }
-    let result;
-    if (!req.userObject.isAdmin) {
-        result = await boardModel.checkUserBoardWritable(req.userObject.userId, document[0].boardId)
-        if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
-            return res.status(403).json({ target: 'documentId', message: '댓글을 등록할 수 있는 권한이 없습니다.' });
-        }
+    
+    let result = await boardModel.getBoard(document[0].boardId);
+    if (!Array.isArray(result) || result.length === 0) {
+        logger.error('댓글 등록 처리에 게시판 가져오기 중 에러 : ', result, document[0].boardId)
+        return res.status(404).json({ target: 'documentId', message: '라운지/토픽을 찾을 수 없습니다.' });
     }
     if (!comment.isAnonymous) {
-        result = await boardModel.getBoard(document[0].boardId);
-        if (!Array.isArray(result) || result.length === 0) {
-            return res.status(404).json({ target: 'documentId', message: '라운지/토픽을 찾을 수 없습니다.' });
-        }
         comment.userNickName = result[0].boardType === 'T' ? req.userObject.topicNickName : req.userObject.loungeNickName
+    }
+    if (!req.userObject.isAdmin) {
+        if(!result[0].statusAuth.comment.includes(req.userObject.auth)){
+            const authString = {
+                'A':'인증',
+                'E':'전직교사',
+                'N':'예비교사',
+                'D':'인증제한'
+            }
+            return res.status(403).json({ target: 'documentId', message: `댓글을 쓸 수 있는 권한이 없습니다. ${result[0].statusAuth.comment.map(x=>authString[x]).filter(x=>x).join(', ')} 회원만 댓글 쓰기가 가능합니다.` })
+        }
+        result = await boardModel.checkUserBoardWritable(req.userObject.userId, document[0].boardId)
+        if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
+            return res.status(403).json({ target: 'documentId', message: '댓글을 쓸 수 있는 권한이 없습니다.' });
+        }
     }
     let parentComment;
     if (comment.parentCommentId) {
@@ -184,7 +209,7 @@ router.post('/', requiredAuth, async (req, res) => {
     }
 });
 
-router.put('/', requiredAuth, async (req, res) => {
+router.put('/', requiredSignin, async (req, res) => {
     let comment = {
         commentId: req.body.commentId,
         contents: req.body.contents,

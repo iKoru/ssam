@@ -572,7 +572,7 @@ router.post('/board', requiredAuth, async (req, res) => {
     if (!Array.isArray(board) || board.length === 0 || board[0].status === 'DELETED') {
         return res.status(404).json({ target: 'boardId', message: '구독할 토픽을 찾을 수 없습니다.' })
     } else if (board[0].boardType !== 'T') {
-        return res.status(400).json({ target: 'boardId', message: '구독할 수 없는 게시판입니다.' })
+        return res.status(400).json({ target: 'boardId', message: '구독할 필요가 없는 게시판입니다.' })
     }
     result = await boardModel.getUserBoard(userId, boardId, req.userObject.isAdmin);
     if (Array.isArray(result) && result.length > 0) {

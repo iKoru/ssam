@@ -500,19 +500,24 @@ exports.checkUserBoardWritable = async (userId, boardId) => {
                 cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, [{ count: 0 }], 3600);
                 return [{ count: 0 }];
             } else if (cachedData.length === 0) {//no sanction and subscription
-                if (board[0].boardType !== 'T') {//lounge need not subscribe. just check the user has the right group.
-                    cachedData = await pool.executeQuery('checkUserLoungeWritable',
-                        builder.select()
-                            .field('COUNT(*)', 'count')
-                            .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId).where('AUTH_TYPE = \'READWRITE\''), 'AUTH')
-                            .where('ALLOWED_GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_USER_GROUP WHERE USER_ID = ?)', userId)
-                            .limit(1)
-                            .toParam()
-                    );
-                    if (Array.isArray(cachedData)) {//save cache only when no error occured
-                        cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, cachedData, 3600);
+                if (board[0].boardType !== 'T') {
+                    if(board[0].boardType === 'L'){//lounge need not subscribe. just check the user has the right group.
+                        cachedData = await pool.executeQuery('checkUserLoungeWritable',
+                            builder.select()
+                                .field('COUNT(*)', 'count')
+                                .from(builder.select().field('ALLOWED_GROUP_ID').from('SS_MST_BOARD_AUTH').where('BOARD_ID = ?', boardId).where('AUTH_TYPE = \'READWRITE\''), 'AUTH')
+                                .where('ALLOWED_GROUP_ID IN (SELECT GROUP_ID FROM SS_MST_USER_GROUP WHERE USER_ID = ?)', userId)
+                                .limit(1)
+                                .toParam()
+                        );
+                        if (Array.isArray(cachedData)) {//save cache only when no error occured
+                            cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, cachedData, 3600);
+                        }
+                        return cachedData;
+                    }else{//X, P, E boardType - just pass through
+                        cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, [{ count: 1 }], 3600);
+                        return [{ count: 1}];
                     }
-                    return cachedData;
                 } else {
                     cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, [{ count: 0, needSubscription: true }], 3600);
                     return [{ count: 0, needSubscription: true }];
