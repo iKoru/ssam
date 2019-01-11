@@ -99,6 +99,9 @@ router.put('/', requiredSignin, async (req, res) => {
             }
             parameters.status = user.status;
         }
+        if(user.emailVerifiedDate === null && req.userObject.auth === 'E'){
+            parameters.emailVerifiedDate = null;
+        }
         if ((user.grade !== undefined && user.grade !== original.grade) || (user.major !== undefined && user.major !== original.major) || (user.email !== undefined && user.email !== original.email)) {
             if (process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && util.moment().month() !== 2) { //month() === 2 is March
                 return res.status(400).json({ message: '학년, 전공, 이메일은 매년 3월에만 변경이 가능합니다.' })

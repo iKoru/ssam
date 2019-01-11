@@ -136,6 +136,9 @@ exports.updateUserInfo = async (param) => {
         if (user.status !== undefined) {
             query.set('STATUS', user.status)
         }
+        if (user.emailVerifiedDate !== undefined) {
+            query.set('EMAIL_VERIFIED_DATE', user.emailVerifiedDate)
+        }
         let result = await pool.executeQuery(null,
             query
                 .where('USER_ID = ?', user.userId)
@@ -205,6 +208,9 @@ exports.updateUserInfo = async (param) => {
                 }
                 if (user.status !== undefined) {
                     cachedData.status = user.status
+                }
+                if (user.emailVerifiedDate !== undefined) {
+                    cachedData.emailVerifiedDate = user.emailVerifiedDate
                 }
                 cache.setAsync('[user]' + user.userId, cachedData, 3600);
             }
