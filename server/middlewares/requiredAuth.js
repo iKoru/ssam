@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const config = require('../../config'),
   qs = require('querystring'),
-  { jwtErrorMessages } = require('../constants');
+  { jwtErrorMessages } = require('../constants'),
+  logger = require('../logger');
 const userModel = require('../models/userModel')
 
 const auth = (req, res, next) => {
@@ -39,6 +40,7 @@ const auth = (req, res, next) => {
       if (Array.isArray(auth)) {
         if ((!auth.some(x => x.groupType === 'D') && auth.some(x => x.groupType === 'A')) || (Array.isArray(user) && user.length > 0 && user[0].isAdmin)) {
           req.userObject = user[0];
+          req.userObject.auth = 'A';
           next();
         } else {
           onError({ message: '인증이 필요합니다.', statusCode: 403, redirectTo: '/error?error=403' });
