@@ -11,7 +11,7 @@ const { safeStringLength, moment, shallowArrayEquals } = require('../util'),
 
 //based on /board
 
-router.get('/', requiredAuth, async (req, res) => {
+router.get('/', requiredSignin, async (req, res) => {
     let boardId = req.query.boardId;
     if (!boardId || typeof boardId !== 'string') {
         return res.status(400).json({ target: 'boardId', message: '라운지/토픽을 찾을 수 없습니다.' });

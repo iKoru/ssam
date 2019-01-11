@@ -234,7 +234,7 @@ router.get('/boardId', requiredAuth, async (req, res) => {
     }
 })
 
-router.get('/:boardId([a-zA-Z]+)', requiredAuth, async (req, res, next) => {
+router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
     let boardId = req.params.boardId
     if (boardId === 'loungeBest' || boardId === 'topicBest') {
         let page = req.query.page,

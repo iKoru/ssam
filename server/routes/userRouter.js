@@ -415,6 +415,8 @@ router.get('/', requiredSignin, async (req, res) => {
             result.auth = 'AUTHORIZED'
         } else if (result2.some(x => x.groupType === 'E')) {
             result.auth = 'EXPIRED'
+        } else{
+            result.auth = 'NORMAL'
         }
 
         result.groups = result2.filter(x => x.isOpenToUsers).map(x => x.groupId)
