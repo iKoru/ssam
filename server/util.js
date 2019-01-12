@@ -74,8 +74,6 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction) =>
             result, errors = [];
         try {
             while (i < files.length) {
-                console.log(files[i], process.env.PWD)
-                console.log(files[i].path, targetPath, targetDirectory, files[i].filename)
                 try {
                     result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
                 } catch (error) {
@@ -141,7 +139,6 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction) =>
                         continue;
                     }
                 }
-                console.log('r', result)
                 try {
                     result = await saveFunction(targetDirectory, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `${targetPath}/${targetDirectory}/${files[i].filename}`);
                     if (typeof result === 'object' || result === 0) {

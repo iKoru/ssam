@@ -2,6 +2,8 @@ const router = require('express').Router();
 const requiredSignin = require('../middlewares/requiredSignin'),
     adminOnly = require('../middlewares/adminOnly'),
     logger = require('../logger'),
+    path = require('path'),
+    util = require('../util'),
     { dbErrorCode, commentNotificationTemplate, childCommentNotificationTemplate, boardTypeDomain } = require('../constants');
 const commentModel = require('../models/commentModel'),
     documentModel = require('../models/documentModel'),
@@ -150,11 +152,12 @@ router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
     comment.hasAttach = req.files && req.files.length > 0;
     result = await commentModel.createComment(comment);
     if (result.rowCount > 0 && result.rows && result.rows.length > 0 && result.rows[0].commentId > 0) {
+        const commentId = result.rows[0].commentId;
         if (comment.hasAttach) {
-            result = await util.uploadFile(req.files, 'attachComment', result.rows[0].commentId, commentModel.createCommentAttach);
-            res.status(200).json({ target: 'attach', message: result.status === 200 ? '게시물을 등록하였습니다.' : '댓글을 등록했으나, 첨부파일을 업로드하지 못했습니다.', commentId: result.rows[0].commentId });
+            result = await util.uploadFile(req.files, 'attachComment', commentId, commentModel.createCommentAttach);
+            res.status(200).json({ target: 'attach', message: result.status === 200 ? '게시물을 등록하였습니다.' : '댓글을 등록했으나, 첨부파일을 업로드하지 못했습니다.', commentId: commentId });
         } else {
-            res.status(200).json({ message: '댓글을 등록하였습니다.', commentId: result.rows[0].commentId });
+            res.status(200).json({ message: '댓글을 등록하였습니다.', commentId: commentId });
         }
         if (comment.parentCommentId) {//알림 대상 : 대댓글
             if (parentComment[0].userId !== req.userObject.userId) {//자기 댓글에 자기가 대댓글 작성하면 알림 없음
