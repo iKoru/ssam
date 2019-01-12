@@ -14,6 +14,7 @@ const getChildComments = async (parentCommentId, documentId) => {
                 'VOTE_DOWN_COUNT': '"voteDownCount"',
                 'RESTRICTION_STATUS': '"restrictionStatus"',
                 'CHILD_COUNT': '"childCount"',
+                'HAS_ATTACH': '"hasAttach"',
                 'WRITE_DATETIME': '"writeDateTime"',
                 'ANIMAL_NAME': '"animalName"',
                 'RESERVED1': '"reserved1"',
@@ -43,6 +44,7 @@ exports.getChildCommentsByDocumentId = async (documentId) => {
                 'VOTE_DOWN_COUNT': '"voteDownCount"',
                 'RESTRICTION_STATUS': '"restrictionStatus"',
                 'CHILD_COUNT': '"childCount"',
+                'HAS_ATTACH': '"hasAttach"',
                 'WRITE_DATETIME': '"writeDateTime"',
                 'ANIMAL_NAME': '"animalName"',
                 'RESERVED1': '"reserved1"',
@@ -128,6 +130,7 @@ exports.getComments = async (documentId, page = 1) => {
                 'REPORT_COUNT': '"reportCount"',
                 'RESTRICTION_STATUS': '"restrictionStatus"',
                 'CHILD_COUNT': '"childCount"',
+                'HAS_ATTACH': '"hasAttach"',
                 'WRITE_DATETIME': '"writeDateTime"',
                 'ANIMAL_NAME': '"animalName"',
                 'RESERVED1': '"reserved1"',
@@ -161,6 +164,9 @@ const updateComment = async (comment) => {
         } else if (comment.child < 0) {
             query.set('CHILD_COUNT', builder.str('CHILD_COUNT - 1'))
         }
+    }
+    if (comment.hasAttach !== undefined) {
+        query.set('HAS_ATTACH', comment.hasAttach)
     }
     if (comment.restrictionStatus !== undefined) {
         query.set('RESTRICTION_STATUS', comment.restrictionStatus)
@@ -237,6 +243,7 @@ exports.createComment = async (comment) => {
                 'DEPTH': comment.parentCommentId ? 1 : 0,
                 'WRITE_DATETIME': util.getYYYYMMDDHH24MISS(),
                 'IS_ANONYMOUS': comment.isAnonymous,
+                'HAS_ATTACH': !comment.hasAttach,
                 'ANIMAL_NAME': animalName.animalName + (animalName.generation > 1 ? ` ${animalName.generation}세` : ''),
                 'RESERVED1': comment.reserved1,
                 'RESERVED2': comment.reserved2,
@@ -271,6 +278,7 @@ const getComment = async (commentId) => {
                 'REPORT_COUNT': '"reportCount"',
                 'RESTRICTION_STATUS': '"restrictionStatus"',
                 'CHILD_COUNT': '"childCount"',
+                'HAS_ATTACH': '"hasAttach"',
                 'WRITE_DATETIME': '"writeDateTime"',
                 'IS_DELETED': '"isDeleted"',
                 'PARENT_COMMENT_ID': '"parentCommentId"',
@@ -303,6 +311,7 @@ exports.getUserComment = async (userId, isAdmin, page = 1) => {
             'MCOMMENT.REPORT_COUNT': '"reportCount"',
             'MCOMMENT.RESTRICTION_STATUS': '"restrictionStatus"',
             'MCOMMENT.CHILD_COUNT': '"childCount"',
+            'MCOMMENT.HAS_ATTACH': '"hasAttach"',
             'MCOMMENT.WRITE_DATETIME': '"writeDateTime"',
             'MCOMMENT.RESERVED1': '"reserved1"',
             'MCOMMENT.RESERVED2': '"reserved2"',

@@ -324,7 +324,7 @@ exports.createDocument = async (document) => {
                 'ALLOW_ANONYMOUS': document.allowAnonymous,
                 'RESTRICTION': JSON.stringify(document.restriction),
                 'HAS_SURVEY': !!document.survey,
-                'HAS_ATTACH': !!document.attach,
+                'HAS_ATTACH': !!document.hasAttach,
                 'CATEGORY_NAME': document.categoryName,
                 'RESERVED1': document.reserved1,
                 'RESERVED2': document.reserved2,

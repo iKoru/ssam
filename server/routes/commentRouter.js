@@ -147,10 +147,10 @@ router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
         }
     }
 
-    comment.attach = req.files && req.files.length > 0;
+    comment.hasAttach = req.files && req.files.length > 0;
     result = await commentModel.createComment(comment);
     if (result.rowCount > 0 && result.rows && result.rows.length > 0 && result.rows[0].commentId > 0) {
-        if (comment.attach) {
+        if (comment.hasAttach) {
             result = await util.uploadFile(req.files, 'attachComment', result.rows[0].commentId, commentModel.createCommentAttach);
             res.status(200).json({ target: 'attach', message: result.status === 200 ? '게시물을 등록하였습니다.' : '댓글을 등록했으나, 첨부파일을 업로드하지 못했습니다.', commentId: result.rows[0].commentId });
         } else {
@@ -296,6 +296,87 @@ router.delete('/:commentId([0-9]+)', adminOnly, async (req, res) => {
         return res.status(404).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' });
     }
 });
+
+router.post('/attach', requiredSignin, multer.array('attach'), async (req, res) => {
+    let commentId = req.body.commentId;
+    if (typeof commentId === 'string') {
+        commentId = 1 * commentId
+    }
+    if (!Number.isInteger(commentId) || commentId === 0) {
+        return res.status(400).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' })
+    }
+    if (!Array.isArray(req.files) || req.files.length < 1) {
+        return res.status(400).json({ target: 'files', message: '첨부파일을 올려주세요.' })
+    }
+    let comment = await commentModel.getComment(commentId);
+    if (Array.isArray(comment) && comment.length > 0) {
+        if ((comment[0].userId === req.userObject.userId) || req.userObject.isAdmin) {
+            const result = await util.uploadFile(req.files, 'attachComment', commentId, commentModel.createCommentAttach);
+            if (result.status === 200 && !comment[0].hasAttach) {
+                await commentModel.updateComment({ commentId: commentId, hasAttach: true });
+            }
+            if (result.status === 500) {
+                logger.error('첨부파일 등록 중 에러 : ', result, commentId)
+            }
+            return res.status(result.status).json({ message: result.message });
+        } else {
+            return res.status(403).json({ target: 'commentId', message: '첨부파일을 올릴 수 있는 권한이 없습니다.' })
+        }
+    } else {
+        return res.status(404).json({ target: 'commentId', message: '댓글을 찾을 수 없습니다.' })
+    }
+});
+
+router.delete('/attach/:commentId(^[\\d]+$)/:attachId', requiredSignin, async (req, res) => {
+    let commentId = req.params.commentId;
+    let attachId = req.params.attachId;
+    if (typeof commentId === 'string') {
+        commentId = 1 * commentId
+    }
+    if (!Number.isInteger(commentId) || commentId === 0) {
+        return res.status(400).json({ target: 'commentId', message: '첨부파일을 삭제할 댓글을 찾을 수 없습니다.' })
+    } else if (typeof attachId !== 'string') {
+        return res.status(400).json({ target: 'attachId', message: '삭제할 첨부파일이 올바르지 않습니다.' })
+    }
+
+    let comment = await commentModel.getDocument(commentId);
+    if (!Array.isArray(comment) || comment.length < 1) {
+        return res.status(404).json({ target: 'commentId', message: '대상 댓글을 찾을 수 없습니다.' })
+    } else {
+        comment = comment[0];
+        if (comment.userId !== req.userObject.userId && !req.userObject.isAdmin) {
+            return res.status(403).json({ target: 'commentId', message: '첨부파일을 삭제할 권한이 없습니다.' })
+        }
+    }
+
+    let attach = await commentModel.getDocumentAttach(commentId, attachId);
+    if (!Array.isArray(attach) || attach.length < 1) {
+        return res.status(404).json({ target: 'attachId', message: '삭제할 첨부파일을 찾을 수 없습니다.' })
+    } else {
+        attach = attach[0];
+    }
+
+    let result;
+    try {
+        result = await util.unlink(attach.attachPath);
+    } catch (error) {
+        if (result && result !== 'ENOENT') {
+            logger.error('첨부파일 삭제 중 에러 : ', error, commentId);
+            return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result || ''}]` })
+        }
+    }
+    result = await commentModel.deleteCommentAttach(commentId, attachId);
+    if (typeof result !== 'object') {
+        result = await commentModel.getCommentAttach(commentId);
+        if (Array.isArray(result) && result.length === 0) { //no more attachments
+            await commentModel.updateComment({ commentId: commentId, hasAttach: false });
+        }
+        return res.status(200).json({ message: '첨부파일을 삭제하였습니다.' })
+    } else {
+        logger.error('첨부파일 삭제 중 에러 : ', result, commentId);
+        return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code || ''}]` })
+    }
+})
 
 router.get('/animal', adminOnly, async (req, res) => {
     let result = await commentModel.getAnimalNames();

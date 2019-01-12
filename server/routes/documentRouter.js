@@ -69,7 +69,7 @@ router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
         return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
     }
 
-    document.attach = req.files && req.files.length > 0;
+    document.hasAttach = req.files && req.files.length > 0;
     result = await documentModel.createDocument(document);
     if (result.error || result.rowCount === 0) {
         logger.error('게시물 저장 중 에러 : ', result, document);
@@ -90,7 +90,7 @@ router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
                 survey = true;
             }
         }
-        if (document.attach) {
+        if (document.hasAttach) {
             result = await util.uploadFile(req.files, 'attach', req.body.documentId, documentModel.createDocumentAttach);
             return res.status(200).json({ target: 'attach', message: result.status === 200 ? (survey ? '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' : '게시물을 등록하였습니다.') : (survey ? '게시물을 등록했으나, 첨부파일과 설문조사를 등록하지 못했습니다.' : '게시물을 등록했으나, 첨부파일을 업로드하지 못했습니다.'), documentId: req.body.documentId });
         } else {
@@ -220,10 +220,10 @@ router.post('/attach', requiredSignin, multer.array('attach'), async (req, res) 
     if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
     }
-    let document = await documentModel.getDocument(documentId);
     if (!Array.isArray(req.files) || req.files.length < 1) {
         return res.status(400).json({ target: 'files', message: '첨부파일을 올려주세요.' })
     }
+    let document = await documentModel.getDocument(documentId);
     if (Array.isArray(document) && document.length > 0) {
         if ((document[0].userId === req.userObject.userId) || req.userObject.isAdmin) {
             const result = await util.uploadFile(req.files, 'attach', documentId, documentModel.createDocumentAttach);
@@ -249,7 +249,7 @@ router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredSignin, async (
         documentId = 1 * documentId
     }
     if (!Number.isInteger(documentId) || documentId === 0) {
-        return res.status(400).json({ target: 'documentId', message: '삭제할 게시물을 찾을 수 없습니다.' })
+        return res.status(400).json({ target: 'documentId', message: '첨부파일을 삭제할 게시물을 찾을 수 없습니다.' })
     } else if (typeof attachId !== 'string') {
         return res.status(400).json({ target: 'attachId', message: '삭제할 첨부파일이 올바르지 않습니다.' })
     }
