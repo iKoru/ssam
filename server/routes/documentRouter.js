@@ -1,6 +1,5 @@
 const router = require('express').Router();
-const requiredAuth = require('../middlewares/requiredAuth'),
-    requiredSignin = require('../middlewares/requiredSignin'),
+const requiredSignin = require('../middlewares/requiredSignin'),
     adminOnly = require('../middlewares/adminOnly');
 const boardModel = require('../models/boardModel'),
     documentModel = require('../models/documentModel'),
@@ -8,10 +7,10 @@ const boardModel = require('../models/boardModel'),
     path = require('path'),
     logger = require('../logger')
 let multer = require('multer')
-    multer = multer({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, storage:multer.diskStorage({filename: function(req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) }}) }) //max 4MB)
-    //based on /document
+multer = multer({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, storage: multer.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }) //max 4MB)
+//based on /document
 
-router.post('/', requiredSignin, multer.array('attach'), async(req, res) => {
+router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
     let document = {
         userId: req.userObject.userId,
         boardId: req.body.boardId,
@@ -37,25 +36,25 @@ router.post('/', requiredSignin, multer.array('attach'), async(req, res) => {
     } else if (document.survey !== undefined && Array.isArray(document.survey)) {
         return res.status(400).json({ target: 'survey', message: '설문조사 내용이 올바르지 않습니다.' })
     }
-    if(typeof document.restriction === 'string' && document.restriction !== ''){
-        try{
+    if (typeof document.restriction === 'string' && document.restriction !== '') {
+        try {
             document.restriction = JSON.parse(document.restriction)
-        }catch(error){
-            logger.error('게시물 제한조건 파싱 중 에러 : '. document.restriction, error);
-            return res.status(400).json({target:'restriction', message:'첨부파일 다운로드 조건 형식이 올바르지 않습니다.'})
+        } catch (error) {
+            logger.error('게시물 제한조건 파싱 중 에러 : '.document.restriction, error);
+            return res.status(400).json({ target: 'restriction', message: '첨부파일 다운로드 조건 형식이 올바르지 않습니다.' })
         }
     }
 
     let result = await boardModel.getBoard(document.boardId);
     if (Array.isArray(result) && result.length > 0) {
-        if(!result[0].statusAuth.write.includes(req.userObject.auth)){
+        if (!result[0].statusAuth.write.includes(req.userObject.auth)) {
             const authString = {
-                'A':'인증',
-                'E':'전직교사',
-                'N':'예비교사',
-                'D':'인증제한'
+                'A': '인증',
+                'E': '전직교사',
+                'N': '예비교사',
+                'D': '인증제한'
             }
-            return res.status(403).json({ target: 'documentId', message: `게시물을 쓸 수 있는 권한이 없습니다. ${result[0].statusAuth.read.map(x=>authString[x]).filter(x=>x).join(', ')} 회원만 쓰기가 가능합니다.` })
+            return res.status(403).json({ target: 'documentId', message: `게시물을 쓸 수 있는 권한이 없습니다. ${result[0].statusAuth.read.map(x => authString[x]).filter(x => x).join(', ')} 회원만 쓰기가 가능합니다.` })
         }
         if (result[0].boardType === 'T') {
             document.userNickName = req.userObject.topicNickName;
@@ -79,28 +78,28 @@ router.post('/', requiredSignin, multer.array('attach'), async(req, res) => {
         req.body.documentId = result.rows[0].documentId;
         let survey = false;
         if (document.survey) {
-            try{
+            try {
                 document.survey = JSON.parse(document.survey);
                 result = await documentModel.createDocumentSurvey(req.body.documentId, document.survey);
                 if (typeof result === 'object' || result === 0) {
                     logger.error('설문조사 등록 중 에러 : ', document.survey, result);
                     survey = true;
                 }
-            }catch(error){
+            } catch (error) {
                 logger.error('설문조사 파싱 및 등록 중 에러 : ', document.survey, error);
                 survey = true;
             }
         }
         if (document.attach) {
             result = await util.uploadFile(req.files, 'attach', req.body.documentId, documentModel.createDocumentAttach);
-            return res.status(200).json({ target: 'attach', message: result.status === 200 ? (survey?'게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.':'게시물을 등록하였습니다.') : (survey?'게시물을 등록했으나, 첨부파일과 설문조사를 등록하지 못했습니다.':'게시물을 등록했으나, 첨부파일을 업로드하지 못했습니다.'), documentId: req.body.documentId });
+            return res.status(200).json({ target: 'attach', message: result.status === 200 ? (survey ? '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' : '게시물을 등록하였습니다.') : (survey ? '게시물을 등록했으나, 첨부파일과 설문조사를 등록하지 못했습니다.' : '게시물을 등록했으나, 첨부파일을 업로드하지 못했습니다.'), documentId: req.body.documentId });
         } else {
-            return res.status(200).json({ message: (survey?'게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.':'게시물을 등록하였습니다.'), documentId: req.body.documentId })
+            return res.status(200).json({ message: (survey ? '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' : '게시물을 등록하였습니다.'), documentId: req.body.documentId })
         }
     }
 });
 
-router.put('/', requiredSignin, async(req, res) => {
+router.put('/', requiredSignin, async (req, res) => {
     let document = {
         documentId: req.body.documentId,
         isDeleted: req.body.isDeleted,
@@ -110,7 +109,7 @@ router.put('/', requiredSignin, async(req, res) => {
         hasSurvey: req.body.hasSurvey !== undefined ? !!req.body.hasSurvey : undefined
     };
     if (typeof document.documentId === 'string') {
-        document.documentId = 1*document.documentId;
+        document.documentId = 1 * document.documentId;
     }
     if (!Number.isInteger(document.documentId) || document.documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '변경할 게시물을 찾을 수 없습니다.' })
@@ -141,7 +140,7 @@ router.put('/', requiredSignin, async(req, res) => {
     if (document.isDeleted === original.isDeleted) {
         delete document.isDeleted;
     }
-    if(document.isDeleted){
+    if (document.isDeleted) {
         delete document.contents;
     }
     let result;
@@ -163,17 +162,17 @@ router.put('/', requiredSignin, async(req, res) => {
 
     result = await documentModel.updateDocument(document);
     if (result > 0) {
-        return res.status(200).json({ message: `게시물을 ${document.isDeleted?'삭제':'변경'}하였습니다.` });
+        return res.status(200).json({ message: `게시물을 ${document.isDeleted ? '삭제' : '변경'}하였습니다.` });
     } else {
         logger.error('게시물 변경 중 에러 : ', result, document);
         return res.status(500).json({ message: `변경사항을 저장하지 못했습니다.[${result.code || ''}]` })
     }
 });
 
-router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async(req, res) => {
+router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async (req, res) => {
     let documentId = req.params[0];
     if (typeof documentId === 'string') {
-        documentId = 1*documentId;
+        documentId = 1 * documentId;
     }
     if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '삭제할 게시물을 찾을 수 없습니다.' });
@@ -213,10 +212,10 @@ router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async(req, res) => {
     }
 });
 
-router.post('/attach', requiredSignin, multer.array('attach'), async(req, res) => {
+router.post('/attach', requiredSignin, multer.array('attach'), async (req, res) => {
     let documentId = req.body.documentId;
     if (typeof documentId === 'string') {
-        documentId = 1*documentId
+        documentId = 1 * documentId
     }
     if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
@@ -243,11 +242,11 @@ router.post('/attach', requiredSignin, multer.array('attach'), async(req, res) =
     }
 });
 
-router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredSignin, async(req, res) => {
+router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredSignin, async (req, res) => {
     let documentId = req.params.documentId;
     let attachId = req.params.attachId;
     if (typeof documentId === 'string') {
-        documentId = 1*documentId
+        documentId = 1 * documentId
     }
     if (!Number.isInteger(documentId) || documentId === 0) {
         return res.status(400).json({ target: 'documentId', message: '삭제할 게시물을 찾을 수 없습니다.' })
@@ -273,9 +272,9 @@ router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredSignin, async(r
     }
 
     let result;
-    try{
+    try {
         result = await util.unlink(attach.attachPath);
-    }catch(error){
+    } catch (error) {
         if (result && result !== 'ENOENT') {
             logger.error('첨부파일 삭제 중 에러 : ', error, documentId);
             return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result || ''}]` })
@@ -296,7 +295,7 @@ router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredSignin, async(r
 
 router.get('/', requiredSignin, async (req, res) => {
     //search document list
-    let {boardId, searchQuery, searchTarget, page} = req.query;
+    let { boardId, searchQuery, searchTarget, page } = req.query;
     if (typeof page === 'string') {
         page = 1 * page
     }
@@ -305,15 +304,15 @@ router.get('/', requiredSignin, async (req, res) => {
     } else if (page < 1 || page === undefined) {
         page = 1;
     }
-    if(!['title', 'contents', 'titleContents'].includes(searchTarget)){
-        return res.status(400).json({target:'searchTarget', message:'검색할 대상을 선택해주세요.'})
+    if (!['title', 'contents', 'titleContents'].includes(searchTarget)) {
+        return res.status(400).json({ target: 'searchTarget', message: '검색할 대상을 선택해주세요.' })
     }
     let result = await documentModel.getDocuments(boardId, null, searchQuery, searchTarget, null, null, page);
-    if(Array.isArray(result)){
+    if (Array.isArray(result)) {
         return res.status(200).json(result);
-    }else{
+    } else {
         logger.error('게시물 검색 중 에러 : ', result, boardId, searchQuery, searchTarget, page, req.userObject.userId);
-        return res.status(500).json({message:'게시물을 찾지 못했습니다. 잠시 후 다시 시도해주세요.'})
+        return res.status(500).json({ message: '게시물을 찾지 못했습니다. 잠시 후 다시 시도해주세요.' })
     }
 })
 module.exports = router;

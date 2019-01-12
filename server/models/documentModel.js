@@ -228,7 +228,7 @@ exports.getPeriodicallyBestDocuments = async (boardType, since) => {
                 'BOARD_ID': '"boardId"',
                 'VOTE_UP_COUNT': '"voteUpCount"',
                 'WRITE_DATETIME': '"writeDateTime"',
-                'COMMENT_COUNT':'"commentCount"',
+                'COMMENT_COUNT': '"commentCount"',
                 'TITLE': '"title"',
             })
             .from('SS_MST_DOCUMENT', 'DOCUMENT')

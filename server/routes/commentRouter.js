@@ -1,6 +1,5 @@
 const router = require('express').Router();
-const requiredAuth = require('../middlewares/requiredAuth'),
-    requiredSignin = require('../middlewares/requiredSignin'),
+const requiredSignin = require('../middlewares/requiredSignin'),
     adminOnly = require('../middlewares/adminOnly'),
     logger = require('../logger'),
     { dbErrorCode, commentNotificationTemplate, childCommentNotificationTemplate, boardTypeDomain } = require('../constants');
@@ -8,6 +7,8 @@ const commentModel = require('../models/commentModel'),
     documentModel = require('../models/documentModel'),
     boardModel = require('../models/boardModel'),
     notificationModel = require('../models/notificationModel')
+let multer = require('multer')
+multer = multer({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, storage: multer.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }) //max 4MB)
 //based on /comment
 
 router.get('/', requiredSignin, async (req, res) => {
@@ -30,18 +31,18 @@ router.get('/', requiredSignin, async (req, res) => {
     let result = await documentModel.getDocument(documentId);
     if (Array.isArray(result) && result.length > 0) {
         result = await boardModel.getBoard(result[0].boardId)
-        if(Array.isArray(result) && result.length > 0 && result[0].status === 'NORMAL'){
-            if(!result[0].statusAuth.read.includes(req.userObject.auth)){
+        if (Array.isArray(result) && result.length > 0 && result[0].status === 'NORMAL') {
+            if (!result[0].statusAuth.read.includes(req.userObject.auth)) {
                 const authString = {
-                    'A':'인증',
-                    'E':'전직교사',
-                    'N':'예비교사',
-                    'D':'인증제한'
+                    'A': '인증',
+                    'E': '전직교사',
+                    'N': '예비교사',
+                    'D': '인증제한'
                 }
-                return res.status(403).json({ target: 'documentId', message: `댓글을 볼 수 있는 권한이 없습니다. ${result[0].statusAuth.comment.map(x=>authString[x]).filter(x=>x).join(', ')} 회원만 읽기가 가능합니다.` })
+                return res.status(403).json({ target: 'documentId', message: `댓글을 볼 수 있는 권한이 없습니다. ${result[0].statusAuth.comment.map(x => authString[x]).filter(x => x).join(', ')} 회원만 읽기가 가능합니다.` })
             }
-        }else{
-            return res.status(404).json({ target: 'documentId', message: `존재하지 않는 ${result && result[0] && result[0].boardType? boardTypeDomain[result[0].boardType] || '게시판' : '게시판'}입니다.` });
+        } else {
+            return res.status(404).json({ target: 'documentId', message: `존재하지 않는 ${result && result[0] && result[0].boardType ? boardTypeDomain[result[0].boardType] || '게시판' : '게시판'}입니다.` });
         }
         result = await boardModel.checkUserBoardReadable(req.userObject.userId, result[0].boardId);
         if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
@@ -75,12 +76,12 @@ router.get('/', requiredSignin, async (req, res) => {
     }
 });
 
-router.post('/', requiredSignin, async (req, res) => {
+router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
     let comment = {
         documentId: req.body.documentId,
         parentCommentId: req.body.parentCommentId,
         contents: req.body.contents,
-        isAnonymous: req.body.isAnonymous,
+        isAnonymous: (req.body.isAnonymous === 'true'),
         userId: req.userObject.userId
     }
     if (typeof comment.documentId === 'string') {
@@ -110,7 +111,7 @@ router.post('/', requiredSignin, async (req, res) => {
     } else if (!document[0].allowAnonymous) {
         comment.isAnonymous = false;
     }
-    
+
     let result = await boardModel.getBoard(document[0].boardId);
     if (!Array.isArray(result) || result.length === 0) {
         logger.error('댓글 등록 처리에 게시판 가져오기 중 에러 : ', result, document[0].boardId)
@@ -120,14 +121,14 @@ router.post('/', requiredSignin, async (req, res) => {
         comment.userNickName = result[0].boardType === 'T' ? req.userObject.topicNickName : req.userObject.loungeNickName
     }
     if (!req.userObject.isAdmin) {
-        if(!result[0].statusAuth.comment.includes(req.userObject.auth)){
+        if (!result[0].statusAuth.comment.includes(req.userObject.auth)) {
             const authString = {
-                'A':'인증',
-                'E':'전직교사',
-                'N':'예비교사',
-                'D':'인증제한'
+                'A': '인증',
+                'E': '전직교사',
+                'N': '예비교사',
+                'D': '인증제한'
             }
-            return res.status(403).json({ target: 'documentId', message: `댓글을 쓸 수 있는 권한이 없습니다. ${result[0].statusAuth.comment.map(x=>authString[x]).filter(x=>x).join(', ')} 회원만 댓글 쓰기가 가능합니다.` })
+            return res.status(403).json({ target: 'documentId', message: `댓글을 쓸 수 있는 권한이 없습니다. ${result[0].statusAuth.comment.map(x => authString[x]).filter(x => x).join(', ')} 회원만 댓글 쓰기가 가능합니다.` })
         }
         result = await boardModel.checkUserBoardWritable(req.userObject.userId, document[0].boardId)
         if (!Array.isArray(result) || result.length === 0 || result[0].count === 0) {
@@ -146,9 +147,15 @@ router.post('/', requiredSignin, async (req, res) => {
         }
     }
 
+    comment.attach = req.files && req.files.length > 0;
     result = await commentModel.createComment(comment);
     if (result.rowCount > 0 && result.rows && result.rows.length > 0 && result.rows[0].commentId > 0) {
-        res.status(200).json({ message: '댓글을 등록하였습니다.', commentId: result.rows[0].commentId });
+        if (comment.attach) {
+            result = await util.uploadFile(req.files, 'attachComment', result.rows[0].commentId, commentModel.createCommentAttach);
+            res.status(200).json({ target: 'attach', message: result.status === 200 ? '게시물을 등록하였습니다.' : '댓글을 등록했으나, 첨부파일을 업로드하지 못했습니다.', commentId: result.rows[0].commentId });
+        } else {
+            res.status(200).json({ message: '댓글을 등록하였습니다.', commentId: result.rows[0].commentId });
+        }
         if (comment.parentCommentId) {//알림 대상 : 대댓글
             if (parentComment[0].userId !== req.userObject.userId) {//자기 댓글에 자기가 대댓글 작성하면 알림 없음
                 let noti = await notificationModel.getNotifications(parentComment[0].userId, null, 'CC', parentComment[0].commentId);
@@ -239,7 +246,7 @@ router.put('/', requiredSignin, async (req, res) => {
         if (comment.isDeleted === result[0].isDeleted) {
             delete comment.isDeleted;
         }
-        if(comment.isDeleted){
+        if (comment.isDeleted) {
             delete comment.contents;
         }
         if ((comment.contents === undefined) && (comment.isDeleted === undefined)) {

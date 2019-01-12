@@ -387,3 +387,50 @@ const createCommentAnimalName = async (documentId, userId, animalName, generatio
             .toParam()
     )
 }
+
+exports.getCommentAttach = async (commentId, attachId) => {
+    let query = builder.select()
+        .fields({
+            'COMMENT_ID': '"commentId"',
+            'ATTACH_ID': '"attachId"',
+            'ATTACH_TYPE': '"attachType"',
+            'ATTACH_NAME': '"attachName"',
+            'ATTACH_PATH': '"attachPath"',
+            'ORIGINAL_NAME': '"originalName"'
+        })
+        .from('SS_MST_COMMENT_ATTACH')
+        .where('COMMENT_ID = ?', commentId);
+    if (attachId) {
+        query.where('ATTACH_ID = ?', attachId)
+    }
+    return await pool.executeQuery('getCommentAttach' + (attachId ? 'att' : ''),
+        query.toParam()
+    )
+}
+
+exports.createCommentAttach = async (commentId, attachId, attachName, attachType, attachPath) => {
+    return await pool.executeQuery('createCommentAttach',
+        builder.insert()
+            .into('SS_MST_COMMENT_ATTACH')
+            .setFields({
+                'COMMENT_ID': commentId,
+                'ATTACH_ID': attachId,
+                'ATTACH_NAME': attachName,
+                'ATTACH_TYPE': attachType,
+                'ATTACH_PATH': attachPath
+            })
+            .toParam()
+    )
+}
+
+exports.deleteCommentAttach = async (commentId, attachId) => {
+    let query = builder.delete()
+        .from('SS_MST_COMMENT_ATTACH')
+        .where('COMMENT_ID = ?', commentId);
+    if (attachId) {
+        query.where('ATTACH_ID = ?', attachId)
+    }
+    return await pool.executeQuery('deleteCommentAttach' + (attachId ? 'one' : 'all'),
+        query.toParam()
+    )
+}
