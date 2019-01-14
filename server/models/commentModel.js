@@ -1,7 +1,8 @@
 const pool = require('./db').instance,
     builder = require('./db').builder;
 const documentModel = require('./documentModel'),
-    util = require('../util');
+    util = require('../util'),
+    cache = require('../cache');
 
 const getChildComments = async (parentCommentId, documentId) => {
     return await pool.executeQuery('getChildComments' + (documentId ? 'docu' : ''),
@@ -148,6 +149,41 @@ exports.getComments = async (documentId, page = 1) => {
             .offset((page - 1) * 100)
             .toParam()
     )
+}
+
+exports.getBestComments = async (documentId) => {
+    if (!documentId) {
+        return [];
+    }
+    let cachedData = await cache.getAsync('[getBestComments]'+documentId);
+    if (cachedData) {
+        return cachedData;
+    }
+    cachedData = await pool.executeQuery('getBestComments',
+        builder.select()
+            .fields({
+                'COMMENT_ID': '"commentId"',
+                'VOTE_UP_COUNT': '"voteUpCount"',
+                'HAS_ATTACH': '"hasAttach"',
+                'ANIMAL_NAME': '"animalName"',
+                'RESERVED1': '"reserved1"',
+                'RESERVED2': '"reserved2"',
+                'RESERVED3': '"reserved3"',
+                'RESERVED4': '"reserved4"'
+            })
+            .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+            .from('SS_MST_COMMENT')
+            .where('DOCUMENT_ID = ?', documentId)
+            .where('IS_DELETED = false')
+            .where('VOTE_UP_COUNT > 9')
+            .order('VOTE_UP_COUNT', false)
+            .limit(3)
+            .toParam()
+    )
+    if(Array.isArray(cachedData)){
+        cache.setAsync('[getBestComments]'+documentId, cachedData, 60*5)
+    }
+    return cachedData
 }
 
 const updateComment = async (comment) => {

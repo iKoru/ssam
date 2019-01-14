@@ -7,6 +7,7 @@ const visitorOnly = require('../middlewares/visitorOnly'),
     logger = require('../logger'),
     { moment } = require('../util');
 const documentModel = require('../models/documentModel'),
+    commentModel = require('../models/commentModel'),
     userModel = require('../models/userModel'),
     boardModel = require('../models/boardModel');
 
@@ -237,6 +238,9 @@ router.get('/boardId', requiredAuth, async (req, res) => {
 router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
     let boardId = req.params.boardId
     if (boardId === 'loungeBest' || boardId === 'topicBest') {
+        if(req.userObject.auth !== 'A'){
+            return res.status(403).json({message:'게시물을 보기 위해서는 인증이 필요합니다.'});
+        }
         let page = req.query.page,
             documentId = req.query.documentId,
             searchQuery = req.query.searchQuery,
@@ -272,6 +276,15 @@ router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
         let board = await boardModel.getBoard(boardId);
         if (Array.isArray(board) && board.length > 0) {
             board = board[0];
+            if (!board.statusAuth.write.includes(req.userObject.auth)) {
+                const authString = {
+                    'A': '인증',
+                    'E': '전직교사',
+                    'N': '예비교사',
+                    'D': '인증제한'
+                }
+                return res.status(403).json({ target: 'documentId', message: `게시물을 볼 수 있는 권한이 없습니다. ${board.statusAuth.read.map(x => authString[x]).filter(x => x).join(', ')} 회원만 조회가 가능합니다.` })
+            }
             let result = await boardModel.checkUserBoardReadable(req.userObject.userId, boardId);
             if (Array.isArray(result) && result.length > 0 && result[0].count > 0) { //readable
                 let page = req.query.page,
@@ -315,7 +328,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
                     return res.status(500).json({ message: `게시물 목록을 조회하지 못했습니다.[${result.code || ''}]` })
                 }
             } else {
-                return res.status(403).json({ target: 'boardId', message: `${boardTypeDomain[board.boardType]}의 게시물을 볼 수 있는 권한이 없습니다.` })
+                return res.status(403).json({ target: 'boardId', message: `${boardTypeDomain[board.boardType]}의 게시물을 볼 수 있는 권한이 없습니다.`, needSubscription:Array.isArray(result) && result.length > 0?result[0].needSubscription:undefined })
             }
         }
     }
@@ -369,6 +382,12 @@ const getDocument = async (req, res) => {
                 result[0].isWriter = true;
             }
             delete result[0].userId;
+            if(result[0].commentCount > 0){
+                const comments = await commentModel.getBestComments(documentId);
+                if(Array.isArray(comments)){
+                    result[0].bestComments = comments;
+                }
+            }
             return res.status(200).json(result[0]);
         } else {
             return res.status(404).json({ target: 'documentId', message: `존재하지 않는 ${board && board[0] && board[0].boardType? boardTypeDomain[board[0].boardType] || '게시판' : '게시판'}입니다.` });
