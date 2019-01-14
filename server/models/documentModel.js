@@ -68,7 +68,6 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
             break;
     }
 
-
     //find page
     if (!page && documentId) {
         //around documentId

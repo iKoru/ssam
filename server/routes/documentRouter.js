@@ -311,7 +311,7 @@ router.get('/', requiredSignin, async (req, res) => {
     if (!['title', 'contents', 'titleContents'].includes(searchTarget)) {
         return res.status(400).json({ target: 'searchTarget', message: '검색할 대상을 선택해주세요.' })
     }
-    let result = await documentModel.getDocuments(boardId, null, searchQuery, searchTarget, null, null, page, false, null, targetYear);
+    let result = await documentModel.getDocuments(boardId, null, searchQuery, searchTarget, null, false, page, false, null, targetYear);
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {
