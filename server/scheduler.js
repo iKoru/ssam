@@ -1,5 +1,6 @@
 const scheduler = require('node-schedule');
-const logger = require('./logger');
+const logger = require('./logger'),
+    constants = require('./constants');
 const groupModel = require('./models/groupModel'),
     boardModel = require('./models/boardModel')
 
@@ -24,6 +25,25 @@ scheduler.scheduleJob('0 0 3 * * *', async () => { //trigger 03:00am everyday
                 }
             }
             result[i].reservedContents.boardId = result[i].boardId;
+            if(result[i].reservedContents.useCategory !== undefined){
+                await boardModel.deleteBoardCategory(result[i].boardId);//reset categories
+                if(result[i].reservedContents.useCategory){//create categories
+                    await boardModel.createBoardCategory(result[i].boardId, constants.defaultTopicCategories);
+                }
+            }
+            if (result[i].reservedContents.auth) {
+                let j = 0;
+                while (j < result[i].reservedContents.auth.length) {
+                    if (result[i].reservedContents.auth[j].command === 'INSERT') {
+                        await boardModel.createBoardAuth(result[i].boardId, result[i].reservedContents.auth[j].groupId, result[i].reservedContents.auth[j].authType)
+                    } else if (result[i].reservedContents.auth[i].command === 'UPDATE') {
+                        await boardModel.updateBoardAuth(result[i].boardId, result[i].reservedContents.auth[j].groupId, result[i].reservedContents.auth[j].authType)
+                    } else if (result[i].reservedContents.auth[i].command === 'DELETE') {
+                        await boardModel.deleteBoardAuth(result[i].boardId, result[i].reservedContents.auth[j].groupId)
+                    }
+                    j++;
+                }
+            }
             delete result[i].reservedContents.reservedContents; //prevent duplicate reservation
             delete result[i].reservedContents.reservedDate;
             check = await boardModel.updateBoard(result[i].reservedContents)

@@ -593,8 +593,6 @@ const deleteBoardCategory = async (boardId, categories) => {
         .where('BOARD_ID = ?', boardId)
     if (Array.isArray(categories) && categories.length > 0) {
         query.where('CATEGORY_NAME IN ?', categories);
-    } else if (categories && categories.length === 0) {
-        return 0;
     }
     return await pool.executeQuery('deleteBoardCategory' + (categories ? categories.length : ''),
         query.toParam()
@@ -698,4 +696,15 @@ exports.getRecentBoards = async () => {
         cache.setAsync('[getRecentBoards]', cachedData, 60 * 30);
     }
     return cachedData;
+}
+
+exports.getBoardMember = async(boardId, boardType) => {
+    return await pool.executeQuery('getBoardMember' + boardType,
+        builder.select()
+        .field(boardType === 'T'?'TOPIC_NICKNAME':'LOUNGE_NICKNAME', '"nickName"')
+        .from('SS_MST_USER_BOARD', 'UBOARD')
+        .join('SS_MST_USER', 'MUSER', 'MUSER.USER_ID = UBOARD.USER_ID')
+        .where('UBOARD.BOARD_ID = ?', boardId)
+        .toParam()
+    )
 }

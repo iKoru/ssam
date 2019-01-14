@@ -31,6 +31,9 @@ router.get('/', requiredSignin, async (req, res) => {
     if (!req.userObject.isAdmin) {
         delete board.ownerId;
     }
+    if(Array.isArray(board.categories)){
+        board.categories = board.categories.filter(x=>x)
+    }
     delete board.status;
     board.boardAuth = await boardModel.getBoardAuthName(board.boardId, req.userObject.isAdmin);
 
@@ -390,7 +393,7 @@ router.post('/', requiredAuth, async (req, res) => {
         return res.status(200).json({ message: `${constants.boardTypeDomain[board.boardType]}을 만들었습니다.` })
     } else {
         logger.error('게시판 생성 중 에러 : ', check, req.userObject.userId, board)
-        return res.status(500).json({ message: `${constants.boardTypeDomain[board.boardType]} 생성에 실패하였습니다.[${check.code}] 잠시 후 다시 시도해주세요.` })
+        return res.status(500).json({ message: `${constants.boardTypeDomain[board.boardType]} 생성에 실패하였습니다.[${check.code || ''}] 잠시 후 다시 시도해주세요.` })
     }
 });
 
@@ -417,6 +420,26 @@ router.delete('/:boardId([a-zA-z]+)', adminOnly, async (req, res) => {
         return res.status(200).json({ message: '게시판을 삭제하였습니다.' });
     }
 });
+
+router.get('/member', requiredSignin, async(req, res)=>{
+    let boardId = req.query.boardId;
+    if (typeof boardId !== 'string' || boardId === '') {
+        return res.status(400).json({ target: 'boardId', message: '게시판 ID 값이 없습니다.' });
+    }
+    const board = await boardModel.getBoard(boardId);
+    if (!Array.isArray(board) || board.length < 1) {
+        return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
+    } else if (board[0].ownerId !== req.userObject.userId && !req.userObject.isAdmin) {
+        return res.status(403).json({ target: 'boardId', message: `${constants.boardTypeDomain[board[0].boardType]} 정보를 확인할 수 있는 권한이 없습니다.` });
+    }
+    let result = await boardModel.getBoardMember(boardId, board[0].boardType);
+    if(Array.isArray(result)){
+        return res.status(200).json(result)
+    }else{
+        logger.error('게시판 구성원 조회 중 에러 : ', result, boardId, req.userObject.userId);
+        return res.status(500).json({message:`${constants.boardTypeDomain[board[0].boardType]} 구성원 정보를 가져오지 못했습니다.[${result.code || ''}]`})
+    }
+})
 
 router.get('/list', requiredSignin, async (req, res) => {
     let isAscending, sortTarget, searchTarget, searchQuery, page, boardType;
