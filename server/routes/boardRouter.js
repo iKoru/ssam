@@ -5,7 +5,7 @@ const requiredAuth = require('../middlewares/requiredAuth'),
 const boardModel = require('../models/boardModel'),
     userModel = require('../models/userModel'),
     groupModel = require('../models/groupModel')
-const { safeStringLength, moment, shallowArrayEquals } = require('../util'),
+const { safeStringLength, moment, shallowArrayEquals, partialUUID } = require('../util'),
     logger = require('../logger'),
     constants = require('../constants');
 
@@ -246,7 +246,7 @@ router.post('/', requiredAuth, async (req, res) => {
 
     if (!constants.boardTypeDomain.hasOwnProperty(board.boardType) || (board.boardType !== 'T' && !req.userObject.isAdmin)) {
         return res.status(400).json({ target: 'boardType', message: '라운지/토픽 구분값이 올바르지 않습니다.' });
-    } else if (typeof board.boardId !== 'string' || board.boardId === '') {
+    } else if (board.boardId && typeof board.boardId !== 'string') {
         return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID가 올바르지 않습니다.` })
     } else if (typeof board.boardName !== 'string' || board.boardName === '') {
         return res.status(400).json({ target: 'boardName', message: `${constants.boardTypeDomain[board.boardType]} 이름은 필수입니다.` });
@@ -263,25 +263,57 @@ router.post('/', requiredAuth, async (req, res) => {
         if (!Number.isInteger(board.recentOrder)) {
             return res.status(400).json({ target: 'recentOrder', message: '최근글 노출순서 값이 올바르지 않습니다.' });
         }
-    } else {
+    }
+        
+    let i = 0, j=0, check;
+    if(!board.boardId){//generate random string
+        while(i<10){
+            board.boardId = partialUUID()+partialUUID();console.log(board.boardId);
+            check = await boardModel.checkBoardId(board.boardId);
+            if (Array.isArray(check) && check[0].count === 0) {
+                if (!constants.boardIdRegex[0].test(board.boardId)) {
+                    i++;
+                    continue;
+                } else if (!constants.boardIdRegex[1].test(board.boardId)) {
+                    i++;
+                    continue;
+                }
+                j=0;
+                while (j < constants.reserved.length) {
+                    if (board.boardId.indexOf(constants.reserved[j]) >= 0) {
+                        break;
+                    }
+                    j++;
+                }
+                if(j === constants.reserved.length){
+                    break;
+                }
+            }
+            i++;
+        }
+        if(i===10){
+            return res.status(500).json({ target: 'boardId', message: '토픽ID를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.' })
+        }
+    }else{
         if (!constants.boardIdRegex[0].test(board.boardId)) {
             return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID의 길이가 너무 길거나, [_, -] 이외의 특수문자가 있습니다.` })
         } else if (!constants.boardIdRegex[1].test(board.boardId)) {
             return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID에 연속된 [_, -]가 있습니다.` })
         }
-        let i = 0;
+        i=0;
         while (i < constants.reserved.length) {
             if (board.boardId.indexOf(constants.reserved[i]) >= 0) {
                 return res.status(403).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID가 허용되지 않는 문자(${constants.reserved[i]})를 포함합니다.` })
             }
             i++;
         }
+        check = await boardModel.getBoard(board.boardId);
+        if (Array.isArray(check) && check.length > 0) {
+            return res.status(409).json({ target: 'boardId', message: `이미 존재하는 ${constants.boardTypeDomain[board.boardType]} ID입니다.` });
+        }
     }
 
-    let check = await boardModel.getBoard(board.boardId);
-    if (Array.isArray(check) && check.length > 0) {
-        return res.status(409).json({ target: 'boardId', message: `이미 존재하는 ${constants.boardTypeDomain[board.boardType]} ID입니다.` });
-    }
+
     if (board.parentBoardId) {
         check = await boardModel.getBoard(board.parentBoardId);
         if (!Array.isArray(check) || check.length === 0) {
@@ -291,7 +323,6 @@ router.post('/', requiredAuth, async (req, res) => {
         }
     }
     board.ownerId = req.userObject.isAdmin ? (req.body.ownerId ? req.body.ownerId : req.userObject.userId) : req.userObject.userId;
-    console.log('owner : ', board.ownerId)
     let isAdmin = false;
     if (board.ownerId !== req.userObject.userId && req.userObject.isAdmin) {
         check = await userModel.getUser(board.ownerId);
@@ -340,7 +371,7 @@ router.post('/', requiredAuth, async (req, res) => {
             comment: ['A']
         })
     }
-    console.log(board);
+
     check = await boardModel.createBoard(board);
     if (check > 0) {
         if (groups.length > 0) {
