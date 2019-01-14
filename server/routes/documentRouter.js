@@ -296,9 +296,12 @@ router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredSignin, async (
 
 router.get('/', requiredSignin, async (req, res) => {
     //search document list
-    let { boardId, searchQuery, searchTarget, page } = req.query;
+    let { boardId, searchQuery, searchTarget, page, targetYear } = req.query;
     if (typeof page === 'string') {
         page = 1 * page
+    }
+    if(typeof targetYear === 'string'){
+        targetYear = 1 * targetYear;
     }
     if (page !== undefined && !Number.isInteger(page) || page === 0) {
         return res.status(400).json({ target: 'page', message: '게시물을 찾을 수 없습니다.' });
@@ -308,7 +311,7 @@ router.get('/', requiredSignin, async (req, res) => {
     if (!['title', 'contents', 'titleContents'].includes(searchTarget)) {
         return res.status(400).json({ target: 'searchTarget', message: '검색할 대상을 선택해주세요.' })
     }
-    let result = await documentModel.getDocuments(boardId, null, searchQuery, searchTarget, null, null, page);
+    let result = await documentModel.getDocuments(boardId, null, searchQuery, searchTarget, null, null, page, false, null, targetYear);
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {

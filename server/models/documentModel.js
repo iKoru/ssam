@@ -5,11 +5,11 @@ const util = require('../util'),
 const boardModel = require('./boardModel'),
     userModel = require('./userModel');
 
-exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending = false, page, isAdmin = false, category = null) => {
+exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending = false, page, isAdmin = false, category = null, targetYear = null) => {
     if (!boardId) {
         return [];
     }
-    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category) {
+    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category && !targetYear) {
         let cachedData = await cache.getAsync('[document]' + boardId + '@' + (page || ''));
         if (cachedData) {//array itself
             return cachedData;
@@ -24,6 +24,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
             'VIEW_COUNT': '"viewCount"',
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
+            'count(*) OVER()': '"totalCount"'
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_DOCUMENT')
@@ -51,6 +52,9 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
                 break;
         }
     }
+    if(targetYear){
+        query.where('WRITE_DATETIME BETWEEN ? AND ?', util.moment(targetYear, 'YYYY').startOf('year').format('YMMDDHHmmss'), util.moment(targetYear, 'YYYY').endOf('year').format('YMMDDHHmmss'))
+    }
     switch (sortTarget) {
         case 'viewCount':
             query.order('VIEW_COUNT', isAscending)
@@ -66,7 +70,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
 
 
     //find page
-    if (documentId) {
+    if (!page && documentId) {
         //around documentId
         let withQuery = builder.select().field('DOCUMENT_ID');
         switch (sortTarget) {
@@ -106,7 +110,10 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
         if (category) {
             withQuery.where('CATEGORY = ?', category)
         }
-        const pages = await pool.executeQuery('findDocumentPage' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc'),
+        if(targetYear){
+            withQuery.where('WRITE_DATETIME BETWEEN ? AND ?', util.moment(targetYear, 'YYYY').startOf('year').format('YMMDDHHmmss'), util.moment(targetYear, 'YYYY').endOf('year').format('YMMDDHHmmss'))
+        }
+        const pages = await pool.executeQuery('findDocumentPage' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc') + (category ? 'cat' : '') + (targetYear),
             builder.select().with('DOCUMENTS', withQuery).field('CEIL(NUM/10.0)', '"page"').from('DOCUMENTS').where('DOCUMENT_ID = ?', documentId)
                 .toParam()
         );
@@ -120,11 +127,11 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
     }
 
     //select documents
-    let result = await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc') + (category ? 'cat' : ''),
+    let result = await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc') + (category ? 'cat' : '') + (targetYear),
         query.limit(10).offset((page - 1) * 10)
             .toParam()
     )
-    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category) {
+    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category && !targetYear) {
         cache.setAsync('[document]' + boardId + '@' + (page || ''), result, 30);//maintain in 30 sec
     }
     return result;
