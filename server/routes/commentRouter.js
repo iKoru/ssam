@@ -150,6 +150,7 @@ router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
     }
 
     comment.hasAttach = req.files && req.files.length > 0;
+    comment.reserved1 = req.userObject.auth;
     result = await commentModel.createComment(comment);
     if (result.rowCount > 0 && result.rows && result.rows.length > 0 && result.rows[0].commentId > 0) {
         const commentId = result.rows[0].commentId;

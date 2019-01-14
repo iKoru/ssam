@@ -70,6 +70,7 @@ router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
     }
 
     document.hasAttach = req.files && req.files.length > 0;
+    document.reserved1 = req.userObject.auth;
     result = await documentModel.createDocument(document);
     if (result.error || result.rowCount === 0) {
         logger.error('게시물 저장 중 에러 : ', result, document);
