@@ -19,7 +19,7 @@ function sendMail(mailOptions) {
 };
 
 exports.sendEmailVerification = async function (userId, email, key) {
-  const authLinkParams = `authSubmit/userId=${userId}&authKey=${key}`;
+  const authLinkParams = `authSubmit?userId=${userId}&authKey=${key}`;
 
   return await sendMail({
     from: emailSender,
