@@ -45,12 +45,12 @@ router.post('/', requiredSignin, async (req, res) => {
     }
 });
 
-router.get('/submit', async (req, res) => { // get /auth/submit 
-    if (!req.query.userId || !req.query.authKey) {
+router.post('/submit', async (req, res) => { // post /auth/submit 
+    if (!req.body.userId || !req.body.authKey) {
         return res.status(400).json({ message: '인증할 사용자를 찾을 수 없습니다.' });
     } else {
-        let userId = req.query.userId,
-            authKey = req.query.authKey;
+        let userId = req.body.userId,
+            authKey = req.body.authKey;
         const user = await userModel.getUser(userId);
         if (!Array.isArray(user) || user.length < 1) {
             return res.status(404).json({ message: '인증할 사용자를 찾을 수 없습니다.' });
@@ -76,7 +76,7 @@ router.get('/submit', async (req, res) => { // get /auth/submit
                             return res.status(200).json({ message: '정상적으로 인증되었습니다.' });
                         }
                     }
-                    logger.error('인증메일 응답으로 인증 처리 중 에러 : ', req.userObject.userId, req.userObject.email, req.query.authKey, history)
+                    logger.error('인증메일 응답으로 인증 처리 중 에러 : ', req.body.userId, req.body.authKey, history)
                     return res.status(500).json({ message: '인증사항을 저장하는 데 실패하였습니다. 관리자에게 문의해주세요.' });
                 }
                 i++;
