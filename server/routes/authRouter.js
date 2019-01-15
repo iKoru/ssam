@@ -6,6 +6,7 @@ const authModel = require('../models/authModel'),
     util = require('../util'),
     logger = require('../logger'),
     mailer = require('../mailer'),
+    { dbErrorCode } = require('../constants'),
     { authGrantedGroupId, authExpiredGroupId } = require('../../config');
 //based on /auth
 router.get('/', requiredSignin, (req, res) => {
@@ -72,7 +73,7 @@ router.post('/submit', async (req, res) => { // post /auth/submit
                         await groupModel.deleteUserGroup(userId, authExpiredGroupId);
                         await groupModel.deleteUserGroup(userId, authGrantedGroupId);
                         history = await groupModel.createUserGroup(userId, authGrantedGroupId);
-                        if (history === 1) {
+                        if (history === 1 || history.code === dbErrorCode.PKDUPLICATION) {
                             return res.status(200).json({ message: '정상적으로 인증되었습니다.' });
                         }
                     }
