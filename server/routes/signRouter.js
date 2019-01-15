@@ -9,6 +9,7 @@ const visitorOnly = require('../middlewares/visitorOnly'),
 const signModel = require('../models/signModel'),
   userModel = require('../models/userModel'),
   util = require('../util'),
+  mailer = require('../mailer'),
   logger = require('../logger');
 
 //based on /
@@ -91,8 +92,11 @@ router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
         logger.error('새로운 리셋 패스워드 저장 에러 : ', user, result);
         return res.status(500).json({ message: '새로운 패스워드를 저장하는 데 실패하였습니다. 관리자에게 문의 부탁드립니다.' });
       } else {
-        //send email
-        return res.status(200).json({ message: '새로운 패스워드를 이메일로 발송하였습니다. 메일을 확인해주세요!' });
+        if (await mailer.sendTempPasswordEmail(email, newPassword)) {
+          return res.status(200).json({ message: '새로운 패스워드를 이메일로 발송하였습니다. 메일을 확인해주세요!' });
+        } else {
+          return res.status(500).json({ message: '이메일을 발송하지 못했습니다. 잠시 후 다시 시도해주세요.' });
+        }
       }
     } else {
       return res.status(400).json({ target: 'email', message: 'ID에 등록된 이메일과 다릅니다.' });

@@ -4,7 +4,8 @@ const router = require('express').Router(),
 const constants = require('../constants'),
     util = require('../util'),
     logger = require('../logger'),
-    config = require('../../config');
+    config = require('../../config'),
+    mailer = require('../mailer');
 let multerLib = require('multer');
 let multer = multerLib({
     dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, fileFilter: function (req, file, cb) {
@@ -99,7 +100,7 @@ router.put('/', requiredSignin, async (req, res) => {
             }
             parameters.status = user.status;
         }
-        if(user.emailVerifiedDate === null && req.userObject.auth === 'E'){
+        if (user.emailVerifiedDate === null && req.userObject.auth === 'E') {
             parameters.emailVerifiedDate = null;
         }
         if ((user.grade !== undefined && user.grade !== original.grade) || (user.major !== undefined && user.major !== original.major) || (user.email !== undefined && user.email !== original.email)) {
@@ -311,7 +312,11 @@ router.post('/', checkSignin, async (req, res) => { //회원가입
     }
     result = await userModel.createUser(user);
     if (typeof result !== 'object' && result > 0) {
-        //TODO : send email
+        if (user.email) {
+            const authKey = util.UUID();
+            result = await authModel.createUserAuth(user.userId, authKey);
+            await mailer.sendEmailVerification(user.userId, user.email, authKey)
+        }
         trial = 0;
         while (trial < user.userGroup.length) {
             result = await groupModel.createUserGroup(user.userId, user.userGroup[trial]);
@@ -418,7 +423,7 @@ router.get('/', requiredSignin, async (req, res) => {
             result.auth = 'AUTHORIZED'
         } else if (result2.some(x => x.groupType === 'E')) {
             result.auth = 'EXPIRED'
-        } else{
+        } else {
             result.auth = 'NORMAL'
         }
 

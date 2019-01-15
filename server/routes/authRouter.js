@@ -5,6 +5,7 @@ const authModel = require('../models/authModel'),
     groupModel = require('../models/groupModel'),
     util = require('../util'),
     logger = require('../logger'),
+    mailer = require('../mailer'),
     { authGrantedGroupId, authExpiredGroupId } = require('../../config');
 //based on /auth
 router.get('/', requiredSignin, (req, res) => {
@@ -36,14 +37,12 @@ router.post('/', requiredSignin, async (req, res) => {
         authKey = util.UUID();
         result = await authModel.createUserAuth(userId, authKey);
     }
-    //TODO : send email(async)
-    if (typeof result === 'number' && result > 0) {
+    if (result === 1 && await mailer.sendEmailVerification(userId, email, authKey)) {
         return res.status(200).json({ message: '등록된 이메일로 인증메일을 보내드렸습니다. 이메일을 확인해주세요.' });
     } else {
         logger.error('인증메일 보내기 요청 처리 중 에러 : ', result, req.userObject.userId, req.userObject.email)
         return res.status(500).json({ message: `인증 메일을 생성하는 도중에 오류가 발생했습니다.[${result.code || ''}]` })
     }
-
 });
 
 router.get('/submit', async (req, res) => { // get /auth/submit 
