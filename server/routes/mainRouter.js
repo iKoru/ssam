@@ -134,7 +134,7 @@ router.get('/best', checkSignin, async (req, res) => {
     }
 })
 
-router.get('/recent', checkSignin, async (req, res) => {
+router.get('/recent', requiredSignin, async (req, res) => {
     let result = await boardModel.getRecentBoards();
     if (Array.isArray(result)) {
         return res.status(200).json(result);
