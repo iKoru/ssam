@@ -11,3 +11,5 @@ dump.rdb
 admin/*
 nuxt
 admin
+client
+client/*
