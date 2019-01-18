@@ -169,6 +169,9 @@ router.put('/', requiredAuth, async (req, res) => {
         if ((req.body.recentOrder !== undefined) && req.body.recentOrder !== board[0].recentOrder) {
             reservedContents.recentOrder = req.body.recentOrder > 30000 ? 30000 : req.body.recentOrder;
         }
+        if ((req.body.orderNumber !== undefined) && req.body.orderNumber !== board[0].orderNumber) {
+            reservedContents.orderNumber = req.body.orderNumber > 30000 ? 30000 : req.body.orderNumber;
+        }
         if (req.body.statusAuth) {
             let statusAuth = board[0].statusAuth, changed = false;
             if (Array.isArray(req.body.statusAuth.read) && !shallowArrayEquals(req.body.statusAuth.read, statusAuth.read)) {
@@ -244,7 +247,8 @@ router.post('/', requiredAuth, async (req, res) => {
         boardType: req.body.boardType,
         groups: req.body.allowedGroups,
         parentBoardId: req.userObject.isAdmin ? req.body.parentBoardId : undefined,
-        recentOrder: req.userObject.isAdmin ? (req.body.recentOrder > 30000 ? 30000 : req.body.recentOrder) : undefined
+        recentOrder: req.userObject.isAdmin ? (req.body.recentOrder > 30000 ? 30000 : req.body.recentOrder) : undefined,
+        orderNumber: req.userObject.isAdmin ? (req.body.orderNumber > 30000 ? 30000 : req.body.orderNumber) : undefined
     };
 
     if (!constants.boardTypeDomain.hasOwnProperty(board.boardType) || (board.boardType !== 'T' && !req.userObject.isAdmin)) {
@@ -267,7 +271,13 @@ router.post('/', requiredAuth, async (req, res) => {
             return res.status(400).json({ target: 'recentOrder', message: '최근글 노출순서 값이 올바르지 않습니다.' });
         }
     }
-        
+    if (board.orderNumber !== undefined && board.orderNumber !== null && typeof board.orderNumber !== 'number') {
+        board.orderNumber = board.orderNumber * 1;
+        if (!Number.isInteger(board.recentOrder)) {
+            return res.status(400).json({ target: 'orderNumber', message: '게시판순서 값이 올바르지 않습니다.' });
+        }
+    }
+    
     let i = 0, j=0, check;
     if(!board.boardId){//generate random string
         while(i<10){
@@ -446,7 +456,7 @@ router.get('/list', requiredSignin, async (req, res) => {
     if (typeof req.query.isAscending === 'boolean') {
         isAscending = req.query.isAscending;
     }
-    if (['boardType', 'boardName'].includes(req.query.sortTarget)) {
+    if (['boardType', 'boardName', 'orderNumber'].includes(req.query.sortTarget)) {
         sortTarget = req.query.sortTarget;
     }
     if (['boardName', 'boardId'].includes(req.query.searchTarget)) {

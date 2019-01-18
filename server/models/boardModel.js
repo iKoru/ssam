@@ -18,8 +18,8 @@ exports.checkBoardId = async (boardId) => {
     );
 }
 
-exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardName", sortTarget = "boardName", isAscending = true, isAdmin = false) => {
-    if (!searchQuery && !isAdmin && !boardType && !page && sortTarget === 'boardName' && isAscending) {
+exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardName", sortTarget = "orderNumber", isAscending = true, isAdmin = false) => {
+    if (!searchQuery && !isAdmin && !boardType && !page && sortTarget === 'orderNumber' && isAscending) {
         let cachedData = await cache.getAsync('[getBoardList]');
         if (cachedData) {
             return cachedData;
@@ -37,6 +37,7 @@ exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardNa
         'USE_CATEGORY': '"useCategory"',
         'PARENT_BOARD_ID': '"parentBoardId"',
         'RECENT_ORDER': '"recentOrder"',
+        'ORDER_NUMBER':'"orderNumber"',
         'STATUS_AUTH': '"statusAuth"',
         'RESERVED_DATE': '"reservedDate"',
         'RESERVED_CONTENTS': '"reservedContents"',
@@ -73,8 +74,10 @@ exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardNa
             query.order('BOARD.BOARD_ID', isAscending);
             break;
         case 'boardName':
-        default:
             query.order('BOARD_NAME', isAscending);
+            break;
+        default:
+            query.order('ORDER_NUMBER', isAscending)
             break;
     }
     if (isAdmin) {
@@ -87,7 +90,7 @@ exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardNa
         query.group('BOARD.BOARD_ID')
             .toParam()
     )
-    if (Array.isArray(result) && !searchQuery && !isAdmin && !boardType && !page && sortTarget === 'boardName' && isAscending) {
+    if (Array.isArray(result) && !searchQuery && !isAdmin && !boardType && !page && sortTarget === 'orderNumber' && isAscending) {
         cache.setAsync('[getBoardList]', result, 3600);
     }
     return result;
@@ -139,6 +142,7 @@ exports.getReservedBoard = async () => {
                 'USE_CATEGORY': '"useCategory"',
                 'PARENT_BOARD_ID': '"parentBoardId"',
                 'RECENT_ORDER': '"recentOrder"',
+                'ORDER_NUMBER':'"orderNumber"',
                 'STATUS_AUTH': '"statusAuth"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
@@ -171,6 +175,7 @@ const getBoard = async (boardId) => {
                 'USE_CATEGORY': '"useCategory"',
                 'PARENT_BOARD_ID': '"parentBoardId"',
                 'RECENT_ORDER': '"recentOrder"',
+                'ORDER_NUMBER':'"orderNumber"',
                 'STATUS_AUTH': '"statusAuth"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
@@ -350,6 +355,7 @@ exports.createBoard = async (board) => {
                 'ALL_GROUP_AUTH': board.allGroupAuth,
                 'PARENT_BOARD_ID': board.parentBoardId,
                 'RECENT_ORDER': board.recentOrder,
+                'ORDER_NUMBER':board.orderNumber,
                 'STATUS_AUTH': board.statusAuth,
             })
             .toParam()
@@ -414,6 +420,9 @@ exports.updateBoard = async (board) => {
     }
     if (board.recentOrder !== undefined) {
         query.set('RECENT_ORDER', board.recentOrder)
+    }
+    if(board.orderNumber !== undefined){
+        query.set('ORDER_NUMBER', board.orderNumber)
     }
     if (board.statusAuth !== undefined) {
         query.set('STATUS_AUTH', board.statusAuth)
