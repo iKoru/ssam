@@ -238,8 +238,8 @@ router.get('/boardId', requiredAuth, async (req, res) => {
 router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
     let boardId = req.params.boardId
     if (boardId === 'loungeBest' || boardId === 'topicBest') {
-        if(req.userObject.auth !== 'A'){
-            return res.status(403).json({message:'게시물을 보기 위해서는 인증이 필요합니다.'});
+        if (req.userObject.auth !== 'A') {
+            return res.status(403).json({ message: '게시물을 보기 위해서는 인증이 필요합니다.' });
         }
         let page = req.query.page,
             documentId = req.query.documentId,
@@ -319,7 +319,12 @@ router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
                 if (typeof category !== 'string' || category.length > 30) {
                     category = undefined;
                 }
-
+                if (!board.parentBoardId) {//childBoard check
+                    const boards = await boardModel.getBoards();
+                    if (boards.some(x => x.parentBoardId === boardId)) {
+                        boardId = boards.filter(x => x.parentBoardId === boardId).map(x => x.boardId)
+                    }
+                }
                 let result = await documentModel.getDocuments(boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending, page, req.userObject.isAdmin, category);
                 if (Array.isArray(result)) {
                     return res.status(200).json(result);
@@ -328,7 +333,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
                     return res.status(500).json({ message: `게시물 목록을 조회하지 못했습니다.[${result.code || ''}]` })
                 }
             } else {
-                return res.status(403).json({ target: 'boardId', message: `${boardTypeDomain[board.boardType]}의 게시물을 볼 수 있는 권한이 없습니다.`, needSubscription:Array.isArray(result) && result.length > 0?result[0].needSubscription:undefined })
+                return res.status(403).json({ target: 'boardId', message: `${boardTypeDomain[board.boardType]}의 게시물을 볼 수 있는 권한이 없습니다.`, needSubscription: Array.isArray(result) && result.length > 0 ? result[0].needSubscription : undefined })
             }
         }
     }
@@ -342,14 +347,14 @@ const getDocument = async (req, res) => {
     if (Array.isArray(result) && result.length > 0) {
         const board = await boardModel.getBoard(result[0].boardId);
         if (Array.isArray(board) && board.length > 0 && board[0].status === 'NORMAL') {
-            if(!board[0].statusAuth.read.includes(req.userObject.auth)){
+            if (!board[0].statusAuth.read.includes(req.userObject.auth)) {
                 const authString = {
-                    'A':'인증',
-                    'E':'전직교사',
-                    'N':'예비교사',
-                    'D':'인증제한'
+                    'A': '인증',
+                    'E': '전직교사',
+                    'N': '예비교사',
+                    'D': '인증제한'
                 }
-                return res.status(403).json({ target: 'documentId', message: `게시물을 읽을 수 있는 권한이 없습니다. ${board[0].statusAuth.read.map(x=>authString[x]).filter(x=>x).join(', ')} 회원만 읽기가 가능합니다.` })
+                return res.status(403).json({ target: 'documentId', message: `게시물을 읽을 수 있는 권한이 없습니다. ${board[0].statusAuth.read.map(x => authString[x]).filter(x => x).join(', ')} 회원만 읽기가 가능합니다.` })
             }
             if (board[0].allGroupAuth === 'NONE') {
                 const check = await boardModel.checkUserBoardReadable(req.userObject.userId, result[0].boardId);
@@ -382,15 +387,15 @@ const getDocument = async (req, res) => {
                 result[0].isWriter = true;
             }
             delete result[0].userId;
-            if(result[0].commentCount > 0){
+            if (result[0].commentCount > 0) {
                 const comments = await commentModel.getBestComments(documentId);
-                if(Array.isArray(comments)){
+                if (Array.isArray(comments)) {
                     result[0].bestComments = comments;
                 }
             }
             return res.status(200).json(result[0]);
         } else {
-            return res.status(404).json({ target: 'documentId', message: `존재하지 않는 ${board && board[0] && board[0].boardType? boardTypeDomain[board[0].boardType] || '게시판' : '게시판'}입니다.` });
+            return res.status(404).json({ target: 'documentId', message: `존재하지 않는 ${board && board[0] && board[0].boardType ? boardTypeDomain[board[0].boardType] || '게시판' : '게시판'}입니다.` });
         }
     } else {
         return res.status(404).json({ target: 'documentId', message: '존재하지 않는 게시물입니다.' })
