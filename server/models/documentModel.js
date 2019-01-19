@@ -26,7 +26,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
             'TITLE': '"title"',
             'count(*) OVER()': '"totalCount"'
         })
-        .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+        .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_DOCUMENT')
     if (!isAdmin) {
         query.where('IS_DELETED = false');
@@ -52,7 +52,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
                 break;
         }
     }
-    if(targetYear){
+    if (targetYear) {
         query.where('WRITE_DATETIME BETWEEN ? AND ?', util.moment(targetYear, 'YYYY').startOf('year').format('YMMDDHHmmss'), util.moment(targetYear, 'YYYY').endOf('year').format('YMMDDHHmmss'))
     }
     switch (sortTarget) {
@@ -109,7 +109,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
         if (category) {
             withQuery.where('CATEGORY = ?', category)
         }
-        if(targetYear){
+        if (targetYear) {
             withQuery.where('WRITE_DATETIME BETWEEN ? AND ?', util.moment(targetYear, 'YYYY').startOf('year').format('YMMDDHHmmss'), util.moment(targetYear, 'YYYY').endOf('year').format('YMMDDHHmmss'))
         }
         const pages = await pool.executeQuery('findDocumentPage' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc') + (category ? 'cat' : '') + (targetYear),
@@ -154,7 +154,7 @@ exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarg
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
         })
-        .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+        .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_DOCUMENT', 'DOCUMENT')
         .where('IS_DELETED = false')
         .where('BEST_DATETIME IS NOT NULL')
@@ -367,7 +367,7 @@ const getDocument = async (documentId) => {
                 'RESERVED3': '"reserved3"',
                 'RESERVED4': '"reserved4"'
             })
-            .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+            .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
             .field(builder.case().when('IS_DELETED = true').then('삭제된 글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
             .from('SS_MST_DOCUMENT')
             .where('DOCUMENT_ID = ?', documentId)
@@ -399,7 +399,7 @@ exports.getUserDocument = async (userId, isAdmin, page = 1) => {
             'RESERVED4': '"reserved4"',
             'count(*) OVER()': '"totalCount"'
         })
-        .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+        .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_DOCUMENT')
         .where('USER_ID = ?', userId);
     if (!isAdmin) {
