@@ -127,7 +127,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
 
     //select documents
     let result = await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc') + (category ? 'cat' : '') + (targetYear),
-        query.limit(10).offset((page - 1) * 10)
+        query.limit(20).offset((page - 1) * 20)
             .toParam()
     )
     if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category && !targetYear) {
@@ -211,8 +211,8 @@ exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarg
         page = 1;
     }
 
-    let result = await pool.executeQuery('getBestDocumenta' + boardType + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
-        query.order('BEST_DATETIME', false).limit(10).offset((page - 1) * 10)
+    let result = await pool.executeQuery('getBestDocument' + boardType + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
+        query.order('BEST_DATETIME', false).limit(20).offset((page - 1) * 20)
             .toParam()
     )
     if (Array.isArray(result) && !documentId && !searchQuery && !searchTarget) {
