@@ -418,13 +418,13 @@ router.get('/', requiredSignin, async (req, res) => {
             result.region = result.region.groupName;
         }
         if (result2.some(x => x.groupType === 'D')) {
-            result.auth = 'DENIED'
+            result.auth = 'D'
         } else if (result2.some(x => x.groupType === 'A')) {
-            result.auth = 'AUTHORIZED'
+            result.auth = 'A'
         } else if (result2.some(x => x.groupType === 'E')) {
-            result.auth = 'EXPIRED'
+            result.auth = 'E'
         } else {
-            result.auth = 'NORMAL'
+            result.auth = 'N'
         }
 
         result.groups = result2.filter(x => x.isOpenToUsers).map(x => x.groupId)
