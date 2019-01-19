@@ -31,8 +31,8 @@ router.get('/', requiredSignin, async (req, res) => {
     if (!req.userObject.isAdmin) {
         delete board.ownerId;
     }
-    if(Array.isArray(board.categories)){
-        board.categories = board.categories.filter(x=>x)
+    if (Array.isArray(board.categories)) {
+        board.categories = board.categories.filter(x => x)
     }
     delete board.status;
     board.boardAuth = await boardModel.getBoardAuthName(board.boardId, req.userObject.isAdmin);
@@ -103,17 +103,17 @@ router.put('/', requiredAuth, async (req, res) => {
             result;
         if (Array.isArray(currentBoardAuth)) {
             while (i < groups.length) {
-                if (!currentBoardAuth.find(x => x.groupId === groups[i])) { //new group
-                    result = await groupModel.getGroup(groups[i]);
+                if (!currentBoardAuth.some(x => x.groupId === groups[i].groupId)) { //new group
+                    result = await groupModel.getGroup(groups[i].groupId);
                     if (result && result[0] && (result[0].isOpenToUsers || req.userObject.isAdmin)) {
-                        reservedContents.auth.push({ groupId: groups[i], authType: 'READONLY', command: 'INSERT' });
+                        reservedContents.auth.push({ groupId: groups[i].groupId, authType: groups[i].authType, command: 'INSERT' });
                     }
                 }
                 i++;
             }
             i = 0;
             while (i < currentBoardAuth.length) {
-                if (!(groups.find(x => x === currentBoardAuth[i].groupId))) { //deleted group
+                if (!(groups.some(x => x.groupId === currentBoardAuth[i].groupId))) { //deleted group
                     reservedContents.auth.push({ groupId: currentBoardAuth[i].groupId, command: 'DELETE' })
                 }
                 i++;
@@ -273,15 +273,15 @@ router.post('/', requiredAuth, async (req, res) => {
     }
     if (board.orderNumber !== undefined && board.orderNumber !== null && typeof board.orderNumber !== 'number') {
         board.orderNumber = board.orderNumber * 1;
-        if (!Number.isInteger(board.recentOrder)) {
+        if (!Number.isInteger(board.orderNumber)) {
             return res.status(400).json({ target: 'orderNumber', message: '게시판순서 값이 올바르지 않습니다.' });
         }
     }
-    
-    let i = 0, j=0, check;
-    if(!board.boardId){//generate random string
-        while(i<10){
-            board.boardId = partialUUID()+partialUUID();console.log(board.boardId);
+
+    let i = 0, j = 0, check;
+    if (!board.boardId) {//generate random string
+        while (i < 10) {
+            board.boardId = partialUUID() + partialUUID(); console.log(board.boardId);
             check = await boardModel.checkBoardId(board.boardId);
             if (Array.isArray(check) && check[0].count === 0) {
                 if (!constants.boardIdRegex[0].test(board.boardId)) {
@@ -291,29 +291,29 @@ router.post('/', requiredAuth, async (req, res) => {
                     i++;
                     continue;
                 }
-                j=0;
+                j = 0;
                 while (j < constants.reserved.length) {
                     if (board.boardId.indexOf(constants.reserved[j]) >= 0) {
                         break;
                     }
                     j++;
                 }
-                if(j === constants.reserved.length){
+                if (j === constants.reserved.length) {
                     break;
                 }
             }
             i++;
         }
-        if(i===10){
+        if (i === 10) {
             return res.status(500).json({ target: 'boardId', message: '토픽ID를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.' })
         }
-    }else{
+    } else {
         if (!constants.boardIdRegex[0].test(board.boardId)) {
             return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID의 길이가 너무 길거나, [_, -] 이외의 특수문자가 있습니다.` })
         } else if (!constants.boardIdRegex[1].test(board.boardId)) {
             return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID에 연속된 [_, -]가 있습니다.` })
         }
-        i=0;
+        i = 0;
         while (i < constants.reserved.length) {
             if (board.boardId.indexOf(constants.reserved[i]) >= 0) {
                 return res.status(403).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID가 허용되지 않는 문자(${constants.reserved[i]})를 포함합니다.` })
@@ -431,7 +431,7 @@ router.delete('/:boardId([a-zA-z]+)', adminOnly, async (req, res) => {
     }
 });
 
-router.get('/member', requiredSignin, async(req, res)=>{
+router.get('/member', requiredSignin, async (req, res) => {
     let boardId = req.query.boardId;
     if (typeof boardId !== 'string' || boardId === '') {
         return res.status(400).json({ target: 'boardId', message: '게시판 ID 값이 없습니다.' });
@@ -443,11 +443,11 @@ router.get('/member', requiredSignin, async(req, res)=>{
         return res.status(403).json({ target: 'boardId', message: `${constants.boardTypeDomain[board[0].boardType]} 정보를 확인할 수 있는 권한이 없습니다.` });
     }
     let result = await boardModel.getBoardMember(boardId, board[0].boardType);
-    if(Array.isArray(result)){
+    if (Array.isArray(result)) {
         return res.status(200).json(result)
-    }else{
+    } else {
         logger.error('게시판 구성원 조회 중 에러 : ', result, boardId, req.userObject.userId);
-        return res.status(500).json({message:`${constants.boardTypeDomain[board[0].boardType]} 구성원 정보를 가져오지 못했습니다.[${result.code || ''}]`})
+        return res.status(500).json({ message: `${constants.boardTypeDomain[board[0].boardType]} 구성원 정보를 가져오지 못했습니다.[${result.code || ''}]` })
     }
 })
 

@@ -31,27 +31,26 @@ exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardNa
         'OWNER_ID': '"ownerId"',
         'BOARD_DESCRIPTION': '"boardDescription"',
         'BOARD_TYPE': '"boardType"',
-        'STATUS': '"status"',
+        'BOARD.STATUS': '"status"',
         'ALL_GROUP_AUTH': '"allGroupAuth"',
         'ALLOW_ANONYMOUS': '"allowAnonymous"',
         'USE_CATEGORY': '"useCategory"',
         'PARENT_BOARD_ID': '"parentBoardId"',
         'RECENT_ORDER': '"recentOrder"',
-        'ORDER_NUMBER':'"orderNumber"',
+        'BOARD.ORDER_NUMBER': '"orderNumber"',
         'STATUS_AUTH': '"statusAuth"',
         'RESERVED_DATE': '"reservedDate"',
         'RESERVED_CONTENTS': '"reservedContents"',
-        'array_agg(DISTINCT CAT.CATEGORY_NAME)': '"categories"'
-    });
-    if (isAdmin) {
-        query.field('array_agg(DISTINCT AUTH.ALLOWED_GROUP_ID)', '"allowedGroups"')
-            .from('SS_MST_BOARD', 'BOARD')
-            .left_join('SS_MST_BOARD_AUTH', 'AUTH', 'AUTH.BOARD_ID = BOARD.BOARD_ID')
-            .left_join('SS_MST_BOARD_CATEGORY', 'CAT', 'CAT.BOARD_ID = BOARD.BOARD_ID');
-    } else {
-        query.from('SS_MST_BOARD', 'BOARD')
-            .left_join('SS_MST_BOARD_CATEGORY', 'CAT', 'CAT.BOARD_ID = BOARD.BOARD_ID')
-            .where('STATUS <> \'DELETED\'');
+        'array_agg(DISTINCT CAT.CATEGORY_NAME)': '"categories"',
+        'array_agg(DISTINCT AUTH.ALLOWED_GROUP_ID)': '"allowedGroups"'
+    })
+        .from('SS_MST_BOARD', 'BOARD')
+        .left_join('SS_MST_BOARD_AUTH', 'AUTH', 'AUTH.BOARD_ID = BOARD.BOARD_ID')
+        .left_join('SS_MST_GROUP', 'MGROUP', 'AUTH.ALLOWED_GROUP_ID = MGROUP.GROUP_ID AND MGROUP.IS_OPEN_TO_USERS = true')
+        .left_join('SS_MST_BOARD_CATEGORY', 'CAT', 'CAT.BOARD_ID = BOARD.BOARD_ID')
+
+    if (!isAdmin) {
+        query.where('BOARD.STATUS <> \'DELETED\'')
     }
     if (searchQuery) {
         if (searchTarget === 'boardName') {
@@ -65,19 +64,19 @@ exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardNa
     }
     switch (sortTarget) {
         case 'boardType':
-            query.order('BOARD_TYPE', isAscending);
+            query.order('BOARD.BOARD_TYPE', isAscending);
             break;
         case 'status':
-            query.order('STATUS', isAscending);
+            query.order('BOARD.STATUS', isAscending);
             break;
         case 'boardId':
             query.order('BOARD.BOARD_ID', isAscending);
             break;
         case 'boardName':
-            query.order('BOARD_NAME', isAscending);
+            query.order('BOARD.BOARD_NAME', isAscending);
             break;
         default:
-            query.order('ORDER_NUMBER', isAscending)
+            query.order('BOARD.ORDER_NUMBER', isAscending)
             break;
     }
     if (isAdmin) {
@@ -142,7 +141,7 @@ exports.getReservedBoard = async () => {
                 'USE_CATEGORY': '"useCategory"',
                 'PARENT_BOARD_ID': '"parentBoardId"',
                 'RECENT_ORDER': '"recentOrder"',
-                'ORDER_NUMBER':'"orderNumber"',
+                'ORDER_NUMBER': '"orderNumber"',
                 'STATUS_AUTH': '"statusAuth"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
@@ -175,13 +174,16 @@ const getBoard = async (boardId) => {
                 'USE_CATEGORY': '"useCategory"',
                 'PARENT_BOARD_ID': '"parentBoardId"',
                 'RECENT_ORDER': '"recentOrder"',
-                'ORDER_NUMBER':'"orderNumber"',
+                'BOARD.ORDER_NUMBER': '"orderNumber"',
                 'STATUS_AUTH': '"statusAuth"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
-                'array_agg(CAT.CATEGORY_NAME)': 'categories'
+                'array_agg(CAT.CATEGORY_NAME)': 'categories',
+                'array_agg(DISTINCT AUTH.ALLOWED_GROUP_ID)': '"allowedGroups"'
             })
             .from('SS_MST_BOARD', 'BOARD')
+            .left_join('SS_MST_BOARD_AUTH', 'AUTH', 'AUTH.BOARD_ID = BOARD.BOARD_ID')
+            .left_join('SS_MST_GROUP', 'MGROUP', 'AUTH.ALLOWED_GROUP_ID = MGROUP.GROUP_ID AND MGROUP.IS_OPEN_TO_USERS = true')
             .left_join('SS_MST_BOARD_CATEGORY', 'CAT', 'CAT.BOARD_ID = BOARD.BOARD_ID')
             .where('BOARD.BOARD_ID = ?', boardId)
             .group('BOARD.BOARD_ID')
@@ -355,7 +357,7 @@ exports.createBoard = async (board) => {
                 'ALL_GROUP_AUTH': board.allGroupAuth,
                 'PARENT_BOARD_ID': board.parentBoardId,
                 'RECENT_ORDER': board.recentOrder,
-                'ORDER_NUMBER':board.orderNumber,
+                'ORDER_NUMBER': board.orderNumber,
                 'STATUS_AUTH': board.statusAuth,
             })
             .toParam()
@@ -421,7 +423,7 @@ exports.updateBoard = async (board) => {
     if (board.recentOrder !== undefined) {
         query.set('RECENT_ORDER', board.recentOrder)
     }
-    if(board.orderNumber !== undefined){
+    if (board.orderNumber !== undefined) {
         query.set('ORDER_NUMBER', board.orderNumber)
     }
     if (board.statusAuth !== undefined) {
@@ -510,7 +512,7 @@ exports.checkUserBoardWritable = async (userId, boardId) => {
                 return [{ count: 0 }];
             } else if (cachedData.length === 0) {//no sanction and subscription
                 if (board[0].boardType !== 'T') {
-                    if(board[0].boardType === 'L'){//lounge need not subscribe. just check the user has the right group.
+                    if (board[0].boardType === 'L') {//lounge need not subscribe. just check the user has the right group.
                         cachedData = await pool.executeQuery('checkUserLoungeWritable',
                             builder.select()
                                 .field('COUNT(*)', 'count')
@@ -523,9 +525,9 @@ exports.checkUserBoardWritable = async (userId, boardId) => {
                             cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, cachedData, 3600);
                         }
                         return cachedData;
-                    }else{//X, P, E boardType - just pass through
+                    } else {//X, P, E boardType - just pass through
                         cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, [{ count: 1 }], 3600);
-                        return [{ count: 1}];
+                        return [{ count: 1 }];
                     }
                 } else {
                     cache.setAsync('[writeUserBoard]' + userId + '@' + boardId, [{ count: 0, needSubscription: true }], 3600);
@@ -707,13 +709,13 @@ exports.getRecentBoards = async () => {
     return cachedData;
 }
 
-exports.getBoardMember = async(boardId, boardType) => {
+exports.getBoardMember = async (boardId, boardType) => {
     return await pool.executeQuery('getBoardMember' + boardType,
         builder.select()
-        .field(boardType === 'T'?'TOPIC_NICKNAME':'LOUNGE_NICKNAME', '"nickName"')
-        .from('SS_MST_USER_BOARD', 'UBOARD')
-        .join('SS_MST_USER', 'MUSER', 'MUSER.USER_ID = UBOARD.USER_ID')
-        .where('UBOARD.BOARD_ID = ?', boardId)
-        .toParam()
+            .field(boardType === 'T' ? 'TOPIC_NICKNAME' : 'LOUNGE_NICKNAME', '"nickName"')
+            .from('SS_MST_USER_BOARD', 'UBOARD')
+            .join('SS_MST_USER', 'MUSER', 'MUSER.USER_ID = UBOARD.USER_ID')
+            .where('UBOARD.BOARD_ID = ?', boardId)
+            .toParam()
     )
 }
