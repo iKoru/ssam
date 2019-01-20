@@ -326,7 +326,7 @@ exports.getUser = async (userId) => {
         logger.error(err);
         logger.error('cache 에러 발생!')
     }
-    cachedData = await pool.executeQuery('getUser3',
+    cachedData = await pool.executeQuery('getUser',
         builder.select()
             .fields({
                 'USER_ID': '"userId"',
@@ -334,6 +334,7 @@ exports.getUser = async (userId) => {
                 'TOPIC_NICKNAME': '"topicNickName"',
                 'LOUNGE_NICKNAME_MODIFIED_DATE': '"loungeNickNameModifiedDate"',
                 'TOPIC_NICKNAME_MODIFIED_DATE': '"topicNickNameModifiedDate"',
+                'INFO_MODIFIED_DATE': '"infoModifiedDate"',
                 'EMAIL': '"email"',
                 'IS_ADMIN': '"isAdmin"',
                 'EMAIL_VERIFIED_DATE': '"emailVerifiedDate"',

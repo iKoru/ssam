@@ -19,6 +19,7 @@ const adminOnly = require('../middlewares/adminOnly'),
     checkSignin = require('../middlewares/checkSignin');
 const userModel = require('../models/userModel'),
     groupModel = require('../models/groupModel'),
+    authModel = require('../models/authModel'),
     documentModel = require('../models/documentModel'),
     commentModel = require('../models/commentModel'),
     boardModel = require('../models/boardModel'),
@@ -103,7 +104,19 @@ router.put('/', requiredSignin, async (req, res) => {
         if (user.emailVerifiedDate === null && req.userObject.auth === 'E') {
             parameters.emailVerifiedDate = null;
         }
-        if ((user.grade !== undefined && user.grade !== original.grade) || (user.major !== undefined && user.major !== original.major) || (user.email !== undefined && user.email !== original.email)) {
+        if(user.grade !== undefined || user.major !== undefined || user.email !== undefined){
+            let result2 = await groupModel.getUserGroup(user.userId);
+            if (Array.isArray(result2)) {
+                if(result2.some(x=>x.groupType === 'M')){
+                    original.major = result2.find(x=>x.groupType === 'M').groupId
+                }
+                if(result2.some(x=>x.groupType === 'G')){
+                    original.grade = result2.find(x=>x.groupType === 'G').groupId
+                }
+                if(result2.some(x=>x.groupType === 'R')){
+                    original.region = result2.find(x=>x.groupType === 'R').groupId
+                }
+            }
             if (process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && util.moment().month() !== 2) { //month() === 2 is March
                 return res.status(400).json({ message: '학년, 전공, 이메일은 매년 3월에만 변경이 가능합니다.' })
             }
@@ -153,14 +166,14 @@ router.put('/', requiredSignin, async (req, res) => {
             }
         }
         if (req.userObject.isAdmin) {
-            if (user.memo !== original.memo) {
+            if (user.memo !== undefined && user.memo !== original.memo) {
                 parameters.memo = user.memo;
             }
             if (typeof user.isAdmin === 'boolean' && user.isAdmin !== original.isAdmin) {
                 parameters.isAdmin = !!user.isAdmin; //make it as boolean
             }
-            delete parameters.major;
-            delete parameters.grade;//관리자는 별도로 처리
+            //delete parameters.major;
+            //delete parameters.grade;//관리자는 별도로 처리
         }
         if (typeof user.isOpenInfo === 'boolean' && user.isOpenInfo !== original.isOpenInfo) {
             parameters.isOpenInfo = !!user.isOpenInfo; //make it as boolean
