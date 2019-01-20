@@ -5,6 +5,7 @@ const boardModel = require('../models/boardModel'),
     documentModel = require('../models/documentModel'),
     util = require('../util'),
     path = require('path'),
+    { boardTypeDomain} = require('../constants'),
     logger = require('../logger')
 let multer = require('multer')
 multer = multer({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, storage: multer.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }) //max 4MB)
@@ -311,7 +312,41 @@ router.get('/', requiredSignin, async (req, res) => {
     if (!['title', 'contents', 'titleContents'].includes(searchTarget)) {
         return res.status(400).json({ target: 'searchTarget', message: '검색할 대상을 선택해주세요.' })
     }
-    let result = await documentModel.getDocuments(boardId, null, searchQuery, searchTarget, null, false, page, false, null, targetYear);
+    
+    let board, result;
+    if(boardId){
+        board = await boardModel.getBoard(boardId);
+        if (Array.isArray(board) && board.length > 0 && board[0].status !== 'DELETED') {
+            board = board[0];
+            if (!board.statusAuth.read.includes(req.userObject.auth)) {
+                const authString = {
+                    'A': '인증',
+                    'E': '전직교사',
+                    'N': '예비교사',
+                    'D': '인증제한'
+                }
+                return res.status(403).json({ target: 'documentId', message: `게시물을 볼 수 있는 권한이 없습니다. ${board.statusAuth.read.map(x => authString[x]).filter(x => x).join(', ')} 회원만 조회가 가능합니다.` })
+            }
+        }else{
+            return res.status(404).json({ target: 'boardId', message: '존재하지 않는 게시판입니다.' })
+        }
+        result = await boardModel.checkUserBoardReadable(req.userObject.userId, boardId);
+        if (Array.isArray(result) && result.length > 0 && result[0].count > 0) { //readable
+            if (!board.parentBoardId) {//childBoard check
+                const boards = await boardModel.getBoards();
+                if (boards.some(x => x.parentBoardId === boardId)) {
+                    boardId = boards.filter(x => x.parentBoardId === boardId && x.status !== 'DELETED').map(x => x.boardId)
+                }
+            }
+        } else {
+            return res.status(403).json({ target: 'boardId', message: `${boardTypeDomain[board.boardType]}의 게시물을 볼 수 있는 권한이 없습니다.`, needSubscription: Array.isArray(result) && result.length > 0 ? result[0].needSubscription : undefined })
+        }
+    }else{//all open board
+        const boards = await boardModel.getBoards();
+        boardId = boards.filter(x => x.allGroupAuth !== 'NONE' && !x.parentBoardId  && x.statusAuth.read.includes(req.userObject.auth) && x.status !== 'DELETED').map(x => x.boardId)
+    }
+
+    result = await documentModel.getDocuments(boardId, null, searchQuery, searchTarget, null, false, page, false, null, targetYear, 10);
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {

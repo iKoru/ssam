@@ -276,7 +276,7 @@ router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
         let board = await boardModel.getBoard(boardId);
         if (Array.isArray(board) && board.length > 0) {
             board = board[0];
-            if (!board.statusAuth.write.includes(req.userObject.auth)) {
+            if (!board.statusAuth.read.includes(req.userObject.auth)) {
                 const authString = {
                     'A': '인증',
                     'E': '전직교사',
@@ -293,7 +293,8 @@ router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
                     searchQuery = req.query.searchQuery,
                     searchTarget = req.query.searchTarget,
                     isAscending = req.query.isAscending,
-                    category = req.query.category;
+                    category = req.query.category,
+                    rowsPerPage = req.query.rowsPerPage;
                 if (typeof page === 'string') {
                     page = 1 * page
                 }
@@ -319,13 +320,19 @@ router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
                 if (typeof category !== 'string' || category.length > 30) {
                     category = undefined;
                 }
+                if(typeof rowsPerPage === 'string'){
+                    rowsPerPage = rowsPerPage*1;
+                }
+                if(!Number.isInteger(rowsPerPage) || rowsPerPage <=0){
+                    rowsPerPage = 20;
+                }
                 if (!board.parentBoardId) {//childBoard check
                     const boards = await boardModel.getBoards();
                     if (boards.some(x => x.parentBoardId === boardId)) {
                         boardId = boards.filter(x => x.parentBoardId === boardId).map(x => x.boardId)
                     }
                 }
-                let result = await documentModel.getDocuments(boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending, page, req.userObject.isAdmin, category);
+                result = await documentModel.getDocuments(boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending, page, req.userObject.isAdmin, category, null, req.query.rowsPerPage);
                 if (Array.isArray(result)) {
                     return res.status(200).json(result);
                 } else {

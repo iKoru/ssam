@@ -5,12 +5,12 @@ const util = require('../util'),
 const boardModel = require('./boardModel'),
     userModel = require('./userModel');
 
-exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending = false, page, isAdmin = false, category = null, targetYear = null) => {
+exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, sortTarget, isAscending = false, page, isAdmin = false, category = null, targetYear = null, rowsPerPage = 20) => {
     if (!boardId) {
         return [];
     }
     if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category && !targetYear) {
-        let cachedData = await cache.getAsync('[document]' + boardId + '@' + (page || ''));
+        let cachedData = await cache.getAsync('[document]' + boardId + '@' + (page || '') + '/' + rowsPerPage);
         if (cachedData) {//array itself
             return cachedData;
         }
@@ -127,11 +127,11 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
 
     //select documents
     let result = await pool.executeQuery('getDocuments' + (isAdmin ? 'admin' : '') + (boardId ? (typeof boardId === 'object' ? boardId.length : '') + 'board' : '') + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : '') + (isAscending ? 'asc' : 'desc') + (category ? 'cat' : '') + (targetYear),
-        query.limit(20).offset((page - 1) * 20)
+        query.limit(rowsPerPage).offset((page - 1) * rowsPerPage)
             .toParam()
     )
     if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category && !targetYear) {
-        cache.setAsync('[document]' + boardId + '@' + (page || ''), result, 30);//maintain in 30 sec
+        cache.setAsync('[document]' + boardId + '@' + (page || '') + '/' + rowsPerPage, result, 30);//maintain in 30 sec
     }
     return result;
 }
