@@ -47,7 +47,7 @@ router.post('/document', requiredAuth, async(req, res) => {
     if (result > 0) {
         return res.status(200).json({ message: '신고했습니다.' });
     } else if (typeof result === 'object' && result.code === dbErrorCode.PKDUPLICATION) {
-        return res.status(409).json({ message: '이미 신고하셨습니다.' });
+        return res.status(409).json({ message: '이미 신고한 글입니다.' });
     } else {
         logger.error('게시물 신고 중 에러 : ', result, documentId, req.userObject.userId)
         return res.status(500).json({ message: `신고하지 못했습니다.[${result.code || ''}]` })
@@ -128,7 +128,7 @@ router.post('/comment', requiredAuth, async(req, res) => {
     if (result > 0) {
         return res.status(200).json({ message: '신고했습니다.' });
     } else if (typeof result === 'object' && result.code === dbErrorCode.PKDUPLICATION) {
-        return res.status(409).json({ message: '이미 신고하셨습니다.' });
+        return res.status(409).json({ message: '이미 신고한 댓글입니다.' });
     } else {
         logger.error('댓글 신고 중 에러 : ', result, commentId, req.userObject.userId)
         return res.status(500).json({ message: `신고하지 못했습니다.[${result.code || ''}]` })
