@@ -23,7 +23,7 @@ const getChildComments = async (parentCommentId, documentId) => {
                 'RESERVED3': '"reserved3"',
                 'RESERVED4': '"reserved4"'
             })
-            .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+            .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
             .field(builder.case().when('IS_DELETED = true').then('삭제된 댓글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
             .from('SS_MST_COMMENT')
             .where('DOCUMENT_ID = ?', documentId || builder.rstr('DOCUMENT_ID'))
@@ -38,7 +38,7 @@ exports.getChildCommentsByDocumentId = async (documentId) => {
         builder.select()
             .fields({
                 'USER_ID': '"userId"',
-                'COMMENT_ID': '"commentId"',
+                'MMCOMMENT.COMMENT_ID': '"commentId"',
                 'PARENT_COMMENT_ID': '"parentCommentId"',
                 'DOCUMENT_ID': '"documentId"',
                 'VOTE_UP_COUNT': '"voteUpCount"',
@@ -51,14 +51,23 @@ exports.getChildCommentsByDocumentId = async (documentId) => {
                 'RESERVED1': '"reserved1"',
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
-                'RESERVED4': '"reserved4"'
+                'RESERVED4': '"reserved4"',
+                'ATTACH.ATTACHMENTS': '"attach"'
             })
-            .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+            .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
             .field(builder.case().when('IS_DELETED = true').then('삭제된 댓글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
-            .from('SS_MST_COMMENT')
-            .where('DOCUMENT_ID = ?', documentId)
-            .where('DEPTH = 1')
-            .order('COMMENT_ID')
+            .from(builder.select().from('SS_MST_COMMENT', 'MMCOMMENT')
+                .where('MMCOMMENT.DOCUMENT_ID = ?', documentId)
+                .where('MMCOMMENT.DEPTH = 1')
+                .order('MMCOMMENT.COMMENT_ID')
+            )
+            .left_join(builder.select()
+                .field('SCOMMENT.COMMENT_ID', 'COMMENT_ID')
+                .field('json_agg(ATTACH)', 'ATTACHMENTS')
+                .from('SS_MST_COMMENT', 'SCOMMENT')
+                .left_join('SS_MST_COMMENT_ATTACH', 'ATTACH', 'ATTACH.COMMENT_ID = SCOMMENT.COMMENT_ID')
+                .group('SCOMMENT.COMMENT_ID'), 'ATTACH', 'ATTACH.COMMENT_ID = MCOMMENT.COMMENT_ID'
+            )
             .toParam()
     );
 }
@@ -124,7 +133,7 @@ exports.getComments = async (documentId, page = 1) => {
         builder.select()
             .fields({
                 'USER_ID': '"userId"',
-                'COMMENT_ID': '"commentId"',
+                'MCOMMENT.COMMENT_ID': '"commentId"',
                 'DOCUMENT_ID': '"documentId"',
                 'VOTE_UP_COUNT': '"voteUpCount"',
                 'VOTE_DOWN_COUNT': '"voteDownCount"',
@@ -137,16 +146,25 @@ exports.getComments = async (documentId, page = 1) => {
                 'RESERVED1': '"reserved1"',
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
-                'RESERVED4': '"reserved4"'
+                'RESERVED4': '"reserved4"',
+                'ATTACH.ATTACHMENTS': '"attach"'
             })
-            .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+            .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
             .field(builder.case().when('IS_DELETED = true').then('삭제된 댓글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
-            .from('SS_MST_COMMENT')
-            .where('DOCUMENT_ID = ?', documentId)
-            .where('DEPTH = 0')
-            .order('COMMENT_ID')
-            .limit(100)
-            .offset((page - 1) * 100)
+            .from(builder.select().from('SS_MST_COMMENT', 'MMCOMMENT')
+                .where('MMCOMMENT.DOCUMENT_ID = ?', documentId)
+                .where('MMCOMMENT.DEPTH = 0')
+                .order('MMCOMMENT.COMMENT_ID')
+                .limit(100)
+                .offset((page - 1) * 100), 'MCOMMENT'
+            )
+            .left_join(builder.select()
+                .field('SCOMMENT.COMMENT_ID', 'COMMENT_ID')
+                .field('json_agg(ATTACH)', 'ATTACHMENTS')
+                .from('SS_MST_COMMENT', 'SCOMMENT')
+                .left_join('SS_MST_COMMENT_ATTACH', 'ATTACH', 'ATTACH.COMMENT_ID = SCOMMENT.COMMENT_ID')
+                .group('SCOMMENT.COMMENT_ID'), 'ATTACH', 'ATTACH.COMMENT_ID = MCOMMENT.COMMENT_ID'
+            )
             .toParam()
     )
 }
@@ -155,7 +173,7 @@ exports.getBestComments = async (documentId) => {
     if (!documentId) {
         return [];
     }
-    let cachedData = await cache.getAsync('[getBestComments]'+documentId);
+    let cachedData = await cache.getAsync('[getBestComments]' + documentId);
     if (cachedData) {
         return cachedData;
     }
@@ -171,7 +189,7 @@ exports.getBestComments = async (documentId) => {
                 'RESERVED3': '"reserved3"',
                 'RESERVED4': '"reserved4"'
             })
-            .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+            .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
             .from('SS_MST_COMMENT')
             .where('DOCUMENT_ID = ?', documentId)
             .where('IS_DELETED = false')
@@ -180,8 +198,8 @@ exports.getBestComments = async (documentId) => {
             .limit(3)
             .toParam()
     )
-    if(Array.isArray(cachedData)){
-        cache.setAsync('[getBestComments]'+documentId, cachedData, 60*5)
+    if (Array.isArray(cachedData)) {
+        cache.setAsync('[getBestComments]' + documentId, cachedData, 60 * 5)
     }
     return cachedData
 }
@@ -279,7 +297,7 @@ exports.createComment = async (comment) => {
                 'DEPTH': comment.parentCommentId ? 1 : 0,
                 'WRITE_DATETIME': util.getYYYYMMDDHH24MISS(),
                 'IS_ANONYMOUS': comment.isAnonymous,
-                'HAS_ATTACH': !comment.hasAttach,
+                'HAS_ATTACH': !!comment.hasAttach,
                 'ANIMAL_NAME': animalName.animalName + (animalName.generation > 1 ? ` ${animalName.generation}세` : ''),
                 'RESERVED1': comment.reserved1,
                 'RESERVED2': comment.reserved2,
@@ -324,7 +342,7 @@ const getComment = async (commentId) => {
                 'RESERVED3': '"reserved3"',
                 'RESERVED4': '"reserved4"'
             })
-            .field(builder.case().when('IS_ANONYMOUS = true').then('익명').else(builder.rstr('USER_NICKNAME')), '"nickName"')
+            .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
             .field(builder.case().when('IS_DELETED = true').then('삭제된 댓글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
             .from('SS_MST_COMMENT')
             .where('COMMENT_ID = ?', commentId)
@@ -355,7 +373,7 @@ exports.getUserComment = async (userId, isAdmin, page = 1) => {
             'MCOMMENT.RESERVED4': '"reserved4"',
             'count(*) OVER()': '"totalCount"'
         })
-        .field(builder.case().when('MCOMMENT.IS_ANONYMOUS = true').then('익명').else(builder.rstr('MCOMMENT.USER_NICKNAME')), '"nickName"')
+        .field(builder.case().when('MCOMMENT.IS_ANONYMOUS = true').then('').else(builder.rstr('MCOMMENT.USER_NICKNAME')), '"nickName"')
         .from('SS_MST_COMMENT', 'MCOMMENT')
         .join('SS_MST_DOCUMENT', 'DOCUMENT', 'MCOMMENT.DOCUMENT_ID = DOCUMENT.DOCUMENT_ID')
         .where('MCOMMENT.USER_ID = ?', userId);

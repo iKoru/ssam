@@ -320,10 +320,10 @@ router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
                 if (typeof category !== 'string' || category.length > 30) {
                     category = undefined;
                 }
-                if(typeof rowsPerPage === 'string'){
-                    rowsPerPage = rowsPerPage*1;
+                if (typeof rowsPerPage === 'string') {
+                    rowsPerPage = rowsPerPage * 1;
                 }
-                if(!Number.isInteger(rowsPerPage) || rowsPerPage <=0){
+                if (!Number.isInteger(rowsPerPage) || rowsPerPage <= 0) {
                     rowsPerPage = 20;
                 }
                 if (!board.parentBoardId) {//childBoard check
@@ -384,12 +384,12 @@ const getDocument = async (req, res) => {
                     }
                 }
             }
-            if (result[0].hasAttach) {
-                const attach = await documentModel.getDocumentAttach(documentId);
-                if (Array.isArray(attach) && attach.length > 0) {
-                    result[0].attach = attach;
-                }
-            }
+            // if (result[0].hasAttach) {
+            //     const attach = await documentModel.getDocumentAttach(documentId);
+            //     if (Array.isArray(attach) && attach.length > 0) {
+            //         result[0].attach = attach;
+            //     }
+            // }
             if ((result[0].userId === req.userObject.userId) || req.userObject.isAdmin) {
                 result[0].isWriter = true;
             }

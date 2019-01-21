@@ -346,7 +346,7 @@ const getDocument = async (documentId) => {
     return await pool.executeQuery('getDocument2',
         builder.select()
             .fields({
-                'DOCUMENT_ID': '"documentId"',
+                'MDOCUMENT.DOCUMENT_ID': '"documentId"',
                 'BOARD_ID': '"boardId"',
                 'USER_ID': '"userId"',
                 'IS_DELETED': '"isDeleted"',
@@ -365,12 +365,19 @@ const getDocument = async (documentId) => {
                 'RESERVED1': '"reserved1"',
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
-                'RESERVED4': '"reserved4"'
+                'RESERVED4': '"reserved4"',
+                'ATTACH.ATTACHMENTS': '"attach"'
             })
             .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
             .field(builder.case().when('IS_DELETED = true').then('삭제된 글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
-            .from('SS_MST_DOCUMENT')
-            .where('DOCUMENT_ID = ?', documentId)
+            .from(builder.select().from('SS_MST_DOCUMENT')
+                .where('DOCUMENT_ID = ?', documentId), 'MDOCUMENT')
+            .left_join(builder.select()
+                .field('SDOCUMENT.DOCUMENT_ID', 'DOCUMENT_ID')
+                .field('json_agg(ATTACH)', 'ATTACHMENTS')
+                .from('SS_MST_DOCUMENT', 'SDOCUMENT')
+                .left_join('SS_MST_DOCUMENT_ATTACH', 'ATTACH', 'ATTACH.DOCUMENT_ID = SDOCUMENT.DOCUMENT_ID')
+                .group('SDOCUMENT.DOCUMENT_ID'), 'ATTACH', 'ATTACH.DOCUMENT_ID = MDOCUMENT.DOCUMENT_ID')
             .toParam()
     );
 }
