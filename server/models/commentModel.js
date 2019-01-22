@@ -21,10 +21,11 @@ const getChildComments = async (parentCommentId, documentId) => {
                 'RESERVED1': '"reserved1"',
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
-                'RESERVED4': '"reserved4"'
+                'RESERVED4': '"reserved4"',
+                'IS_DELETED': '"isDeleted"'
             })
             .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
-            .field(builder.case().when('IS_DELETED = true').then('삭제된 댓글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
+            .field(builder.case().when('IS_DELETED = true').then('삭제된 답글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
             .from('SS_MST_COMMENT')
             .where('DOCUMENT_ID = ?', documentId || builder.rstr('DOCUMENT_ID'))
             .where('PARENT_COMMENT_ID = ?', parentCommentId)
@@ -52,10 +53,11 @@ exports.getChildCommentsByDocumentId = async (documentId) => {
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
                 'RESERVED4': '"reserved4"',
+                'IS_DELETED': '"isDeleted"',
                 'ATTACH.ATTACHMENTS': '"attach"'
             })
             .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
-            .field(builder.case().when('IS_DELETED = true').then('삭제된 댓글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
+            .field(builder.case().when('IS_DELETED = true').then('삭제된 답글입니다.').else(builder.rstr('CONTENTS')), '"contents"')
             .from(builder.select().from('SS_MST_COMMENT', 'MMCOMMENT')
                 .where('MMCOMMENT.DOCUMENT_ID = ?', documentId)
                 .where('MMCOMMENT.DEPTH = 1')
@@ -147,6 +149,7 @@ exports.getComments = async (documentId, page = 1) => {
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
                 'RESERVED4': '"reserved4"',
+                'IS_DELETED': '"isDeleted"',
                 'ATTACH.ATTACHMENTS': '"attach"'
             })
             .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
