@@ -562,8 +562,9 @@ exports.getDocumentSurvey = async (documentId) => {
             .fields({
                 'DOCUMENT_ID': '"documentId"',
                 'SURVEY_CONTENTS': '"surveyContents"',
-                'SURVEY_ANSWERS': '"surveyAnswers"'
+                'SURVEY_ANSWERS': '"surveyAnswers"',
             })
+            .function('(SELECT COUNT(*) AS "participants" FROM SS_HST_DOCUMENT_SURVEY WHERE DOCUMENT_ID = ?),', documentId) //last comma required
             .from('SS_MST_DOCUMENT_SURVEY')
             .where('DOCUMENT_ID = ?', documentId)
             .toParam()

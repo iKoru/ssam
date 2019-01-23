@@ -90,7 +90,14 @@ router.post('/survey', requiredAuth, async (req, res) => {
             logger.error('설문 내용 제출 중 에러 : ', check, req.userObject.userId, survey.answer)
             return res.status(500).json({ message: `설문 응답을 저장하는 데 실패하였습니다.[${check.code} || '']` })
         } else {
-            return res.status(200).json({ message: '설문 내용을 저장하였습니다.' });
+            survey = await documentModel.getDocumentSurvey(survey.documentId);
+            if (Array.isArray(survey) && survey.length > 0) {
+                delete survey[0].documentId;
+                survey[0].participated = true;
+                return res.status(200).json({ message: '설문 내용을 저장하였습니다.', survey:survey[0] });
+            }else{
+                return res.status(200).json({ message: '설문 내용을 저장하였습니다.'});
+            }
         }
     } else {
         return res.status(409).json({ target: 'answer', message: '이미 참여한 설문입니다.' });
@@ -380,7 +387,7 @@ const getDocument = async (req, res) => {
                     result[0].survey = survey[0];
                     let check = await documentModel.getDocumentSurveyHistory(documentId, req.userObject.userId);
                     if (Array.isArray(check) && check.length > 0 && check[0].count > 0) {
-                        result[0].participatedSurvey = true;
+                        result[0].survey.participated = true;
                     }
                 }
             }

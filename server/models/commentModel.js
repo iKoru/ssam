@@ -39,7 +39,7 @@ exports.getChildCommentsByDocumentId = async (documentId) => {
         builder.select()
             .fields({
                 'USER_ID': '"userId"',
-                'MMCOMMENT.COMMENT_ID': '"commentId"',
+                'MCOMMENT.COMMENT_ID': '"commentId"',
                 'PARENT_COMMENT_ID': '"parentCommentId"',
                 'DOCUMENT_ID': '"documentId"',
                 'VOTE_UP_COUNT': '"voteUpCount"',
@@ -61,7 +61,7 @@ exports.getChildCommentsByDocumentId = async (documentId) => {
             .from(builder.select().from('SS_MST_COMMENT', 'MMCOMMENT')
                 .where('MMCOMMENT.DOCUMENT_ID = ?', documentId)
                 .where('MMCOMMENT.DEPTH = 1')
-                .order('MMCOMMENT.COMMENT_ID')
+                .order('MMCOMMENT.COMMENT_ID'), 'MCOMMENT'
             )
             .left_join(builder.select()
                 .field('SCOMMENT.COMMENT_ID', 'COMMENT_ID')
