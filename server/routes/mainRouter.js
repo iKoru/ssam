@@ -242,7 +242,7 @@ router.get('/boardId', requiredAuth, async (req, res) => {
     }
 })
 
-router.get('/:boardId([a-zA-Z]+)', requiredSignin, async (req, res, next) => {
+router.get('/:boardId(\\w*[a-zA-Z]+\\w*)', requiredSignin, async (req, res, next) => {
     let boardId = req.params.boardId
     if (boardId === 'loungeBest' || boardId === 'topicBest') {
         if (req.userObject.auth !== 'A') {
@@ -416,7 +416,7 @@ const getDocument = async (req, res) => {
     }
 }
 
-router.get('/:boardId([a-zA-Z]+)/:documentId(^[\\d]+$)', requiredSignin, async (req, res, next) => {
+router.get('/:boardId(\\w*[a-zA-Z]+\\w*)/:documentId(^[\\d]+$)', requiredSignin, async (req, res, next) => {
     if (typeof req.params.boardId === 'number' || reserved.includes(req.params.boardId)) {
         next();
         return;
