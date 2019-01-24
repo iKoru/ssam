@@ -42,6 +42,39 @@ router.get('/list', requiredSignin, async (req, res) => {
     }
 });
 
+router.get('/target', requiredSignin, async (req, res) => {
+    let chatId = req.query.chatId;
+    if (typeof chatId === 'string') {
+        chatId = 1 * chatId;
+    }
+    if (!Number.isInteger(chatId) || chatId === 0) {
+        return res.status(400).json({ target: 'chatId', message: '채팅을 찾을 수 없습니다.' });
+    }
+    let result = await messageModel.getChat(chatId);
+    if(!Array.isArray(result)){
+        logger.error('채팅 검색 중 에러 : ', result, chatId, req.userObject.userId);
+        return res.status(500).json({message:'채팅을 찾지 못했습니다.'})
+    } 
+    result = result.filter(x=>x.user1Id === req.userObject.userId || x.user2Id === req.userObject.userId);
+    if(result.length > 0){
+        result[0].otherStatus = (result[0].user1Id === req.userObject.userId ? result[0].user2Status : result[0].user1Status);
+        let other = await userModel.getUser(result[0].user1Id === req.userObject.userId ? result[0].user2Id : result[0].user1Id);
+        if (Array.isArray(other) && other.length > 0) {
+            result[0].otherNickName = result[0].chatType === 'T' ? other[0].topicNickName : other[0].loungeNickName
+            result[0].picturePath = result[0].chatType === 'T' ? null : other[0].picturePath
+        } else {
+            result[0].otherNickName = '(알 수 없음)'
+        }
+        delete result[0].user1Id;
+        delete result[0].user2Id;
+        delete result[0].user1Status;
+        delete result[0].user2Status;
+        return res.status(200).json(result[0])
+    }else{
+        return res.status(404).json({target:'chatId', message:'채팅을 찾을 수 없습니다.'})
+    }
+});
+
 router.post('/list', requiredSignin, async (req, res) => {
     let chat = { ...req.body };
     //parameter safe check
@@ -53,6 +86,8 @@ router.post('/list', requiredSignin, async (req, res) => {
     const other = await userModel.getUserIdByNickName(chat.nickName, chat.chatType);
     if (!Array.isArray(other) || other.length < 1 || other[0].status === 'DELETED') {
         return res.status(404).json({ target: 'nickName', message: '채팅을 시작할 대상이 존재하지 않습니다.' })
+    } else if(other[0].userId === req.userObject.userId){
+        return res.status(400).json({ target: 'nickName', message: '자신과는 채팅을 할 수 없습니다.' });
     }
 
     let result = await messageModel.getChats(req.userObject.userId, other[0].userId, chat.chatType);

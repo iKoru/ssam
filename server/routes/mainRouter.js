@@ -9,6 +9,7 @@ const visitorOnly = require('../middlewares/visitorOnly'),
 const documentModel = require('../models/documentModel'),
     commentModel = require('../models/commentModel'),
     userModel = require('../models/userModel'),
+    groupModel = require('../models/groupModel'),
     boardModel = require('../models/boardModel');
 
 router.get('/index', visitorOnly('/'), (req, res) => {
@@ -25,10 +26,39 @@ router.get('/profile', requiredAuth, async (req, res) => {
         return res.status(400).json({ target: 'nickName', message: '닉네임이 올바르지 않습니다.' })
     }
     let result = await userModel.getProfile(nickName);
-    if (result.userId) {
+    if (Array.isArray(result) && result.length > 0) {
+        result = result[0]
+        let result2 = await groupModel.getUserGroup(result.userId);
+        if (Array.isArray(result2)) {
+            if(result.isOpenInfo){
+                result.major = result2.find(x => x.groupType === 'M');
+                if (result.major) {
+                    result.major = result.major.groupId;
+                }
+                result.grade = result2.find(x => x.groupType === 'G');
+                if (result.grade) {
+                    result.grade = result.grade.groupId;
+                }
+                result.region = result2.find(x => x.groupType === 'R');
+                if (result.region) {
+                    result.region = result.region.groupName;
+                }
+            }
+            if (result2.some(x => x.groupType === 'D')) {
+                result.auth = 'D'
+            } else if (result2.some(x => x.groupType === 'A')) {
+                result.auth = 'A'
+            } else if (result2.some(x => x.groupType === 'E')) {
+                result.auth = 'E'
+            } else {
+                result.auth = 'N'
+            }
+    
+            result.groups = result2.filter(x => x.isOpenToUsers).map(x => x.groupId)
+        }
         delete result.userId;
         return res.status(200).json(result);
-    } else if (Object.keys(result).length === 0) {
+    } else if (Array.isArray(result)) {
         return res.status(404).json({ target: 'nickName', message: '사용자를 찾을 수 없습니다.' })
     } else {
         logger.error('프로필 조회 중 에러 : ', result, nickName);
