@@ -168,6 +168,7 @@ exports.getComments = async (documentId, page = 1) => {
                 .left_join('SS_MST_COMMENT_ATTACH', 'ATTACH', 'ATTACH.COMMENT_ID = SCOMMENT.COMMENT_ID')
                 .group('SCOMMENT.COMMENT_ID'), 'ATTACH', 'ATTACH.COMMENT_ID = MCOMMENT.COMMENT_ID'
             )
+            .order('MCOMMENT.COMMENT_ID')
             .toParam()
     )
 }
