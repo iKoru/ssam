@@ -8,7 +8,7 @@ const boardModel = require('../models/boardModel'),
     { boardTypeDomain} = require('../constants'),
     logger = require('../logger')
 let multer = require('multer')
-multer = multer({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 4 }, storage: multer.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }) //max 4MB)
+multer = multer({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 8 }, storage: multer.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }) //max 4MB)
 //based on /document
 
 router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
@@ -346,6 +346,9 @@ router.get('/', requiredSignin, async (req, res) => {
         boardId = boards.filter(x => x.allGroupAuth !== 'NONE' && !x.parentBoardId  && x.statusAuth.read.includes(req.userObject.auth) && x.status !== 'DELETED').map(x => x.boardId)
     }
 
+    if(!boardId || !Array.isArray(boardId) || boardId.length === 0){
+        return res.status(400).json({message:'검색할 게시판을 찾을 수 없습니다.', target:'boardId'})
+    }
     result = await documentModel.getDocuments(boardId, null, searchQuery, searchTarget, null, false, page, false, null, targetYear, 10);
     if (Array.isArray(result)) {
         return res.status(200).json(result);
