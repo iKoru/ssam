@@ -187,7 +187,9 @@ exports.getBestComments = async (documentId) => {
                 'COMMENT_ID': '"commentId"',
                 'VOTE_UP_COUNT': '"voteUpCount"',
                 'HAS_ATTACH': '"hasAttach"',
+                'CONTENTS':'"contents"',
                 'ANIMAL_NAME': '"animalName"',
+                'WRITE_DATETIME':'"writeDateTime"',
                 'RESERVED1': '"reserved1"',
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
@@ -197,8 +199,9 @@ exports.getBestComments = async (documentId) => {
             .from('SS_MST_COMMENT')
             .where('DOCUMENT_ID = ?', documentId)
             .where('IS_DELETED = false')
-            .where('VOTE_UP_COUNT > 9')
+            .where('VOTE_UP_COUNT > ' + (process.env.NODE_ENV === 'development'? '0' : '9'))
             .order('VOTE_UP_COUNT', false)
+            .order('COMMENT_ID', false)
             .limit(3)
             .toParam()
     )
