@@ -1,32 +1,42 @@
 'use strict';
 
 const logger = require('./logger');
-const { emailDomain, emailAPIKey, emailSender, testEmailReceiver } = require('../config')
-const mailgun = require('mailgun-js')({ apiKey: emailAPIKey, mute: true, domain: emailDomain });
+const { emailDomain, emailSender, emailId, emailPassword, testEmailReceiver } = require('../config')
+const nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+    host: emailDomain,
+    port: 465,
+    secure: true, // true for 465, false for other ports
+    auth: {
+        user: emailId, // generated ethereal user
+        pass: emailPassword // generated ethereal password
+    }
+});
+
 
 function sendMail(mailOptions) {
   return new Promise((resolve) => {
-    mailgun.messages().send(mailOptions, (error, body) => {
-      if (error) {
-        logger.error('이메일 발송 중 에러 : ', error, mailOptions);
-        resolve(false);
-      } else {
-        logger.log('이메일 발송함 : ', body)
-        resolve(true);
-      }
-    })
-  });
+        transporter.sendMail(mailOptions, function(error, body){
+            if (error) {
+                logger.error('이메일 발송 중 에러 : ', error, mailOptions);
+                resolve(false);
+            } else {
+                logger.log('이메일 발송함 : ', body)
+                resolve(true);
+            }
+        });
+    });
 };
 
 exports.sendEmailVerification = async function (userId, email, key) {
   const authLinkParams = `authSubmit?userId=${userId}&authKey=${key}`;
 
   return await sendMail({
-    from: emailSender,
-    to: process.env.NODE_ENV == 'development' ? testEmailReceiver : email,
-    subject: 'Pedagy 교사 인증 메일입니다.',
-    html: getEmailVerificaitonText(authLinkParams)
-  });
+        from: emailSender,
+        to: process.env.NODE_ENV == 'development' ? testEmailReceiver : email,
+        subject: 'Pedagy 교사 인증 메일입니다.',
+        html: getEmailVerificaitonText(authLinkParams)
+    });
 };
 
 exports.sendTempPasswordEmail = async function (email, pwd) {
