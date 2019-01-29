@@ -5,7 +5,7 @@ exports.reserved = ['document', 'documents', 'profile',
     'chats', 'message', 'messages', 'group', 'groups', 'event',
     'events', 'signup', 'signin', 'signout', 'resetPassword',
     'notification', 'notifications', 'survey', 'list', 'admin', 'ADMIN',
-    'ADMINISTRATOR', 'administrator', 'attach', 'profiles', 'animal', 'loungeBest', 'topicBest',
+    'ADMINISTRATOR', 'administrator', 'attach', 'profiles', 'animal',
     'lounge', 'topic', 'type', 'best', 'sanction', 'userId', 'nickName',
     'myPage', 'myBoard', 'myCommunity', 'pedagy', 'myPedagy', 'Pedagy'
 ];

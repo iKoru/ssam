@@ -281,7 +281,8 @@ router.get('/:boardId(\\w*[a-zA-Z]+\\w*)', requiredSignin, async (req, res, next
         let page = req.query.page,
             documentId = req.query.documentId,
             searchQuery = req.query.searchQuery,
-            searchTarget = req.query.searchTarget;
+            searchTarget = req.query.searchTarget,
+            rowsPerPage = req.query.rowsPerPage;
         if (typeof page === 'string') {
             page = 1 * page
         }
@@ -298,8 +299,14 @@ router.get('/:boardId(\\w*[a-zA-Z]+\\w*)', requiredSignin, async (req, res, next
             searchQuery = undefined;
             searchTarget = undefined;
         }
+        if (typeof rowsPerPage === 'string') {
+            rowsPerPage = rowsPerPage * 1;
+        }
+        if (!Number.isInteger(rowsPerPage) || rowsPerPage <= 0) {
+            rowsPerPage = 20;
+        }
 
-        let result = await documentModel.getBestDocuments(documentId, boardId === 'loungeBest' ? 'L' : 'T', searchQuery, searchTarget, page);
+        let result = await documentModel.getBestDocuments(documentId, boardId === 'loungeBest' ? 'L' : 'T', searchQuery, searchTarget, page, rowsPerPage);
         if (Array.isArray(result)) {
             return res.status(200).json(result);
         } else {

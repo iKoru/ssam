@@ -136,15 +136,15 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
     return result;
 }
 
-exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarget, page) => {
+exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarget, page, rowsPerPage = 20) => {
     if (!documentId && !searchQuery && !searchTarget) {
-        let cachedData = await cache.getAsync('[best]' + boardType + '@' + (page || ''));
+        let cachedData = await cache.getAsync('[best]' + boardType + '@' + (page || '') + rowsPerPage);
         if (cachedData) {//array itself
             return cachedData;
         }
     }
     let query = builder.select()
-        .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType).where('ALL_GROUP_AUTH = \'READONLY\''))
+        .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE ' + (boardType === 'L'? '<> \'T\'' : ' = \'T\'')).where('ALL_GROUP_AUTH = \'READONLY\''))
         .fields({
             'DOCUMENT_ID': '"documentId"',
             'DOCUMENT.BOARD_ID': '"boardId"',
@@ -153,6 +153,7 @@ exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarg
             'VIEW_COUNT': '"viewCount"',
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
+            'count(*) OVER()': '"totalCount"'
         })
         .field(builder.case().when('IS_ANONYMOUS = true').then('').else(builder.rstr('USER_NICKNAME')), '"nickName"')
         .from('SS_MST_DOCUMENT', 'DOCUMENT')
@@ -177,7 +178,7 @@ exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarg
     if (documentId) {
         //around documentId
         let withQuery = builder.select()
-            .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE = ?', boardType).where('ALL_GROUP_AUTH = \'READONLY\''))
+            .with('BOARDS', builder.select().field('BOARD_ID').from('SS_MST_BOARD').where('BOARD_TYPE ' + (boardType === 'L'? '<> \'T\'' : ' = \'T\'')).where('ALL_GROUP_AUTH = \'READONLY\''))
             .field('DOCUMENT.DOCUMENT_ID')
             .field(builder.rstr('ROW_NUMBER() OVER (ORDER BY BEST_DATETIME DESC)'), 'NUM')
             .from('SS_MST_DOCUMENT', 'DOCUMENT')
@@ -198,7 +199,7 @@ exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarg
             }
         }
         const pages = await pool.executeQuery('findDocumentPage' + boardType + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
-            builder.select().with('DOCUMENTS', withQuery).field('CEIL(NUM/10.0)', '"page"').from('DOCUMENTS').where('DOCUMENT_ID = ?', documentId)
+            builder.select().with('DOCUMENTS', withQuery).field('CEIL(NUM/10.0)', '"page"').from('DOCUMENTS').where('DOCUMENT_ID = ?', documentId).order('BEST_DATETIME', false)
                 .toParam()
         );
         if (Array.isArray(pages) && pages.length === 1 && pages[0].page > 0) {
@@ -212,11 +213,11 @@ exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarg
     }
 
     let result = await pool.executeQuery('getBestDocument' + boardType + (searchQuery ? (searchTarget === 'title' ? 'title' : (searchTarget === 'contents' ? 'contents' : (searchTarget === 'titleContents' ? 'titleContents' : ''))) : ''),
-        query.order('BEST_DATETIME', false).limit(20).offset((page - 1) * 20)
+        query.order('BEST_DATETIME', false).limit(rowsPerPage).offset((page - 1) * rowsPerPage)
             .toParam()
     )
     if (Array.isArray(result) && !documentId && !searchQuery && !searchTarget) {
-        cache.setAsync('[best]' + boardType + '@' + (page || ''), result, 60);//maintain in 60 sec
+        cache.setAsync('[best]' + boardType + '@' + (page || '') + rowsPerPage, result, 60);//maintain in 60 sec
     }
     return result;
 }
