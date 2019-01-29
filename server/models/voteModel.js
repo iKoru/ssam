@@ -19,9 +19,9 @@ exports.createDocumentVote = async(userId, documentId, isUp) => {
     if (result > 0) {
         result = await documentModel.updateDocumentVote(documentId, isUp);
         if (result.rowCount > 0 && result.rows[0].voteUpCount > 0) {
-            if (isUp && result.rows[0].voteUpCount === 15) {
+            if (isUp && result.rows[0].voteUpCount === (process.env.NODE_ENV === 'development'?1:15)) {
                 await documentModel.updateDocument({ documentId: documentId, bestDateTime: util.getYYYYMMDDHH24MISS() });
-            } else if (!isUp && result.rows[0].voteUpCount === 14) {
+            } else if (!isUp && result.rows[0].voteUpCount === (process.env.NODE_ENV === 'development'?0:14)) {
                 await documentModel.updateDocument({ documentId: documentId, bestDateTime: null });
             }
         } else if (result.rowCount === 0 || result.code) {
