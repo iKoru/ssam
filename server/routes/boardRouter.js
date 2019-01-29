@@ -313,12 +313,14 @@ router.post('/', requiredAuth, async (req, res) => {
         } else if (!constants.boardIdRegex[1].test(board.boardId)) {
             return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID에 연속된 [_, -]가 있습니다.` })
         }
-        i = 0;
-        while (i < constants.reserved.length) {
-            if (board.boardId.indexOf(constants.reserved[i]) >= 0) {
-                return res.status(403).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID가 허용되지 않는 문자(${constants.reserved[i]})를 포함합니다.` })
+        if(!req.userObject.isAdmin){
+            i = 0;
+            while (i < constants.reserved.length) {
+                if (board.boardId.indexOf(constants.reserved[i]) >= 0) {
+                    return res.status(403).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID가 허용되지 않는 문자(${constants.reserved[i]})를 포함합니다.` })
+                }
+                i++;
             }
-            i++;
         }
         check = await boardModel.getBoard(board.boardId);
         if (Array.isArray(check) && check.length > 0) {
