@@ -174,6 +174,10 @@ router.get('/best', checkSignin, async (req, res) => {
 router.get('/recent', requiredSignin, async (req, res) => {
     let result = await boardModel.getRecentBoards();
     if (Array.isArray(result)) {
+        let best = await documentModel.getRecentBestDocuments();
+        if(Array.isArray(best)){
+            result.push({boardId:null, documents:best});
+        }
         return res.status(200).json(result);
     } else {
         logger.error('최근 게시물 설정 게시판 가져오기 에러 : ', result);

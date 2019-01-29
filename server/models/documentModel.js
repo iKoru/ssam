@@ -654,3 +654,30 @@ exports.createDocumentViewLog = async (documentId, userId) => {
         return result;
     }
 }
+
+exports.getRecentBestDocuments = async () => {
+    let cachedData = await cache.getAsync('[recentBest]');
+    if (cachedData) {//array itself
+        return cachedData;
+    }
+    
+    let result = await pool.executeQuery('getRecentBestDocuments',
+        builder.select()
+        .fields({
+            'DOCUMENT_ID': '"documentId"',
+            'DOCUMENT.BOARD_ID': '"boardId"',
+            'TITLE': '"title"'
+        })
+        .from('SS_MST_DOCUMENT', 'DOCUMENT')
+        .where('IS_DELETED = false')
+        .where('BEST_DATETIME IS NOT NULL')
+        .order('BEST_DATETIME', false)
+        .limit(5)
+        .offset(0)
+        .toParam()
+    )
+    if (Array.isArray(result)) {
+        cache.setAsync('[reccentBest]', result, 60);//maintain in 60 sec
+    }
+    return result;
+}
