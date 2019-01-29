@@ -158,8 +158,8 @@ exports.getComments = async (documentId, page = 1) => {
                 .where('MMCOMMENT.DOCUMENT_ID = ?', documentId)
                 .where('MMCOMMENT.DEPTH = 0')
                 .order('MMCOMMENT.COMMENT_ID')
-                .limit(100)
-                .offset((page - 1) * 100), 'MCOMMENT'
+                .limit(process.env.NODE_ENV === 'development'?10:100)
+                .offset((page - 1) * (process.env.NODE_ENV === 'development'?10:100)), 'MCOMMENT'
             )
             .left_join(builder.select()
                 .field('SCOMMENT.COMMENT_ID', 'COMMENT_ID')
@@ -315,13 +315,11 @@ exports.createComment = async (comment) => {
             .toParam()
     )
 
-    if (result.rowCount > 0) {
-        if (comment.parentCommentId) {
-            await updateComment({
-                commentId: comment.parentCommentId,
-                child: 1
-            });
-        }
+    if (result.rowCount > 0 && comment.parentCommentId) {
+        await updateComment({
+            commentId: comment.parentCommentId,
+            child: 1
+        });
         await documentModel.updateDocumentCommentCount(comment.documentId, 1);
     }
     return result;
