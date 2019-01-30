@@ -4,7 +4,7 @@ const logger = require('../logger');
 const userModel = require('../models/userModel')
 
 const auth = (req, res, next) => {
-    const token = req.headers['x-auth'];
+    const token = req.cookies.token;
     if (!token) {
         next();
         return;

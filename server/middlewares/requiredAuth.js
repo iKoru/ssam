@@ -6,7 +6,7 @@ const config = require('../../config'),
 const userModel = require('../models/userModel')
 
 const auth = (req, res, next) => {
-  const token = req.headers['x-auth'];
+  const token = req.cookies.token;
   if (!token) {
     if (req.method === 'GET' || req.method === 'DELETE') {
       return res.status(401).json({ redirectTo: `/signin${qs.stringify({ method: req.method, redirectTo: req.path, ...req.query })}`, message: '로그인이 필요합니다.' });

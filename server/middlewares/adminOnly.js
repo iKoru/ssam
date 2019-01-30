@@ -6,7 +6,7 @@ const config = require('../../config.js'),
     userModel = require('../models/userModel');
 
 const auth = (req, res, next) => {
-    const token = req.headers['x-auth'];
+    const token = req.cookies.token;
     if (!token) {
         logger.info('signin trial without token')
         if (req.method === 'GET' || req.method === 'DELETE') {

@@ -3,7 +3,7 @@ const config = require('../../config.js');
 
 module.exports = (redirectPath) => {
     return (req, res, next) => {
-        const token = req.headers['x-auth'];
+        const token = req.cookies.token;
         if (token) {
             new Promise((resolve, reject) => {
                 jwt.verify(token, config.jwtKey, config.jwtOptions, (err, result) => {

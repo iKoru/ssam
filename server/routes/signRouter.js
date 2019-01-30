@@ -54,9 +54,9 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
             signModel.createSigninLog(userId, user[0].lastSigninDate, req.ip, true);
             const today = util.moment();
             if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YYYYMMDD').add(-1, 'months').isAfter(today))) || auth.some(x => x.groupType === 'E') && !user[0].emailVerifiedDate) {//인증 그룹이 존재하고, 인증 만료기간이 1달 이상 남은 인증그룹도 존재하거나, 전직교사로서 영구적으로 인증하지 않겠다고 선택한 경우(emailVerifiedDate가 없는 경우)
-              return res.json({ token: token });
+              return res.cookie('token', token, {secure:true}).json({ token: token });
             }
-            return res.json({ token: token, redirectTo: '/auth', imminent: auth.some(x => x.groupType === 'A' && util.moment(x.expireDate, 'YYYYMMDD').isAfter(today) && util.moment(x.expireDate, 'YYYYMMDD').add(-1, "months").isBefore(today)), needEmail: !user[0].email });//인증 내역이 없거나 인증 만료 기간이 임박한 경우
+            return res.cookie('token', token, {secure:true}).json({ token: token, redirectTo: '/auth', imminent: auth.some(x => x.groupType === 'A' && util.moment(x.expireDate, 'YYYYMMDD').isAfter(today) && util.moment(x.expireDate, 'YYYYMMDD').add(-1, "months").isBefore(today)), needEmail: !user[0].email });//인증 내역이 없거나 인증 만료 기간이 임박한 경우
           }
         })
       } else {
@@ -105,7 +105,7 @@ router.post('/resetPassword', visitorOnly('/'), async (req, res) => {
 });
 
 router.post('/refresh', (req, res) => {
-  const token = req.headers['x-auth'];
+  const token = req.cookies.token;
   if (token) {
     jwt.verify(token, config.jwtKey, config.jwtOptions, async (err, result) => {
       if (!err) { //아직 유효한 토큰이면 그대로 보낸다.
@@ -124,9 +124,9 @@ router.post('/refresh', (req, res) => {
           }
           const today = util.moment();
           if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YYYYMMDD').add(-1, 'months').isAfter(today))) || auth.some(x => x.groupType === 'E') && !user[0].emailVerifiedDate) {//인증 그룹이 존재하고, 인증 만료기간이 1달 이상 남은 인증그룹도 존재하거나, 전직교사로서 영구적으로 인증하지 않겠다고 선택한 경우(emailVerifiedDate가 없는 경우)
-            return res.json({ token: token });
+            return res.cookie('token', token, {secure:true}).json({ token: token });
           }
-          return res.json({ token: token, redirectTo: '/auth', imminent: auth.some(x => x.groupType === 'A' && util.moment(x.expireDate, 'YYYYMMDD').isAfter(today) && util.moment(x.expireDate, 'YYYYMMDD').add(-1, "months").isBefore(today)), needEmail: !user[0].email });//인증 내역이 없거나 인증 만료 기간이 임박한 경우
+          return res.cookie('token', token, {secure:true}).json({ token: token, redirectTo: '/auth', imminent: auth.some(x => x.groupType === 'A' && util.moment(x.expireDate, 'YYYYMMDD').isAfter(today) && util.moment(x.expireDate, 'YYYYMMDD').add(-1, "months").isBefore(today)), needEmail: !user[0].email });//인증 내역이 없거나 인증 만료 기간이 임박한 경우
         }
       } else if (err.name === 'TokenExpiredError') { //token is valid except it's expired
         if ((new Date(err.expiredAt).getTime() + 3600000) >= (new Date().getTime())) { //기한 만료 및 만료시간부터 1시간이 지나지 않았다면 토큰 리프레시
@@ -151,9 +151,9 @@ router.post('/refresh', (req, res) => {
                 } else {
                   const today = util.moment()
                   if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YYYYMMDD').add(-1, 'months').isAfter(today))) || auth.some(x => x.groupType === 'E') && !user[0].emailVerifiedDate) {//인증 그룹이 존재하고, 인증 만료기간이 1달 이상 남은 인증그룹도 존재하거나, 전직교사로서 영구적으로 인증하지 않겠다고 선택한 경우(emailVerifiedDate가 없는 경우)
-                    return res.json({ token: token });
+                    return res.cookie('token', token, {secure:true}).json({ token: token });
                   }
-                  return res.json({ token: token, redirectTo: '/auth', imminent: auth.some(x => x.groupType === 'A' && util.moment(x.expireDate, 'YYYYMMDD').isAfter(today) && util.moment(x.expireDate, 'YYYYMMDD').add(-1, "months").isBefore(today)), needEmail: !user[0].email });//인증 내역이 없거나 인증 만료 기간이 임박한 경우
+                  return res.cookie('token', token, {secure:true}).json({ token: token, redirectTo: '/auth', imminent: auth.some(x => x.groupType === 'A' && util.moment(x.expireDate, 'YYYYMMDD').isAfter(today) && util.moment(x.expireDate, 'YYYYMMDD').add(-1, "months").isBefore(today)), needEmail: !user[0].email });//인증 내역이 없거나 인증 만료 기간이 임박한 경우
                 }
               })
             }
