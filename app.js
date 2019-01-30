@@ -23,12 +23,12 @@ logger.info('SSAM SERVER IS RUNNING IN ' + process.env.NODE_ENV + ' ENVIRONMENT!
 app.use(cors({ origin: process.env.NODE_ENV === 'development' ? true : [process.env.ADMIN_DOMAIN, process.env.CLIENT_DOMAIN], credentials: true }));
 app.use(helmet());
 app.disable('x-powered-by');
-//app.use(csrf());
 app.use('/static', express.static(path.resolve(__dirname, 'client')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(compression());
+app.use(csrf({ cookie: true }));
 
 router(app); //take over to router
 //at last, take error to error handler
