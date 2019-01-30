@@ -13,3 +13,4 @@ nuxt
 admin
 client
 client/*
+client.js

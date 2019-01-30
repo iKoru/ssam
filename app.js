@@ -29,10 +29,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(compression());
-app.use((req,res,next) => {
-    console.log(req)
-    next()
-})
+
 router(app); //take over to router
 //at last, take error to error handler
 app.use((err, req, res, next) => {
