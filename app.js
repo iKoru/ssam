@@ -19,7 +19,8 @@ const router = require('./server/router');
 process.env.NODE_ENV = (process.env.NODE_ENV && (process.env.NODE_ENV).trim().toLowerCase() == 'production') ? 'production' : 'development';
 logger.info('SSAM SERVER IS RUNNING IN ' + process.env.NODE_ENV + ' ENVIRONMENT!!')
     //app.use(logger(process.env.NODE_ENV));
-app.use(cors());
+
+app.use(cors({origin:process.env.NODE_ENV === 'development'?true:[process.env.ADMIN_DOMAIN, process.env.CLIENT_DOMAIN]}));
 app.use(helmet());
 //app.use(csrf());
 app.use('/static', express.static(path.resolve(__dirname, 'client')));
