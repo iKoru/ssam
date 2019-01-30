@@ -18,9 +18,9 @@ const router = require('./server/router');
 
 process.env.NODE_ENV = (process.env.NODE_ENV && (process.env.NODE_ENV).trim().toLowerCase() == 'production') ? 'production' : 'development';
 logger.info('SSAM SERVER IS RUNNING IN ' + process.env.NODE_ENV + ' ENVIRONMENT!!')
-    //app.use(logger(process.env.NODE_ENV));
+//app.use(logger(process.env.NODE_ENV));
 
-app.use(cors({origin:process.env.NODE_ENV === 'development'?true:[process.env.ADMIN_DOMAIN, process.env.CLIENT_DOMAIN], credentials:true}));
+app.use(cors({ origin: process.env.NODE_ENV === 'development' ? true : [process.env.ADMIN_DOMAIN, process.env.CLIENT_DOMAIN], credentials: true }));
 app.use(helmet());
 app.disable('x-powered-by');
 //app.use(csrf());
@@ -34,6 +34,6 @@ router(app); //take over to router
 //at last, take error to error handler
 app.use((err, req, res, next) => {
     logger.error('예상하지 못한 에러!! : ', err, req.route, req.userObject);
-    res.status(500).json({message:'예상하지 못한 에러입니다. 관리자에게 문의 부탁드립니다.'})
+    res.status(500).json({ message: '예상하지 못한 에러입니다. 관리자에게 문의 부탁드립니다.' })
 });
 module.exports = app;
