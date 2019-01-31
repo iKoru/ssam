@@ -13,8 +13,6 @@ require('./server/cache').flushAll();
 
 const app = express()
 
-const router = require('./server/router');
-
 process.env.NODE_ENV = (process.env.NODE_ENV && (process.env.NODE_ENV).trim().toLowerCase() == 'production') ? 'production' : 'development';
 logger.info('SSAM SERVER IS RUNNING IN ' + process.env.NODE_ENV + ' ENVIRONMENT!!')
 
@@ -23,11 +21,11 @@ app.use(helmet());
 app.disable('x-powered-by');
 app.use('/static', express.static(path.resolve(__dirname, 'client')));
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(compression());
-app.use(bodyParser.urlencoded({ extended: false }));
 
-router(app); //take over to router
+require('./server/router')(app); //take over to router
 //at last, take error to error handler
 app.use((err, req, res, next) => {
   if (err.code === 'EBADCSRFTOKEN'){
