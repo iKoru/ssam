@@ -27,8 +27,8 @@ router.get('/list', requiredSignin, async (req, res) => {
             result[i].otherStatus = (result[i].user1Id === req.userObject.userId ? result[i].user2Status : result[i].user1Status);
             other = await userModel.getUser(result[i].user1Id === req.userObject.userId ? result[i].user2Id : result[i].user1Id);
             if (Array.isArray(other) && other.length > 0) {
-                result[i].otherNickName = req.query.chatType === 'T' ? other[0].topicNickName : other[0].loungeNickName
-                result[i].picturePath = req.query.chatType === 'T' ? null : other[0].picturePath
+                result[i].otherNickName = result[i].chatType === 'T' ? other[0].topicNickName : other[0].loungeNickName
+                result[i].picturePath = result[i].chatType === 'T' ? null : other[0].picturePath
             } else {
                 result[i].otherNickName = '(알 수 없음)'
             }
