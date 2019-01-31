@@ -1,10 +1,11 @@
-const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken'),
+  connect = require('connect'),
+  csrf = require('csurf');
 const config = require('../../config'),
   qs = require('querystring'),
   { jwtErrorMessages } = require('../constants'),
   logger = require('../logger');
 const userModel = require('../models/userModel')
-
 const auth = (req, res, next) => {
   const token = req.cookies.token;
   if (!token) {
@@ -54,5 +55,16 @@ const auth = (req, res, next) => {
     }
   }).catch(onError)
 }
+const token = (req, res, next) => {
+  res.cookie('CSRF-TOKEN', req.csrfToken(), {secure:true});
+  next();
+}
 
-module.exports = auth;
+const combine = (function() {
+  var chain = connect();
+  [csrf({cookie:{secure:true, httpOnly:true}}), auth, token].forEach(function(middleware) {
+    chain.use(middleware);
+  });
+  return chain;
+})();
+module.exports = combine;

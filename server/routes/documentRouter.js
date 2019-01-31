@@ -135,7 +135,6 @@ router.put('/', requiredSignin, async (req, res) => {
     if (!document.isDeleted && typeof document.contents !== 'string' || document.contents === '') {
         return res.status(400).json({ target: 'contents', message: '게시물 내용을 입력해주세요.' })
     }
-
     if (document.contents === original.contents) {
         delete document.contents;
     }

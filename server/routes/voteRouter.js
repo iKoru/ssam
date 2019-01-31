@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const requiredAuth = require('../middlewares/requiredAuth'),
+const requiredSignin = require('../middlewares/requiredSignin'),
     voteModel = require('../models/voteModel'),
     documentModel = require('../models/documentModel'),
     commentModel = require('../models/commentModel'),
@@ -7,7 +7,7 @@ const requiredAuth = require('../middlewares/requiredAuth'),
     logger = require('../logger');
 const { dbErrorCode } = require('../constants');
 //based on /vote
-router.post('/document', requiredAuth, async(req, res) => {
+router.post('/document', requiredSignin, async(req, res) => {
     let documentId = req.body.documentId;
     if (typeof documentId === 'string') {
         documentId = 1*documentId
@@ -37,7 +37,7 @@ router.post('/document', requiredAuth, async(req, res) => {
     }
 });
 
-router.post('/comment', requiredAuth, async(req, res) => {
+router.post('/comment', requiredSignin, async(req, res) => {
     let commentId = req.body.commentId;
     if (typeof commentId === 'string') {
         commentId = 1*commentId

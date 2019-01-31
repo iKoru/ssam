@@ -15,7 +15,7 @@ module.exports = (redirectPath) => {
                 });
             }).then((result) => {
                 if (redirectPath) {
-                    return res.redirect(307, redirectPath);
+                    return res.redirect(307, process.env.CLIENT_DOMAIN + redirectPath);
                 } else {
                     return res.status(400).end();
                 }

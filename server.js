@@ -1,7 +1,7 @@
 "use strict";
 
 const app = require('./app');
-let server; console.log(process.env.IS_LOCAL, 'aa')
+let server;
 if (process.env.IS_LOCAL) {
   const fs = require('fs')
   server = require("https").createServer({ key: fs.readFileSync('../../key.pem'), cert: fs.readFileSync('../../cert.pem') }, app);
