@@ -174,11 +174,11 @@ router.post('/refresh', (req, res) => {
 
 router.get('/admin', adminOnly, async (req, res) => {
   let result = await userModel.getProfile(req.userObject.loungeNickName);
-  if (result.userId) {
-    delete result.userId;
-    return res.status(200).json(result);
-  } else if (Object.keys(result).length === 0) {
+  if (Object.keys(result).length === 0) {
     return res.status(404).json({ target: 'nickName', message: '사용자를 찾을 수 없습니다.' })
+  } else if (result[0].userId) {
+    delete result[0].userId;
+    return res.status(200).json(result[0]);
   } else {
     logger.error('프로필 조회 중 에러 : ', result, req.userObject.loungeNickName);
     return res.status(500).json({ message: `프로필을 조회하지 못했습니다.[${result.code || ''}]` })
