@@ -12,9 +12,9 @@ const auth = (req, res, next) => {
     if (!token) {
         logger.info('signin trial without token')
         if (req.method === 'GET' || req.method === 'DELETE') {
-            return res.status(401).json({ redirectTo: `/signin${qs.stringify({ method: req.method, redirectTo: req.path, ...req.query })}`, message: '로그인이 필요합니다.' });
+            return res.status(401).json({ redirectTo: `/signin?${qs.stringify({ method: req.method, redirectTo: req.path, ...req.query })}`, message: '로그인이 필요합니다.' });
         } else {
-            return res.status(401).json({ redirectTo: `/signin${qs.stringify({ method: req.method, redirectTo: req.path, ...req.body })}`, message: '로그인이 필요합니다.' });
+            return res.status(401).json({ redirectTo: `/signin?${qs.stringify({ method: req.method, redirectTo: req.path, ...req.body })}`, message: '로그인이 필요합니다.' });
         }
     }
 
