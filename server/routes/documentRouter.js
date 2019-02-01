@@ -7,11 +7,33 @@ const boardModel = require('../models/boardModel'),
     path = require('path'),
     { boardTypeDomain} = require('../constants'),
     logger = require('../logger')
-let multer = require('multer')
-multer = multer({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 8 }, storage: multer.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }) //max 4MB)
+let multerLib = require('multer'),
+  multer = multerLib({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 8 }, storage: multerLib.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }).array('attach') //max 8MB)
 //based on /document
 
-router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
+router.post('/', requiredSignin, async (req, res) => {
+  multer(req, res, async function(error){
+    if (error instanceof multerLib.MulterError) {
+      switch (error.code) {
+        case 'LIMIT_FILE_SIZE':
+          return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 크기 8MB를 초과하였습니다.' });
+        case 'LIMIT_PART_COUNT':
+          return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 분할크기를 초과하였습니다.' });
+        case 'LIMIT_FILE_COUNT':
+          return res.status(400).json({ target: 'attach', message: '첨부파일의 갯수가 너무 많습니다.' });
+        case 'LIMIT_FIELD_KEY':
+          return res.status(400).json({ target: 'attach', message: '파일 이름의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
+        case 'LIMIT_FIELD_VALUE':
+          return res.status(400).json({ target: 'attach', message: '파일 필드의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
+        case 'LIMIT_FIELD_COUNT':
+          return res.status(400).json({ target: 'attach', message: '파일 필드가 너무 많습니다. 필드 수를 줄여주세요.' })
+        case 'LIMIT_UNEXPECTED_FILE':
+          return res.status(400).json({ target: 'attach', message: '업로드할 수 없는 파일 종류입니다.' })
+      }
+    } else if (error) {
+        logger.error('첨부파일 업로드 중 에러!! ', error);
+        return res.status(500).json({ target: 'attach', message: `첨부파일을 업로드하는 도중 오류가 발생하였습니다.[${error.message || ''}]` })
+    }
     let document = {
         userId: req.userObject.userId,
         boardId: req.body.boardId,
@@ -99,6 +121,7 @@ router.post('/', requiredSignin, multer.array('attach'), async (req, res) => {
             return res.status(200).json({ message: (survey ? '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' : '게시물을 등록하였습니다.'), documentId: req.body.documentId })
         }
     }
+  });
 });
 
 router.put('/', requiredSignin, async (req, res) => {
@@ -213,7 +236,29 @@ router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async (req, res) => {
     }
 });
 
-router.post('/attach', requiredSignin, multer.array('attach'), async (req, res) => {
+router.post('/attach', requiredSignin, async (req, res) => {
+  multer(req, res, async function(error){
+    if (error instanceof multerLib.MulterError) {
+      switch (error.code) {
+        case 'LIMIT_FILE_SIZE':
+          return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 크기 8MB를 초과하였습니다.' });
+        case 'LIMIT_PART_COUNT':
+          return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 분할크기를 초과하였습니다.' });
+        case 'LIMIT_FILE_COUNT':
+          return res.status(400).json({ target: 'attach', message: '첨부파일의 갯수가 너무 많습니다.' });
+        case 'LIMIT_FIELD_KEY':
+          return res.status(400).json({ target: 'attach', message: '파일 이름의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
+        case 'LIMIT_FIELD_VALUE':
+          return res.status(400).json({ target: 'attach', message: '파일 필드의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
+        case 'LIMIT_FIELD_COUNT':
+          return res.status(400).json({ target: 'attach', message: '파일 필드가 너무 많습니다. 필드 수를 줄여주세요.' })
+        case 'LIMIT_UNEXPECTED_FILE':
+          return res.status(400).json({ target: 'attach', message: '업로드할 수 없는 파일 종류입니다.' })
+      }
+    } else if (error) {
+        logger.error('첨부파일 업로드 중 에러!! ', error);
+        return res.status(500).json({ target: 'attach', message: `첨부파일을 업로드하는 도중 오류가 발생하였습니다.[${error.message || ''}]` })
+    }
     let documentId = req.body.documentId;
     if (typeof documentId === 'string') {
         documentId = 1 * documentId
@@ -241,6 +286,7 @@ router.post('/attach', requiredSignin, multer.array('attach'), async (req, res) 
     } else {
         return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
     }
+  });
 });
 
 router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredSignin, async (req, res) => {
