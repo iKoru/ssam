@@ -14,3 +14,4 @@ admin
 client
 client/*
 client.js
+*.sql
