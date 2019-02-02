@@ -159,8 +159,8 @@ exports.getComments = async (documentId, page = 1) => {
                 .where('MMCOMMENT.DOCUMENT_ID = ?', documentId)
                 .where('MMCOMMENT.DEPTH = 0')
                 .order('MMCOMMENT.COMMENT_ID')
-                .limit(process.env.NODE_ENV === 'development'?10:100)
-                .offset((page - 1) * (process.env.NODE_ENV === 'development'?10:100)), 'MCOMMENT'
+                .limit(process.env.NODE_ENV === 'development' ? 10 : 100)
+                .offset((page - 1) * (process.env.NODE_ENV === 'development' ? 10 : 100)), 'MCOMMENT'
             )
             .left_join(builder.select()
                 .field('SCOMMENT.COMMENT_ID', 'COMMENT_ID')
@@ -188,9 +188,9 @@ exports.getBestComments = async (documentId) => {
                 'COMMENT_ID': '"commentId"',
                 'VOTE_UP_COUNT': '"voteUpCount"',
                 'HAS_ATTACH': '"hasAttach"',
-                'CONTENTS':'"contents"',
+                'CONTENTS': '"contents"',
                 'ANIMAL_NAME': '"animalName"',
-                'WRITE_DATETIME':'"writeDateTime"',
+                'WRITE_DATETIME': '"writeDateTime"',
                 'RESERVED1': '"reserved1"',
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
@@ -200,7 +200,7 @@ exports.getBestComments = async (documentId) => {
             .from('SS_MST_COMMENT')
             .where('DOCUMENT_ID = ?', documentId)
             .where('IS_DELETED = false')
-            .where('VOTE_UP_COUNT > ' + (process.env.NODE_ENV === 'development'? '0' : '9'))
+            .where('VOTE_UP_COUNT > ' + (process.env.NODE_ENV === 'development' ? '0' : '9'))
             .order('VOTE_UP_COUNT', false)
             .order('COMMENT_ID', false)
             .limit(3)
@@ -316,12 +316,15 @@ exports.createComment = async (comment) => {
             .toParam()
     )
 
-    if (result.rowCount > 0 && comment.parentCommentId) {
-        await updateComment({
-            commentId: comment.parentCommentId,
-            child: 1
-        });
-        await documentModel.updateDocumentCommentCount(comment.documentId, 1);
+    if (result.rowCount > 0) {
+        if (comment.parentCommentId) {
+            await updateComment({
+                commentId: comment.parentCommentId,
+                child: 1
+            });
+        } else {
+            await documentModel.updateDocumentCommentCount(comment.documentId, 1);
+        }
     }
     return result;
 }
