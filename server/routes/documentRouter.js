@@ -193,6 +193,57 @@ router.put('/', requiredSignin, async (req, res) => {
     }
 });
 
+router.delete('/attach/:documentId/:attachId', requiredSignin, async (req, res) => {
+    let documentId = req.params.documentId;
+    let attachId = req.params.attachId;
+    if (typeof documentId === 'string') {
+        documentId = 1 * documentId
+    }
+    if (!Number.isInteger(documentId) || documentId === 0) {
+        return res.status(400).json({ target: 'documentId', message: '첨부파일을 삭제할 게시물을 찾을 수 없습니다.' })
+    } else if (typeof attachId !== 'string') {
+        return res.status(400).json({ target: 'attachId', message: '삭제할 첨부파일이 올바르지 않습니다.' })
+    }
+
+    let document = await documentModel.getDocument(documentId);
+    if (!Array.isArray(document) || document.length < 1) {
+        return res.status(404).json({ target: 'documentId', message: '대상 게시물을 찾을 수 없습니다.' })
+    } else {
+        document = document[0];
+        if (document.userId !== req.userObject.userId && !req.userObject.isAdmin) {
+            return res.status(403).json({ target: 'documentId', message: '첨부파일을 삭제할 권한이 없습니다.' })
+        }
+    }
+
+    let attach = await documentModel.getDocumentAttach(documentId, attachId);
+    if (!Array.isArray(attach) || attach.length < 1) {
+        return res.status(404).json({ target: 'attachId', message: '삭제할 첨부파일을 찾을 수 없습니다.' })
+    } else {
+        attach = attach[0];
+    }
+
+    let result;
+    try {
+        result = await util.unlink(attach.attachPath);
+    } catch (error) {
+        if (result && result !== 'ENOENT') {
+            logger.error('첨부파일 삭제 중 에러 : ', error, documentId);
+            return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result || ''}]` })
+        }
+    }
+    result = await documentModel.deleteDocumentAttach(documentId, attachId);
+    if (typeof result !== 'object') {
+        result = await documentModel.getDocumentAttach(documentId);
+        if (Array.isArray(result) && result.length === 0) { //no more attachments
+            await documentModel.updateDocument({ documentId: documentId, hasAttach: false });
+        }
+        return res.status(200).json({ message: '첨부파일을 삭제하였습니다.' })
+    } else {
+        logger.error('첨부파일 삭제 중 에러 : ', result, documentId);
+        return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code || ''}]` })
+    }
+})
+
 router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async (req, res) => {
     let documentId = req.params[0];
     if (typeof documentId === 'string') {
@@ -288,57 +339,6 @@ router.post('/attach', requiredSignin, async (req, res) => {
     }
   });
 });
-
-router.delete('/attach/:documentId(^[\\d]+$)/:attachId', requiredSignin, async (req, res) => {
-    let documentId = req.params.documentId;
-    let attachId = req.params.attachId;
-    if (typeof documentId === 'string') {
-        documentId = 1 * documentId
-    }
-    if (!Number.isInteger(documentId) || documentId === 0) {
-        return res.status(400).json({ target: 'documentId', message: '첨부파일을 삭제할 게시물을 찾을 수 없습니다.' })
-    } else if (typeof attachId !== 'string') {
-        return res.status(400).json({ target: 'attachId', message: '삭제할 첨부파일이 올바르지 않습니다.' })
-    }
-
-    let document = await documentModel.getDocument(documentId);
-    if (!Array.isArray(document) || document.length < 1) {
-        return res.status(404).json({ target: 'documentId', message: '대상 게시물을 찾을 수 없습니다.' })
-    } else {
-        document = document[0];
-        if (document.userId !== req.userObject.userId && !req.userObject.isAdmin) {
-            return res.status(403).json({ target: 'documentId', message: '첨부파일을 삭제할 권한이 없습니다.' })
-        }
-    }
-
-    let attach = await documentModel.getDocumentAttach(documentId, attachId);
-    if (!Array.isArray(attach) || attach.length < 1) {
-        return res.status(404).json({ target: 'attachId', message: '삭제할 첨부파일을 찾을 수 없습니다.' })
-    } else {
-        attach = attach[0];
-    }
-
-    let result;
-    try {
-        result = await util.unlink(attach.attachPath);
-    } catch (error) {
-        if (result && result !== 'ENOENT') {
-            logger.error('첨부파일 삭제 중 에러 : ', error, documentId);
-            return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result || ''}]` })
-        }
-    }
-    result = await documentModel.deleteDocumentAttach(documentId, attachId);
-    if (typeof result !== 'object') {
-        result = await documentModel.getDocumentAttach(documentId);
-        if (Array.isArray(result) && result.length === 0) { //no more attachments
-            await documentModel.updateDocument({ documentId: documentId, hasAttach: false });
-        }
-        return res.status(200).json({ message: '첨부파일을 삭제하였습니다.' })
-    } else {
-        logger.error('첨부파일 삭제 중 에러 : ', result, documentId);
-        return res.status(500).json({ message: `첨부파일을 삭제하지 못했습니다.[${result.code || ''}]` })
-    }
-})
 
 router.get('/', requiredSignin, async (req, res) => {
     //search document list
