@@ -4,6 +4,7 @@
     "description": "SSAM community - community for all teachers",
     "main": "server.js",
     "repository": "",
+    "private":true,
     "author": "iKoru <glassonyou@gmail.com>",
     "scripts": {
         "test": "jest --detectOpenHandles --runInBand --forceExit --silent",
