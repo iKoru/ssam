@@ -15,3 +15,8 @@ client
 client/*
 client.js
 *.sql
+virtual.js
+ssam-client
+ssam-admin
+ssl
+
