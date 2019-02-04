@@ -16,17 +16,15 @@ const app = express()
 process.env.NODE_ENV = (process.env.NODE_ENV && (process.env.NODE_ENV).trim().toLowerCase() == 'production') ? 'production' : 'development';
 logger.info('SSAM SERVER IS RUNNING IN ' + process.env.NODE_ENV + ' ENVIRONMENT!!')
 
-app.use(cors({ origin: process.env.NODE_ENV === 'development' ? true : ['https://'+process.env.ADMIN_DOMAIN, 'https://'+process.env.CLIENT_DOMAIN], credentials: true }));
-app.use(helmet.frameguard({action: 'allow-from', domain: process.env.CLIENT_DOMAIN + ', '+ process.env.ADMIN_DOMAIN}));
+app.use(cors({ origin: process.env.NODE_ENV === 'development' ? true : [process.env.ADMIN_DOMAIN, process.env.CLIENT_DOMAIN], credentials: true }));
 app.use(helmet());
 app.disable('x-powered-by');
-app.use('/static', express.static(path.resolve(__dirname, 'client')));
 app.use('/.well-known/acme-challenge', express.static(path.resolve(__dirname, 'ssl')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(compression());
-
+//app.use((req, res, next) => {console.log(req.cookies);next();});
 require('./server/router')(app); //take over to router
 //at last, take error to error handler
 app.use((err, req, res, next) => {
