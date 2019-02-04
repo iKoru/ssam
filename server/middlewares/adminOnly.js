@@ -43,8 +43,12 @@ const auth = (req, res, next) => {
             logger.info('signin trial success')
             next();
         } else {
-            logger.info('signin trial failed due to not found user id')
-            return res.status(403).json({ message: '잘못된 접근입니다.' });
+            logger.info('signin trial failed due to not found user id');
+            if(req.path === '/admin'){
+                return res.clearCookie('token').status(403).json({ message: '잘못된 접근입니다.' });
+            }else{
+                return res.status(403).json({ message: '잘못된 접근입니다.' });
+            }
         }
     }).catch(onError)
 }
