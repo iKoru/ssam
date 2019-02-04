@@ -9,7 +9,7 @@ if (process.env.IS_LOCAL) {
   server = require('http').Server(app);
 }
 
-server.listen(process.env.API_PORT || 8080, process.env.IP || "0.0.0.0", function () {
+server.listen(process.env.API_PORT || 8080, process.env.API_IP || "0.0.0.0", function () {
   const addr = server.address();
   console.log("ssam server listening at", addr.address + ":" + addr.port);
 });
