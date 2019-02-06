@@ -4,6 +4,7 @@ const requiredAuth = require('../middlewares/requiredAuth'),
     adminOnly = require('../middlewares/adminOnly')
 const boardModel = require('../models/boardModel'),
     userModel = require('../models/userModel'),
+    documentModel = require('../models/documentModel'),
     groupModel = require('../models/groupModel')
 const { safeStringLength, moment, shallowArrayEquals, partialUUID } = require('../util'),
     logger = require('../logger'),
@@ -27,6 +28,9 @@ router.get('/', requiredSignin, async (req, res) => {
         board.owner = board.boardType === 'T' ? owner[0].topicNickName : owner[0].loungeNickName;
     } else {
         board.owner = null;
+    }
+    if (req.userObject.isAdmin || req.userObject.userId === board.ownerId) {
+        board.isOwner = true;
     }
     if (!req.userObject.isAdmin) {
         delete board.ownerId;
@@ -313,7 +317,7 @@ router.post('/', requiredAuth, async (req, res) => {
         } else if (!constants.boardIdRegex[1].test(board.boardId)) {
             return res.status(400).json({ target: 'boardId', message: `${constants.boardTypeDomain[board.boardType]} ID에 연속된 [_, -]가 있습니다.` })
         }
-        if(!req.userObject.isAdmin){
+        if (!req.userObject.isAdmin) {
             i = 0;
             while (i < constants.reserved.length) {
                 if (board.boardId.indexOf(constants.reserved[i]) >= 0) {
@@ -476,12 +480,17 @@ router.get('/list', requiredSignin, async (req, res) => {
     }
     let result = await boardModel.getBoards(searchQuery, boardType, page, searchTarget, sortTarget, isAscending, req.userObject.isAdmin);
     if (Array.isArray(result)) {
-        if (!req.userObject.isAdmin) {
-            result.forEach(x => {
+        result.forEach(x => {
+            if (!req.userObject.isAdmin) {
                 delete x.status;
+                if (req.userObject.userId === x.ownerId) {
+                    x.isOwner = true;
+                }
                 delete x.ownerId;
-            })
-        }
+            } else {
+                x.isOwner = true;
+            }
+        })
         return res.status(200).json(result);
     } else {
         logger.error('게시판 리스트 조회 중 에러 : ', result, req.userObject.userId, req.query)
@@ -511,19 +520,19 @@ router.put('/notice', requiredAuth, async (req, res) => {
         return res.status(403).json({ target: 'documentId', message: `해당하는 게시판의 게시물이 아닙니다.` });
     }
 
-    if(req.body.isAdd && board[0].notices.some(x=>x.documentId === documentId)){
-        return res.status(409).json({target:'documentId', message:'이미 공지로 지정되어 있는 글입니다.'})
-    }else if(!req.body.isAdd && !board[0].notices.some(x=>x.documentId === documentId)){
-        return res.status(404).json({target:'documentId', message:'공지로 지정되지 않은 글입니다.'})
+    if (req.body.isAdd && board[0].notices.some(x => x.documentId === documentId)) {
+        return res.status(409).json({ target: 'documentId', message: '이미 공지로 지정되어 있는 글입니다.' })
+    } else if (!req.body.isAdd && !board[0].notices.some(x => x.documentId === documentId)) {
+        return res.status(404).json({ target: 'documentId', message: '공지로 지정되지 않은 글입니다.' })
     }
     let notices = board[0].notices;
-    if(req.body.isAdd){
-        notices.push({documentId:documentId, title:document[0].title, isNotice:true, boardId:boardId})
-    }else{
-        notices.splice(notices.findIndex(x=>x.documentId === documentId), 1)
+    if (req.body.isAdd) {
+        notices.push({ documentId: documentId, title: document[0].title, isNotice: true, boardId: boardId })
+    } else {
+        notices.splice(notices.findIndex(x => x.documentId === documentId), 1)
     }
-    let result = await boardModel.updateBoard({boardId:boardId, notices:notices});
-    if (Array.isArray(result)) {
+    let result = await boardModel.updateBoard({ boardId: boardId, notices: notices });
+    if (result === 1) {
         return res.status(200).json(result)
     } else {
         logger.error('게시판 공지 설정 중 에러 : ', result, boardId, req.userObject.userId, documentId, req.body.isAdd);

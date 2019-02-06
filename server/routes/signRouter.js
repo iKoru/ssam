@@ -172,6 +172,10 @@ router.post('/refresh', (req, res) => {
   }
 });
 
+router.post('/signout', async (req, res) => {
+  return res.clearCookie('token').clearCookie('CSRF-TOKEN').clearCookie('_csrf').status(200).end();
+})
+
 router.get('/admin', adminOnly, async (req, res) => {
   let result = await userModel.getProfile(req.userObject.loungeNickName);
   if (Object.keys(result).length === 0) {
