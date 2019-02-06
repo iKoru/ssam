@@ -489,6 +489,48 @@ router.get('/list', requiredSignin, async (req, res) => {
     }
 });
 
+router.put('/notice', requiredAuth, async (req, res) => {
+    let boardId = req.body.boardId;
+    if (typeof boardId !== 'string' || boardId === '') {
+        return res.status(400).json({ target: 'boardId', message: '게시판을 찾을 수 없습니다.' });
+    }
+    let documentId = req.body.documentId;
+    if (!Number.isInteger(documentId) || documentId <= 0) {
+        return res.status(400).json({ target: 'documentId', message: '공지로 지정할 게시물을 찾을 수 없습니다.' });
+    }
+    const board = await boardModel.getBoard(boardId);
+    if (!Array.isArray(board) || board.length < 1) {
+        return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
+    } else if (board[0].ownerId !== req.userObject.userId && !req.userObject.isAdmin) {
+        return res.status(403).json({ target: 'boardId', message: `${constants.boardTypeDomain[board[0].boardType]} 공지를 변경할 수 있는 권한이 없습니다.` });
+    }
+    const document = await documentModel.getDocument(documentId)
+    if ((!Array.isArray(document) || document.length < 1) && req.body.isAdd) {
+        return res.status(404).json({ target: 'documentId', message: '존재하지 않는 게시물입니다.' });
+    } else if (Array.isArray(document) && document[0] && boardId !== document[0].boardId && !req.userObject.isAdmin) {
+        return res.status(403).json({ target: 'documentId', message: `해당하는 게시판의 게시물이 아닙니다.` });
+    }
+
+    if(req.body.isAdd && board[0].notices.some(x=>x.documentId === documentId)){
+        return res.status(409).json({target:'documentId', message:'이미 공지로 지정되어 있는 글입니다.'})
+    }else if(!req.body.isAdd && !board[0].notices.some(x=>x.documentId === documentId)){
+        return res.status(404).json({target:'documentId', message:'공지로 지정되지 않은 글입니다.'})
+    }
+    let notices = board[0].notices;
+    if(req.body.isAdd){
+        notices.push({documentId:documentId, title:document[0].title, isNotice:true, boardId:boardId})
+    }else{
+        notices.splice(notices.findIndex(x=>x.documentId === documentId), 1)
+    }
+    let result = await boardModel.updateBoard({boardId:boardId, notices:notices});
+    if (Array.isArray(result)) {
+        return res.status(200).json(result)
+    } else {
+        logger.error('게시판 공지 설정 중 에러 : ', result, boardId, req.userObject.userId, documentId, req.body.isAdd);
+        return res.status(500).json({ message: `${constants.boardTypeDomain[board[0].boardType]} 공지를 변경하지 못했습니다.[${result.code || ''}]` })
+    }
+});
+
 const applyReservedContents = async (boardId) => {
     let board = await boardModel.getBoard(boardId);
     if (!Array.isArray(board) || board.length === 0) {

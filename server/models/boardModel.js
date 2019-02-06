@@ -41,6 +41,7 @@ exports.getBoards = async (searchQuery, boardType, page, searchTarget = "boardNa
         'STATUS_AUTH': '"statusAuth"',
         'RESERVED_DATE': '"reservedDate"',
         'RESERVED_CONTENTS': '"reservedContents"',
+        'NOTICES':'"notices"',
         'array_agg(DISTINCT CAT.CATEGORY_NAME)': '"categories"',
         'array_agg(DISTINCT AUTH.ALLOWED_GROUP_ID)': '"allowedGroups"'
     })
@@ -178,6 +179,7 @@ const getBoard = async (boardId) => {
                 'STATUS_AUTH': '"statusAuth"',
                 'RESERVED_DATE': '"reservedDate"',
                 'RESERVED_CONTENTS': '"reservedContents"',
+                'NOTICES':'"notices"',
                 'array_agg(CAT.CATEGORY_NAME)': 'categories',
                 'array_agg(DISTINCT AUTH.ALLOWED_GROUP_ID)': '"allowedGroups"'
             })
@@ -359,6 +361,7 @@ exports.createBoard = async (board) => {
                 'RECENT_ORDER': board.recentOrder,
                 'ORDER_NUMBER': board.orderNumber,
                 'STATUS_AUTH': board.statusAuth,
+                'NOTICES':JSON.stringify([])
             })
             .toParam()
     );
@@ -428,6 +431,9 @@ exports.updateBoard = async (board) => {
     }
     if (board.statusAuth !== undefined) {
         query.set('STATUS_AUTH', board.statusAuth)
+    }
+    if(board.notices !== undefined){
+        query.set('NOTICES', JSON.stringify(board.notices))
     }
     let result = await pool.executeQuery(null,
         query.where('BOARD_ID = ?', board.boardId)
