@@ -1,6 +1,6 @@
 /* global expect */
 const userModel = require('../../server/models/userModel');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const util = require('../../server/util');
 
 // test('create user - init', async (done) => {
@@ -88,7 +88,7 @@ test('updateUserPassword', async (done) => {
     expect(await userModel.updateUserPassword({ userId: 'orange' })).toEqual(0);
     user = (await userModel.getUser('orange'))[0];
     expect(await bcrypt.compare(raw, user.password)).toEqual(true);
-    
+
     expect(await userModel.updateUserPassword({ userId: 'orange', password: await bcrypt.hash('xptmxm1!', 10) })).toEqual(1);
     user = (await userModel.getUser('orange'))[0];
     expect(await bcrypt.compare('xptmxm1!', user.password)).toEqual(true);

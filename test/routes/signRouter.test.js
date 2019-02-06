@@ -1,7 +1,7 @@
 /* global expect */
 const app = require('../../app'),
     request = require('supertest')(app),
-    bcrypt = require('bcrypt'),
+    bcrypt = require('bcryptjs'),
     userModel = require('../../server/models/userModel'),
     groupModel = require('../../server/models/groupModel')
 // test('signup init', async (done) => {

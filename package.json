@@ -12,7 +12,6 @@
         "test:router": "jest --detectOpenHandles --runInBand --forceExit --testPathPattern=^.*Router\\.test\\.js$"
     },
     "dependencies": {
-        "bcrypt": "^3.0.3",
         "compression": "^1.7.3",
         "connect": "^3.6.6",
         "cookie-parser": "^1.4.3",

@@ -1,6 +1,6 @@
 const router = require('express').Router(),
     path = require('path'),
-    bcrypt = require('bcrypt');
+    bcrypt = require('bcryptjs');
 const constants = require('../constants'),
     util = require('../util'),
     logger = require('../logger'),
@@ -104,17 +104,17 @@ router.put('/', requiredSignin, async (req, res) => {
         if (user.emailVerifiedDate === null && req.userObject.auth === 'E') {
             parameters.emailVerifiedDate = null;
         }
-        if(user.grade !== undefined || user.major !== undefined || user.email !== undefined){
+        if (user.grade !== undefined || user.major !== undefined || user.email !== undefined) {
             let result2 = await groupModel.getUserGroup(user.userId);
             if (Array.isArray(result2)) {
-                if(result2.some(x=>x.groupType === 'M')){
-                    original.major = result2.find(x=>x.groupType === 'M').groupId
+                if (result2.some(x => x.groupType === 'M')) {
+                    original.major = result2.find(x => x.groupType === 'M').groupId
                 }
-                if(result2.some(x=>x.groupType === 'G')){
-                    original.grade = result2.find(x=>x.groupType === 'G').groupId
+                if (result2.some(x => x.groupType === 'G')) {
+                    original.grade = result2.find(x => x.groupType === 'G').groupId
                 }
-                if(result2.some(x=>x.groupType === 'R')){
-                    original.region = result2.find(x=>x.groupType === 'R').groupId
+                if (result2.some(x => x.groupType === 'R')) {
+                    original.region = result2.find(x => x.groupType === 'R').groupId
                 }
             }
             if (process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && util.moment().month() !== 2) { //month() === 2 is March
