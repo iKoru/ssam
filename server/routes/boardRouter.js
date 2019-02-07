@@ -527,6 +527,9 @@ router.put('/notice', requiredAuth, async (req, res) => {
     }
     let notices = board[0].notices;
     if (req.body.isAdd) {
+        if(!req.userObject.isAdmin){
+            notices.splice(0,1);
+        }
         notices.push({ documentId: documentId, title: document[0].title, isNotice: true, boardId: boardId })
     } else {
         notices.splice(notices.findIndex(x => x.documentId === documentId), 1)

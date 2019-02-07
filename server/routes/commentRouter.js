@@ -32,6 +32,9 @@ router.get('/', requiredSignin, async (req, res) => {
   }
   let result = await documentModel.getDocument(documentId);
   if (Array.isArray(result) && result.length > 0) {
+    if(result[0].isDeleted && !req.userObject.isAdmin){
+      return res.status(200).json([]);
+    }
     result = await boardModel.getBoard(result[0].boardId)
     if (Array.isArray(result) && result.length > 0 && result[0].status === 'NORMAL') {
       if (!result[0].statusAuth.read.includes(req.userObject.auth)) {
