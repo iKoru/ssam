@@ -1,6 +1,7 @@
 const pool = require('./db').instance,
     builder = require('./db').builder,
-    { getYYYYMMDDHH24MISS } = require('../util');
+    { getYYYYMMDDHH24MISS, getYYYYMMDD } = require('../util'),
+    cache = require('../cache');
 
 exports.getNotification = async (notificationId) => {
     return await pool.executeQuery('getNotification',
@@ -190,4 +191,103 @@ exports.clearNotification = async (userId) => {
             .where('USER_ID = ?', userId)
             .toParam()
     )
+}
+
+exports.getPopups = async () => {
+    return await pool.executeQuery('getPopups',
+        builder.select()
+            .fields({
+                'POPUP_ID': '"popupId"',
+                'POPUP_START': '"popupStart"',
+                'POPUP_END': '"popupEnd"',
+                'POPUP_ACTIVATED': '"popupActivated"',
+                'POPUP_CONTENTS': '"popupContents"',
+                'POPUP_TYPE': '"popupType"',
+                'POPUP_HREF': '"popupHref"'
+            })
+            .from('SS_MST_POPUP')
+            .toParam()
+    )
+}
+
+exports.getCurrentPopups = async () => {
+    let cachedData = await cache.getAsync('[POPUP]' + getYYYYMMDD())
+    if (cachedData) {
+        return cachedData;
+    }
+    cachedData = await pool.executeQuery('getPopups',
+        builder.select()
+            .fields({
+                'POPUP_ID': '"popupId"',
+                'POPUP_START': '"popupStart"',
+                'POPUP_END': '"popupEnd"',
+                'POPUP_ACTIVATED': '"popupActivated"',
+                'POPUP_CONTENTS': '"popupContents"',
+                'POPUP_TYPE': '"popupType"',
+                'POPUP_HREF': '"popupHref"'
+            })
+            .from('SS_MST_POPUP')
+            .where('POPUP_ACTIVATED = true')
+            .where('POPUP_START < ?', getYYYYMMDD())
+            .where('POPUP_END > ?', getYYYYMMDD())
+            .toParam()
+    )
+    if (Array.isArray(cachedData)) {
+        await cache.setAsync('[POPUP]' + getYYYYMMDD(), cachedData)
+    }
+    return cachedData;
+}
+
+exports.updatePopup = async (popup) => {
+    let result = await pool.executeQuery('updatePopup',
+        builder.update().table('SS_MST_POPUP')
+            .setFields({
+                'POPUP_START': (popup.popupStart || builder.rstr('POPUP_START')),
+                'POPUP_END': (popup.popupEnd || builder.rstr('POPUP_END')),
+                'POPUP_CONTENTS': (popup.popupContents || builder.rstr('POPUP_CONTENTS')),
+                'POPUP_TYPE': (popup.popupType || builder.rstr('POPUP_TYPE')),
+                'POPUP_HREF': (popup.popupHref || builder.rstr('POPUP_HREF')),
+                'POPUP_ACTIVATED': (popup.popupActivated !== undefined ? popup.popupActivated : builder.rstr('POPUP_ACTIVATED')),
+            })
+            .where('POPUP_ID = ?', popup.popupId)
+            .toParam()
+    );
+    if (result === 1) {
+        await cache.delAsync('[POPUP]' + getYYYYMMDD());
+    }
+    return result;
+}
+
+exports.deletePopup = async (popupId) => {
+    let result = await pool.executeQuery('deletePopup',
+        builder.delete()
+            .from('SS_MST_POPUP')
+            .where('POPUP_ID = ?', popupId)
+            .toParam()
+    )
+    if (result === 1) {
+        await cache.delAsync('[POPUP]' + getYYYYMMDD());
+    }
+    return result;
+}
+
+exports.createPopup = async (popup) => {
+    let result = await pool.executeQuery('createPopup',
+        builder.insert()
+            .into('SS_MST_POPUP')
+            .setFields({
+                'POPUP_ID': builder.rstr('CAST(nextval(\'SEQ_SS_MST_POPUP\') AS INTEGER)'),
+                'POPUP_START': popup.popupStart,
+                'POPUP_END': popup.popupEnd,
+                'POPUP_TYPE': popup.popupType,
+                'POPUP_ACTIVATED': popup.popupActivated,
+                'POPUP_CONTENTS': popup.popupContents,
+                'POPUP_HREF': popup.popupHref
+            })
+            .toParam()
+    )
+    if (result === 1) {
+        await cache.delAsync('[POPUP]' + getYYYYMMDD());
+    }
+    return result;
 }

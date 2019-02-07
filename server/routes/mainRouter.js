@@ -1,6 +1,5 @@
 const router = require('express').Router();
-const visitorOnly = require('../middlewares/visitorOnly'),
-    requiredSignin = require('../middlewares/requiredSignin'),
+const requiredSignin = require('../middlewares/requiredSignin'),
     requiredAuth = require('../middlewares/requiredAuth'),
     checkSignin = require('../middlewares/checkSignin'),
     { reserved, reservedNickName, boardTypeDomain, emailRegex, boardIdRegex } = require('../constants'),
@@ -10,15 +9,8 @@ const documentModel = require('../models/documentModel'),
     commentModel = require('../models/commentModel'),
     userModel = require('../models/userModel'),
     groupModel = require('../models/groupModel'),
+    notificationModel = require('../models/notificationModel'),
     boardModel = require('../models/boardModel');
-
-router.get('/index', visitorOnly('/'), (req, res) => {
-    res.status(501).end();
-});
-
-router.get('/', requiredSignin, (req, res) => {
-    res.status(501).end();
-});
 
 router.get('/profile', requiredAuth, async (req, res) => {
     let nickName = req.query.nickName;
@@ -30,7 +22,7 @@ router.get('/profile', requiredAuth, async (req, res) => {
         result = result[0]
         let result2 = await groupModel.getUserGroup(result.userId);
         if (Array.isArray(result2)) {
-            if(result.isOpenInfo){
+            if (result.isOpenInfo) {
                 result.major = result2.find(x => x.groupType === 'M');
                 if (result.major) {
                     result.major = result.major.groupId;
@@ -53,7 +45,7 @@ router.get('/profile', requiredAuth, async (req, res) => {
             } else {
                 result.auth = 'N'
             }
-    
+
             result.groups = result2.filter(x => x.isOpenToUsers).map(x => x.groupId)
         }
         delete result.userId;
@@ -124,9 +116,9 @@ router.post('/survey', requiredAuth, async (req, res) => {
             if (Array.isArray(survey) && survey.length > 0) {
                 delete survey[0].documentId;
                 survey[0].participated = true;
-                return res.status(200).json({ message: '설문 내용을 저장하였습니다.', survey:survey[0] });
-            }else{
-                return res.status(200).json({ message: '설문 내용을 저장하였습니다.'});
+                return res.status(200).json({ message: '설문 내용을 저장하였습니다.', survey: survey[0] });
+            } else {
+                return res.status(200).json({ message: '설문 내용을 저장하였습니다.' });
             }
         }
     } else {
@@ -175,8 +167,8 @@ router.get('/recent', requiredSignin, async (req, res) => {
     let result = await boardModel.getRecentBoards();
     if (Array.isArray(result)) {
         let best = await documentModel.getRecentBestDocuments();
-        if(Array.isArray(best)){
-            result.push({boardId:null, documents:best});
+        if (Array.isArray(best)) {
+            result.push({ boardId: null, documents: best });
         }
         return res.status(200).json(result);
     } else {
@@ -243,6 +235,16 @@ router.get('/nickName', requiredSignin, async (req, res) => {
         }
     } else {
         return res.status(400).json({ target: 'email', message: '체크할 닉네임/필명을 입력해주세요.' })
+    }
+})
+
+router.get('/popup', requiredSignin, async (req, res) => {
+    let result = await notificationModel.getCurrentPopups();
+    if (Array.isArray(result)) {
+        return res.status(200).json(result);
+    } else {
+        logger.error('팝업 가져오기 에러 : ', result);
+        return res.status(500).json({ message: `팝업을 가져오지 못했습니다.[${result.code || ''}]` })
     }
 })
 

@@ -7,6 +7,120 @@ const notificationModel = require('../models/notificationModel'),
     userModel = require('../models/userModel');
 //based on /notification
 
+router.get('/popup', adminOnly, async (req, res) => {
+    let result = await notificationModel.getPopups();
+    if (Array.isArray(result)) {
+        return res.status(200).json(result);
+    } else {
+        logger.error('전체 팝업 가져오기 에러 : ', result);
+        return res.status(500).json({ message: `전체 팝업 목록을 가져오지 못했습니다.[${result.code || ''}]` })
+    }
+})
+
+router.post('/popup', adminOnly, async (req, res) => {
+    let popup = {
+        popupType: req.body.popupType,
+        popupStart: req.body.popupStart,
+        popupEnd: req.body.popupEnd,
+        popupContents: req.body.popupContents,
+        popupHref: req.body.popupHref,
+        popupActivated: req.body.popupActivated
+    };
+    if (!['image', 'html', 'text'].includes(popup.popupType)) {
+        return res.status(400).json({ target: 'popupType', message: '팝업 타입이 올바르지 않습니다.' })
+    }
+    if (typeof popup.popupContents !== 'string') {
+        return res.status(400).json({ target: 'popupContents', message: '팝업 내용이 올바르지 않습니다.' })
+    }
+    if (!popup.popupStart || !moment.isValid(moment(popup.popupStart, 'YYYYMMDD'))) {
+        return res.status(400).json({ target: 'popupStart', message: '팝업 게시 시작일이 올바르지 않습니다.' })
+    }
+    if (!popup.popupEnd || !moment.isValid(moment(popup.popupEnd, 'YYYYMMDD'))) {
+        return res.status(400).json({ target: 'popupEnd', message: '팝업 게시 종료일이 올바르지 않습니다.' })
+    }
+    if (popup.popupHref && (typeof popup.popupHref !== 'string' || popup.variable2.length > 100)) {
+        return res.status(400).json({ target: 'popupHref', message: '팝업 링크가 100자를 넘거나 형태가 올바르지 않습니다.' })
+    }
+    if (popup.popupActivated !== undefined && typeof popup.popupActivated !== 'boolean') {
+        return res.status(400).json({ target: 'popupActivated', message: '팝업 활성화 여부가 올바르지 않습니다.' })
+    }
+
+    let result = await notificationModel.createPopup(popup);
+    if (typeof result === 'object') {
+        logger.error('팝업 생성 시 에러 : ', result, popup);
+        return res.status(500).json({ message: `팝업을 만들지 못했습니다.[${result.code || ''}]` })
+    } else if (result === 0) {
+        return res.status(500).json({ message: '팝업을 만들지 못했습니다.' })
+    } else {
+        return res.status(200).json({ message: '팝업을 만들었습니다.' })
+    }
+})
+
+router.put('/popup', adminOnly, async (req, res) => {
+    let popup = {
+        popupId: req.body.popupId,
+        popupType: req.body.popupType,
+        popupStart: req.body.popupStart,
+        popupEnd: req.body.popupEnd,
+        popupContents: req.body.popupContents,
+        popupHref: req.body.popupHref,
+        popupActivated: req.body.popupActivated
+    };
+    if (typeof popup.popupId === 'string') {
+        popup.popupId = 1 * popup.popupId;
+    }
+    if (!Number.isInteger(popup.popupId) || popup.popupId === 0) {
+        return res.status(400).json({ target: 'popupId', message: '변경할 팝업을 찾을 수 없습니다.' });
+    }
+    if (popup.popupType && !['image', 'html', 'text'].includes(popup.popupType)) {
+        return res.status(400).json({ target: 'popupType', message: '팝업 타입이 올바르지 않습니다.' })
+    }
+    if (popup.popupContents && typeof popup.popupContents !== 'string') {
+        return res.status(400).json({ target: 'popupContents', message: '팝업 내용이 올바르지 않습니다.' })
+    }
+    if (popup.popupStart && !moment.isValid(moment(popup.popupStart, 'YYYYMMDD'))) {
+        return res.status(400).json({ target: 'popupStart', message: '팝업 게시 시작일이 올바르지 않습니다.' })
+    }
+    if (popup.popupEnd && !moment.isValid(moment(popup.popupEnd, 'YYYYMMDD'))) {
+        return res.status(400).json({ target: 'popupEnd', message: '팝업 게시 종료일이 올바르지 않습니다.' })
+    }
+    if (popup.popupHref && (typeof popup.popupHref !== 'string' || popup.variable2.length > 100)) {
+        return res.status(400).json({ target: 'popupHref', message: '팝업 링크가 100자를 넘거나 형태가 올바르지 않습니다.' })
+    }
+    if (popup.popupActivated !== undefined && typeof popup.popupActivated !== 'boolean') {
+        return res.status(400).json({ target: 'popupActivated', message: '팝업 활성화 여부가 올바르지 않습니다.' })
+    }
+
+    let result = await notificationModel.updatePopup(popup);
+    if (typeof result === 'object') {
+        logger.error('팝업 변경 시 에러 : ', result, popup);
+        return res.status(500).json({ message: `팝업을 변경하지 못했습니다.[${result.code || ''}]` })
+    } else if (result === 0) {
+        return res.status(500).json({ message: '팝업을 변경하지 못했습니다.' })
+    } else {
+        return res.status(200).json({ message: '팝업을 변경했습니다.' })
+    }
+})
+
+router.delete('/popup/:popupId', adminOnly, async (req, res) => {
+    let popupId = req.params.popupId;
+    if (typeof popupId === 'string') {
+        popupId = 1 * popupId;
+    }
+    if (!Number.isInteger(popupId) || popupId === 0) {
+        return res.status(400).json({ target: 'popupId', message: '삭제할 팝업을 찾을 수 없습니다.' });
+    }
+    let result = await notificationModel.deletePopup(popupId);
+    if (typeof result === 'object') {
+        logger.error('팝업 삭제 중 에러 : ', result, req.userObject.userId, popupId)
+        return res.status(500).json({ message: `팝업을 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });
+    } else if (result === 0) {
+        return res.status(404).json({ target: 'popupId', message: '삭제할 팝업을 찾을 수 없습니다.' });
+    } else {
+        return res.status(200).json({ message: '팝업을 삭제하였습니다.' });
+    }
+})
+
 router.get('/', requiredSignin, async (req, res) => {
     let type = req.query.type;
     if (typeof type !== 'string' || type.length > 2) {
