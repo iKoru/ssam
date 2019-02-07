@@ -5,123 +5,123 @@ const boardModel = require('../models/boardModel'),
     documentModel = require('../models/documentModel'),
     util = require('../util'),
     path = require('path'),
-    { boardTypeDomain} = require('../constants'),
+    { boardTypeDomain } = require('../constants'),
     logger = require('../logger')
 let multerLib = require('multer'),
-  multer = multerLib({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 8 }, storage: multerLib.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }).array('attach') //max 8MB)
+    multer = multerLib({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 8 }, storage: multerLib.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }).array('attach') //max 8MB)
 //based on /document
 
 router.post('/', requiredSignin, async (req, res) => {
-  multer(req, res, async function(error){
-    if (error instanceof multerLib.MulterError) {
-      switch (error.code) {
-        case 'LIMIT_FILE_SIZE':
-          return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 크기 8MB를 초과하였습니다.' });
-        case 'LIMIT_PART_COUNT':
-          return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 분할크기를 초과하였습니다.' });
-        case 'LIMIT_FILE_COUNT':
-          return res.status(400).json({ target: 'attach', message: '첨부파일의 갯수가 너무 많습니다.' });
-        case 'LIMIT_FIELD_KEY':
-          return res.status(400).json({ target: 'attach', message: '파일 이름의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
-        case 'LIMIT_FIELD_VALUE':
-          return res.status(400).json({ target: 'attach', message: '파일 필드의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
-        case 'LIMIT_FIELD_COUNT':
-          return res.status(400).json({ target: 'attach', message: '파일 필드가 너무 많습니다. 필드 수를 줄여주세요.' })
-        case 'LIMIT_UNEXPECTED_FILE':
-          return res.status(400).json({ target: 'attach', message: '업로드할 수 없는 파일 종류입니다.' })
-      }
-    } else if (error) {
-        logger.error('첨부파일 업로드 중 에러!! ', error);
-        return res.status(500).json({ target: 'attach', message: `첨부파일을 업로드하는 도중 오류가 발생하였습니다.[${error.message || ''}]` })
-    }
-    let document = {
-        userId: req.userObject.userId,
-        boardId: req.body.boardId,
-        title: req.body.title,
-        contents: req.body.contents,
-        isAnonymous: (req.body.isAnonymous === 'true'),
-        allowAnonymous: req.body.isAnonymous === 'true' ? true : (req.body.allowAnonymous === 'true'),
-        restriction: req.body.restriction,
-        survey: req.body.survey
-    };
-    if (typeof document.boardId !== 'string' || document.boardId === '') {
-        return res.status(400).json({ target: 'boardId', message: '게시물을 작성할 라운지/토픽을 선택해주세요.' })
-    } else if (typeof document.isAnonymous !== 'boolean') {
-        return res.status(400).json({ target: 'isAnonymous', message: '익명여부 선택이 올바르지 않습니다.' })
-    } else if (typeof document.title !== 'string' || document.title === '') {
-        return res.status(400).json({ target: 'title', message: '게시물 제목을 입력해주세요.' })
-    } else if (document.title.length > 300) {
-        return res.status(400).json({ target: 'title', message: `게시물 제목이 너무 깁니다.(${document.title.length}/300자)` })
-    } else if (typeof document.contents !== 'string' || document.contents === '') {
-        return res.status(400).json({ target: 'contents', message: '게시물 내용을 입력해주세요.' })
-    } else if (typeof document.allowAnonymous !== 'boolean') {
-        return res.status(400).json({ target: 'allowAnonymous', message: '익명댓글 허용여부가 올바르지 않습니다.' })
-    } else if (document.survey !== undefined && Array.isArray(document.survey)) {
-        return res.status(400).json({ target: 'survey', message: '설문조사 내용이 올바르지 않습니다.' })
-    }
-    if (typeof document.restriction === 'string' && document.restriction !== '') {
-        try {
-            document.restriction = JSON.parse(document.restriction)
-        } catch (error) {
-            logger.error('게시물 제한조건 파싱 중 에러 : '.document.restriction, error);
-            return res.status(400).json({ target: 'restriction', message: '첨부파일 다운로드 조건 형식이 올바르지 않습니다.' })
-        }
-    }
-
-    let result = await boardModel.getBoard(document.boardId);
-    if (Array.isArray(result) && result.length > 0) {
-        if (!result[0].statusAuth.write.includes(req.userObject.auth)) {
-            const authString = {
-                'A': '인증',
-                'E': '전직교사',
-                'N': '예비교사',
-                'D': '인증제한'
+    multer(req, res, async function (error) {
+        if (error instanceof multerLib.MulterError) {
+            switch (error.code) {
+                case 'LIMIT_FILE_SIZE':
+                    return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 크기 8MB를 초과하였습니다.' });
+                case 'LIMIT_PART_COUNT':
+                    return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 분할크기를 초과하였습니다.' });
+                case 'LIMIT_FILE_COUNT':
+                    return res.status(400).json({ target: 'attach', message: '첨부파일의 갯수가 너무 많습니다.' });
+                case 'LIMIT_FIELD_KEY':
+                    return res.status(400).json({ target: 'attach', message: '파일 이름의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
+                case 'LIMIT_FIELD_VALUE':
+                    return res.status(400).json({ target: 'attach', message: '파일 필드의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
+                case 'LIMIT_FIELD_COUNT':
+                    return res.status(400).json({ target: 'attach', message: '파일 필드가 너무 많습니다. 필드 수를 줄여주세요.' })
+                case 'LIMIT_UNEXPECTED_FILE':
+                    return res.status(400).json({ target: 'attach', message: '업로드할 수 없는 파일 종류입니다.' })
             }
-            return res.status(403).json({ target: 'documentId', message: `게시물을 쓸 수 있는 권한이 없습니다. ${result[0].statusAuth.read.map(x => authString[x]).filter(x => x).join(', ')} 회원만 쓰기가 가능합니다.` })
+        } else if (error) {
+            logger.error('첨부파일 업로드 중 에러!! ', error);
+            return res.status(500).json({ target: 'attach', message: `첨부파일을 업로드하는 도중 오류가 발생하였습니다.[${error.message || ''}]` })
         }
-        if (result[0].boardType === 'T') {
-            document.userNickName = req.userObject.topicNickName;
-        } else {
-            document.userNickName = req.userObject.loungeNickName;
+        let document = {
+            userId: req.userObject.userId,
+            boardId: req.body.boardId,
+            title: req.body.title,
+            contents: req.body.contents,
+            isAnonymous: (req.body.isAnonymous === 'true'),
+            allowAnonymous: req.body.isAnonymous === 'true' ? true : (req.body.allowAnonymous === 'true'),
+            restriction: req.body.restriction,
+            survey: req.body.survey
+        };
+        if (typeof document.boardId !== 'string' || document.boardId === '') {
+            return res.status(400).json({ target: 'boardId', message: '게시물을 작성할 라운지/토픽을 선택해주세요.' })
+        } else if (typeof document.isAnonymous !== 'boolean') {
+            return res.status(400).json({ target: 'isAnonymous', message: '익명여부 선택이 올바르지 않습니다.' })
+        } else if (typeof document.title !== 'string' || document.title === '') {
+            return res.status(400).json({ target: 'title', message: '게시물 제목을 입력해주세요.' })
+        } else if (document.title.length > 300) {
+            return res.status(400).json({ target: 'title', message: `게시물 제목이 너무 깁니다.(${document.title.length}/300자)` })
+        } else if (typeof document.contents !== 'string' || document.contents === '') {
+            return res.status(400).json({ target: 'contents', message: '게시물 내용을 입력해주세요.' })
+        } else if (typeof document.allowAnonymous !== 'boolean') {
+            return res.status(400).json({ target: 'allowAnonymous', message: '익명댓글 허용여부가 올바르지 않습니다.' })
+        } else if (document.survey !== undefined && Array.isArray(document.survey)) {
+            return res.status(400).json({ target: 'survey', message: '설문조사 내용이 올바르지 않습니다.' })
         }
-        if (!result[0].allowAnonymous) {
-            document.isAnonymous = false;
-            document.allowAnonymous = false;
-        }
-    } else {
-        return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
-    }
-
-    document.hasAttach = req.files && req.files.length > 0;
-    document.reserved1 = req.userObject.auth;
-    result = await documentModel.createDocument(document);
-    if (result.error || result.rowCount === 0) {
-        logger.error('게시물 저장 중 에러 : ', result, document);
-        return res.status(500).json({ message: `게시물을 저장하던 도중 오류가 발생했습니다.[${result.code || ''}]` })
-    } else {
-        req.body.documentId = result.rows[0].documentId;
-        let survey = false;
-        if (document.survey) {
+        if (typeof document.restriction === 'string' && document.restriction !== '') {
             try {
-                document.survey = JSON.parse(document.survey);
-                result = await documentModel.createDocumentSurvey(req.body.documentId, document.survey);
-                if (typeof result === 'object' || result === 0) {
-                    logger.error('설문조사 등록 중 에러 : ', document.survey, result);
+                document.restriction = JSON.parse(document.restriction)
+            } catch (error) {
+                logger.error('게시물 제한조건 파싱 중 에러 : '.document.restriction, error);
+                return res.status(400).json({ target: 'restriction', message: '첨부파일 다운로드 조건 형식이 올바르지 않습니다.' })
+            }
+        }
+
+        let result = await boardModel.getBoard(document.boardId);
+        if (Array.isArray(result) && result.length > 0) {
+            if (!result[0].statusAuth.write.includes(req.userObject.auth)) {
+                const authString = {
+                    'A': '인증',
+                    'E': '전직교사',
+                    'N': '예비교사',
+                    'D': '인증제한'
+                }
+                return res.status(403).json({ target: 'documentId', message: `게시물을 쓸 수 있는 권한이 없습니다. ${result[0].statusAuth.read.map(x => authString[x]).filter(x => x).join(', ')} 회원만 쓰기가 가능합니다.` })
+            }
+            if (result[0].boardType === 'T') {
+                document.userNickName = req.userObject.topicNickName;
+            } else {
+                document.userNickName = req.userObject.loungeNickName;
+            }
+            if (!result[0].allowAnonymous) {
+                document.isAnonymous = false;
+                document.allowAnonymous = false;
+            }
+        } else {
+            return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
+        }
+
+        document.hasAttach = req.files && req.files.length > 0;
+        document.reserved1 = req.userObject.auth;
+        result = await documentModel.createDocument(document);
+        if (result.error || result.rowCount === 0) {
+            logger.error('게시물 저장 중 에러 : ', result, document);
+            return res.status(500).json({ message: `게시물을 저장하던 도중 오류가 발생했습니다.[${result.code || ''}]` })
+        } else {
+            req.body.documentId = result.rows[0].documentId;
+            let survey = false;
+            if (document.survey) {
+                try {
+                    document.survey = JSON.parse(document.survey);
+                    result = await documentModel.createDocumentSurvey(req.body.documentId, document.survey);
+                    if (typeof result === 'object' || result === 0) {
+                        logger.error('설문조사 등록 중 에러 : ', document.survey, result);
+                        survey = true;
+                    }
+                } catch (error) {
+                    logger.error('설문조사 파싱 및 등록 중 에러 : ', document.survey, error);
                     survey = true;
                 }
-            } catch (error) {
-                logger.error('설문조사 파싱 및 등록 중 에러 : ', document.survey, error);
-                survey = true;
+            }
+            if (document.hasAttach) {
+                result = await util.uploadFile(req.files, 'attach', req.body.documentId, documentModel.createDocumentAttach);
+                return res.status(200).json({ target: 'attach', message: result.status === 200 ? (survey ? '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' : '게시물을 등록하였습니다.') : (survey ? '게시물을 등록했으나, 첨부파일과 설문조사를 등록하지 못했습니다.' : '게시물을 등록했으나, 첨부파일을 업로드하지 못했습니다.'), documentId: req.body.documentId });
+            } else {
+                return res.status(200).json({ message: (survey ? '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' : '게시물을 등록하였습니다.'), documentId: req.body.documentId })
             }
         }
-        if (document.hasAttach) {
-            result = await util.uploadFile(req.files, 'attach', req.body.documentId, documentModel.createDocumentAttach);
-            return res.status(200).json({ target: 'attach', message: result.status === 200 ? (survey ? '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' : '게시물을 등록하였습니다.') : (survey ? '게시물을 등록했으나, 첨부파일과 설문조사를 등록하지 못했습니다.' : '게시물을 등록했으나, 첨부파일을 업로드하지 못했습니다.'), documentId: req.body.documentId });
-        } else {
-            return res.status(200).json({ message: (survey ? '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' : '게시물을 등록하였습니다.'), documentId: req.body.documentId })
-        }
-    }
-  });
+    });
 });
 
 router.put('/', requiredSignin, async (req, res) => {
@@ -152,7 +152,7 @@ router.put('/', requiredSignin, async (req, res) => {
 
     if (!req.userObject.isAdmin) {
         delete document.title;
-    } else if (typeof document.title !== 'string' || document.title.length > 300) {
+    } else if (document.title !== undefined && (typeof document.title !== 'string' || document.title.length > 300)) {
         return res.status(400).json({ target: 'title', message: '입력된 제목이 올바르지 않습니다.' })
     }
     if (!document.isDeleted && typeof document.contents !== 'string' || document.contents === '') {
@@ -288,56 +288,56 @@ router.delete(/\/(\d+)(?:\/.*|\?.*)?$/, adminOnly, async (req, res) => {
 });
 
 router.post('/attach', requiredSignin, async (req, res) => {
-  multer(req, res, async function(error){
-    if (error instanceof multerLib.MulterError) {
-      switch (error.code) {
-        case 'LIMIT_FILE_SIZE':
-          return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 크기 8MB를 초과하였습니다.' });
-        case 'LIMIT_PART_COUNT':
-          return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 분할크기를 초과하였습니다.' });
-        case 'LIMIT_FILE_COUNT':
-          return res.status(400).json({ target: 'attach', message: '첨부파일의 갯수가 너무 많습니다.' });
-        case 'LIMIT_FIELD_KEY':
-          return res.status(400).json({ target: 'attach', message: '파일 이름의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
-        case 'LIMIT_FIELD_VALUE':
-          return res.status(400).json({ target: 'attach', message: '파일 필드의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
-        case 'LIMIT_FIELD_COUNT':
-          return res.status(400).json({ target: 'attach', message: '파일 필드가 너무 많습니다. 필드 수를 줄여주세요.' })
-        case 'LIMIT_UNEXPECTED_FILE':
-          return res.status(400).json({ target: 'attach', message: '업로드할 수 없는 파일 종류입니다.' })
-      }
-    } else if (error) {
-        logger.error('첨부파일 업로드 중 에러!! ', error);
-        return res.status(500).json({ target: 'attach', message: `첨부파일을 업로드하는 도중 오류가 발생하였습니다.[${error.message || ''}]` })
-    }
-    let documentId = req.body.documentId;
-    if (typeof documentId === 'string') {
-        documentId = 1 * documentId
-    }
-    if (!Number.isInteger(documentId) || documentId === 0) {
-        return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
-    }
-    if (!Array.isArray(req.files) || req.files.length < 1) {
-        return res.status(400).json({ target: 'files', message: '첨부파일을 올려주세요.' })
-    }
-    let document = await documentModel.getDocument(documentId);
-    if (Array.isArray(document) && document.length > 0) {
-        if ((document[0].userId === req.userObject.userId) || req.userObject.isAdmin) {
-            const result = await util.uploadFile(req.files, 'attach', documentId, documentModel.createDocumentAttach);
-            if (result.status === 200 && !document[0].hasAttach) {
-                await documentModel.updateDocument({ documentId: documentId, hasAttach: true });
+    multer(req, res, async function (error) {
+        if (error instanceof multerLib.MulterError) {
+            switch (error.code) {
+                case 'LIMIT_FILE_SIZE':
+                    return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 크기 8MB를 초과하였습니다.' });
+                case 'LIMIT_PART_COUNT':
+                    return res.status(400).json({ target: 'attach', message: '첨부파일이 최대 분할크기를 초과하였습니다.' });
+                case 'LIMIT_FILE_COUNT':
+                    return res.status(400).json({ target: 'attach', message: '첨부파일의 갯수가 너무 많습니다.' });
+                case 'LIMIT_FIELD_KEY':
+                    return res.status(400).json({ target: 'attach', message: '파일 이름의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
+                case 'LIMIT_FIELD_VALUE':
+                    return res.status(400).json({ target: 'attach', message: '파일 필드의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
+                case 'LIMIT_FIELD_COUNT':
+                    return res.status(400).json({ target: 'attach', message: '파일 필드가 너무 많습니다. 필드 수를 줄여주세요.' })
+                case 'LIMIT_UNEXPECTED_FILE':
+                    return res.status(400).json({ target: 'attach', message: '업로드할 수 없는 파일 종류입니다.' })
             }
-            if (result.status === 500) {
-                logger.error('첨부파일 등록 중 에러 : ', result, documentId)
-            }
-            return res.status(result.status).json({ message: result.message });
-        } else {
-            return res.status(403).json({ target: 'documentId', message: '첨부파일을 올릴 수 있는 권한이 없습니다.' })
+        } else if (error) {
+            logger.error('첨부파일 업로드 중 에러!! ', error);
+            return res.status(500).json({ target: 'attach', message: `첨부파일을 업로드하는 도중 오류가 발생하였습니다.[${error.message || ''}]` })
         }
-    } else {
-        return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
-    }
-  });
+        let documentId = req.body.documentId;
+        if (typeof documentId === 'string') {
+            documentId = 1 * documentId
+        }
+        if (!Number.isInteger(documentId) || documentId === 0) {
+            return res.status(400).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
+        }
+        if (!Array.isArray(req.files) || req.files.length < 1) {
+            return res.status(400).json({ target: 'files', message: '첨부파일을 올려주세요.' })
+        }
+        let document = await documentModel.getDocument(documentId);
+        if (Array.isArray(document) && document.length > 0) {
+            if ((document[0].userId === req.userObject.userId) || req.userObject.isAdmin) {
+                const result = await util.uploadFile(req.files, 'attach', documentId, documentModel.createDocumentAttach);
+                if (result.status === 200 && !document[0].hasAttach) {
+                    await documentModel.updateDocument({ documentId: documentId, hasAttach: true });
+                }
+                if (result.status === 500) {
+                    logger.error('첨부파일 등록 중 에러 : ', result, documentId)
+                }
+                return res.status(result.status).json({ message: result.message });
+            } else {
+                return res.status(403).json({ target: 'documentId', message: '첨부파일을 올릴 수 있는 권한이 없습니다.' })
+            }
+        } else {
+            return res.status(404).json({ target: 'documentId', message: '게시물을 찾을 수 없습니다.' })
+        }
+    });
 });
 
 router.get('/', requiredSignin, async (req, res) => {
@@ -346,7 +346,7 @@ router.get('/', requiredSignin, async (req, res) => {
     if (typeof page === 'string') {
         page = 1 * page
     }
-    if(typeof targetYear === 'string'){
+    if (typeof targetYear === 'string') {
         targetYear = 1 * targetYear;
     }
     if (page !== undefined && !Number.isInteger(page) || page === 0) {
@@ -357,9 +357,9 @@ router.get('/', requiredSignin, async (req, res) => {
     if (!['title', 'contents', 'titleContents'].includes(searchTarget)) {
         return res.status(400).json({ target: 'searchTarget', message: '검색할 대상을 선택해주세요.' })
     }
-    
+
     let board, result;
-    if(boardId){
+    if (boardId) {
         board = await boardModel.getBoard(boardId);
         if (Array.isArray(board) && board.length > 0 && board[0].status !== 'DELETED') {
             board = board[0];
@@ -372,7 +372,7 @@ router.get('/', requiredSignin, async (req, res) => {
                 }
                 return res.status(403).json({ target: 'documentId', message: `게시물을 볼 수 있는 권한이 없습니다. ${board.statusAuth.read.map(x => authString[x]).filter(x => x).join(', ')} 회원만 조회가 가능합니다.` })
             }
-        }else{
+        } else {
             return res.status(404).json({ target: 'boardId', message: '존재하지 않는 게시판입니다.' })
         }
         result = await boardModel.checkUserBoardReadable(req.userObject.userId, boardId);
@@ -386,13 +386,13 @@ router.get('/', requiredSignin, async (req, res) => {
         } else {
             return res.status(403).json({ target: 'boardId', message: `${boardTypeDomain[board.boardType]}의 게시물을 볼 수 있는 권한이 없습니다.`, needSubscription: Array.isArray(result) && result.length > 0 ? result[0].needSubscription : undefined })
         }
-    }else{//all open board
+    } else {//all open board
         const boards = await boardModel.getBoards();
-        boardId = boards.filter(x => x.allGroupAuth !== 'NONE' && !x.parentBoardId  && x.statusAuth.read.includes(req.userObject.auth) && x.status !== 'DELETED').map(x => x.boardId)
+        boardId = boards.filter(x => x.allGroupAuth !== 'NONE' && !x.parentBoardId && x.statusAuth.read.includes(req.userObject.auth) && x.status !== 'DELETED').map(x => x.boardId)
     }
 
-    if(!boardId || !Array.isArray(boardId) || boardId.length === 0){
-        return res.status(400).json({message:'검색할 게시판을 찾을 수 없습니다.', target:'boardId'})
+    if (!boardId || !Array.isArray(boardId) || boardId.length === 0) {
+        return res.status(400).json({ message: '검색할 게시판을 찾을 수 없습니다.', target: 'boardId' })
     }
     result = await documentModel.getDocuments(boardId, null, searchQuery, searchTarget, null, false, page, false, null, targetYear, 10);
     if (Array.isArray(result)) {
