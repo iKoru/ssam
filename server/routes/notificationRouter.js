@@ -32,10 +32,10 @@ router.post('/popup', adminOnly, async (req, res) => {
     if (typeof popup.popupContents !== 'string') {
         return res.status(400).json({ target: 'popupContents', message: '팝업 내용이 올바르지 않습니다.' })
     }
-    if (!popup.popupStart || !moment.isValid(moment(popup.popupStart, 'YYYYMMDD'))) {
+    if (!popup.popupStart || !moment(popup.popupStart, 'YYYYMMDD').isValid()) {
         return res.status(400).json({ target: 'popupStart', message: '팝업 게시 시작일이 올바르지 않습니다.' })
     }
-    if (!popup.popupEnd || !moment.isValid(moment(popup.popupEnd, 'YYYYMMDD'))) {
+    if (!popup.popupEnd || !moment(popup.popupEnd, 'YYYYMMDD').isValid()) {
         return res.status(400).json({ target: 'popupEnd', message: '팝업 게시 종료일이 올바르지 않습니다.' })
     }
     if (popup.popupHref && (typeof popup.popupHref !== 'string' || popup.variable2.length > 100)) {
@@ -78,10 +78,10 @@ router.put('/popup', adminOnly, async (req, res) => {
     if (popup.popupContents && typeof popup.popupContents !== 'string') {
         return res.status(400).json({ target: 'popupContents', message: '팝업 내용이 올바르지 않습니다.' })
     }
-    if (popup.popupStart && !moment.isValid(moment(popup.popupStart, 'YYYYMMDD'))) {
+    if (popup.popupStart && !moment(popup.popupStart, 'YYYYMMDD').isValid()) {
         return res.status(400).json({ target: 'popupStart', message: '팝업 게시 시작일이 올바르지 않습니다.' })
     }
-    if (popup.popupEnd && !moment.isValid(moment(popup.popupEnd, 'YYYYMMDD'))) {
+    if (popup.popupEnd && !moment(popup.popupEnd, 'YYYYMMDD').isValid()) {
         return res.status(400).json({ target: 'popupEnd', message: '팝업 게시 종료일이 올바르지 않습니다.' })
     }
     if (popup.popupHref && (typeof popup.popupHref !== 'string' || popup.variable2.length > 100)) {

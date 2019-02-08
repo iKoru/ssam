@@ -215,7 +215,7 @@ exports.getCurrentPopups = async () => {
     if (cachedData) {
         return cachedData;
     }
-    cachedData = await pool.executeQuery('getPopups',
+    cachedData = await pool.executeQuery('getCurrentPopups',
         builder.select()
             .fields({
                 'POPUP_ID': '"popupId"',
@@ -228,8 +228,8 @@ exports.getCurrentPopups = async () => {
             })
             .from('SS_MST_POPUP')
             .where('POPUP_ACTIVATED = true')
-            .where('POPUP_START < ?', getYYYYMMDD())
-            .where('POPUP_END > ?', getYYYYMMDD())
+            .where('POPUP_START <= ?', getYYYYMMDD())
+            .where('POPUP_END >= ?', getYYYYMMDD())
             .toParam()
     )
     if (Array.isArray(cachedData)) {
