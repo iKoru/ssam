@@ -115,7 +115,7 @@ router.post('/', requiredSignin, async (req, res) => {
                 }
             }
             if (document.hasAttach) {
-                result = await util.uploadFile(req.files, 'attach', req.body.documentId, documentModel.createDocumentAttach);
+                result = await util.uploadFile(req.files, 'attach', req.body.documentId, documentModel.createDocumentAttach, req.body.documentId);
                 return res.status(200).json({ target: 'attach', message: result.status === 200 ? (survey ? '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' : '게시물을 등록하였습니다.') : (survey ? '게시물을 등록했으나, 첨부파일과 설문조사를 등록하지 못했습니다.' : '게시물을 등록했으나, 첨부파일을 업로드하지 못했습니다.'), documentId: req.body.documentId });
             } else {
                 return res.status(200).json({ message: (survey ? '게시물을 등록하였으나, 설문조사를 등록하지 못했습니다.' : '게시물을 등록하였습니다.'), documentId: req.body.documentId })
@@ -323,7 +323,7 @@ router.post('/attach', requiredSignin, async (req, res) => {
         let document = await documentModel.getDocument(documentId);
         if (Array.isArray(document) && document.length > 0) {
             if ((document[0].userId === req.userObject.userId) || req.userObject.isAdmin) {
-                const result = await util.uploadFile(req.files, 'attach', documentId, documentModel.createDocumentAttach);
+                const result = await util.uploadFile(req.files, 'attach', documentId, documentModel.createDocumentAttach, documentId);
                 if (result.status === 200 && !document[0].hasAttach) {
                     await documentModel.updateDocument({ documentId: documentId, hasAttach: true });
                 }

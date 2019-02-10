@@ -190,7 +190,7 @@ router.post('/', requiredSignin, async (req, res) => {
     if (result.rowCount > 0 && result.rows && result.rows.length > 0 && result.rows[0].commentId > 0) {
       const commentId = result.rows[0].commentId;
       if (comment.hasAttach) {
-        result = await util.uploadFile(req.files, 'attachComment', commentId, commentModel.createCommentAttach);
+        result = await util.uploadFile(req.files, 'attachComment', commentId, commentModel.createCommentAttach, commentId);
         res.status(200).json({ target: 'attach', message: result.status === 200 ? '게시물을 등록하였습니다.' : '댓글을 등록했으나, 첨부파일을 업로드하지 못했습니다.', commentId: commentId });
       } else {
         res.status(200).json({ message: '댓글을 등록하였습니다.', commentId: commentId });
@@ -424,7 +424,7 @@ router.post('/attach', requiredSignin, async (req, res) => {
     let comment = await commentModel.getComment(commentId);
     if (Array.isArray(comment) && comment.length > 0) {
       if ((comment[0].userId === req.userObject.userId) || req.userObject.isAdmin) {
-        const result = await util.uploadFile(req.files, 'attachComment', commentId, commentModel.createCommentAttach);
+        const result = await util.uploadFile(req.files, 'attachComment', commentId, commentModel.createCommentAttach, commentId);
         if (result.status === 200 && !comment[0].hasAttach) {
           await commentModel.updateComment({ commentId: commentId, hasAttach: true });
         }

@@ -10,10 +10,10 @@ const notificationModel = require('../models/notificationModel'),
     config = require('../../config');
 let multerLib = require('multer');
 let multer = multerLib({
-    dest: config.profileBasePath + 'public/popup/', limits: { fileSize: 1024 * 200 }, fileFilter: function (req, file, cb) {
+    dest: config.attachBasePath + 'popup/', limits: { fileSize: 1024 * 200 }, fileFilter: function (req, file, cb) {
         let ext = path.extname(file.originalname).substring(1).toLowerCase();
         cb(null, constants.imageExtensions.includes(ext));
-    }, storage: multerLib.diskStorage({ destination: config.profileBasePath + 'public/popup/', filename: function (req, file, cb) { cb(null, UUID() + path.extname(file.originalname)) } })
+    }, storage: multerLib.diskStorage({ destination: config.attachBasePath + 'popup/', filename: function (req, file, cb) { cb(null, UUID() + path.extname(file.originalname)) } })
 });
 
 //based on /notification
@@ -143,6 +143,8 @@ router.put('/popup', adminOnly, async (req, res) => {
     if(Array.isArray(result) && result.length > 0){
         if(result[0].popupType === 'image' && result[0].popupContents !== popup.popupContents){
             return res.status(400).json({message:'이미지 형식의 팝업은 경로를 변경할 수 없습니다. 팝업 삭제 후 새로 업로드하셔야합니다.'});
+        }else if(result[0].popupType === 'image' && result[0].popupType !== popup.popupType){
+            return res.status(400).json({message:'이미지 형식의 팝업은 종류를 변경할 수 없습니다. 팝업 삭제 후 새로 만드셔야합니다.'});
         }
     }else if(Array.isArray(result)){
         return res.status(404).json({target:'popupId', message:'변경할 팝업을 찾을 수 없습니다.'});

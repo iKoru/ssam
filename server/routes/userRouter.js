@@ -8,10 +8,10 @@ const constants = require('../constants'),
     mailer = require('../mailer');
 let multerLib = require('multer');
 let multer = multerLib({
-    dest: config.profileBasePath + 'public/profiles/', limits: { fileSize: 1024 * 200 }, fileFilter: function (req, file, cb) {
+    dest: config.attachBasePath + 'profiles/', limits: { fileSize: 1024 * 400 }, fileFilter: function (req, file, cb) {
         let ext = path.extname(file.originalname).substring(1).toLowerCase();
         cb(null, constants.imageExtensions.includes(ext));
-    }, storage: multerLib.diskStorage({ destination: config.profileBasePath + 'public/profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })
+    }, storage: multerLib.diskStorage({ destination: config.attachBasePath + 'profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })
 });
 const adminOnly = require('../middlewares/adminOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
@@ -188,7 +188,7 @@ router.put('/', requiredSignin, async (req, res) => {
         }
         if (user.picturePath === '' && original.picturePath) {
             try {
-                result = await util.unlink(`${process.env.PWD}/${config.profileBasePath}/public${original.picturePath}`);
+                result = await util.unlink(`${process.env.PWD}/${config.attachBasePath}${original.picturePath}`);
             } catch (error) {
                 if (error.code !== 'ENOENT') {//이미 삭제할 내용이 없는 경우는 에러 아니게 처리
                     logger.error('프로필사진 삭제 중 에러 : ', error, user.userId, original.userId);
@@ -353,7 +353,7 @@ router.post('/picture', requiredSignin, async (req, res) => { //사진 업로드
         if (error instanceof multerLib.MulterError) {
             switch (error.code) {
                 case 'LIMIT_FILE_SIZE':
-                    return res.status(400).json({ target: 'picture', message: '최대 크기 200KB를 초과하였습니다.' });
+                    return res.status(400).json({ target: 'picture', message: '최대 크기 400KB를 초과하였습니다.' });
                 case 'LIMIT_PART_COUNT':
                     return res.status(400).json({ target: 'picture', message: '최대 분할크기를 초과하였습니다.' });
                 case 'LIMIT_FILE_COUNT':
@@ -374,16 +374,14 @@ router.post('/picture', requiredSignin, async (req, res) => { //사진 업로드
         let userId = req.userObject.userId,
             result;
         if (typeof req.file === 'object' && req.file.filename) {
-            const originalFilePath = config.profileBasePath + 'public/' + req.userObject.picturePath;
-            try {
-                await util.unlink(originalFilePath);
-            } catch (error) {
-                logger.error(error);
+            try{
+                result = await util.uploadFile([req.file], 'attach', 'profiles', userModel.updateUserPicture, userId);
+            }catch(error){
+                logger.error('프로필 이미지 저장 중 에러 : ', error, userId);
+                return res.status(500).json({ message: '이미지 저장에 실패하였습니다. 다시 시도해주세요.' });
             }
-            result = await userModel.updateUserPicture(userId, null, null, null, `/profiles/${req.file.filename}`)
-            //result = await util.uploadFile([req.file], 'dev/public/profiles', userId, userModel.updateUserPicture);
-            if (result > 0) {
-                return res.status(200).json({ message: '정상적으로 반영되었습니다.', picturePath: `/profiles/${req.file.filename}` })
+            if (result.status === 200) {
+                return res.status(200).json({ message: '정상적으로 반영되었습니다.', picturePath: `/attach/profiles/${req.file.filename}` })
             } else {
                 logger.error('프로필 이미지 저장 중 에러 : ', result, userId);
                 return res.status(500).json({ message: '이미지 저장에 실패하였습니다. 다시 시도해주세요.' });
@@ -580,7 +578,7 @@ router.get('/board', requiredSignin, async (req, res) => {
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {
-        logger.error('사용자 게시판 조회 중 에러 : ', result, userId);
+        logger.error('���용자 게시판 조회 중 에러 : ', result, userId);
         return res.status(500).json({ message: '정보를 읽어오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
