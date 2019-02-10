@@ -372,7 +372,22 @@ router.delete('/:commentId([0-9]+)', adminOnly, async (req, res) => {
     if (comment[0].childCount > 0) {
       return res.status(403).json({ target: 'childCount', message: '대댓글이 있는 댓글은 삭제할 수 없습니다.' })
     }
-    let result = await commentModel.deleteComment(commentId);
+    
+    let result = await commentModel.getCommentAttach(commentId);
+    if(Array.isArray(result) && result.length > 0){
+      try{
+        let i=0;
+        while(i < result.length){
+          await util.removeUploadedFile(result[i].attachPath);
+          await commentModel.deleteCommentAttach(commentId, result[i].attachId);
+          i++;
+        }
+      }catch(error){
+        logger.error('댓글 삭제를 위한 첨부파일 삭제 중 에러 : ', error);
+        return res.status(500).json({message:`댓글을 삭제하는 중에 오류가 발생했습니다.[${error || ''}]` })
+      }
+    }
+    result = await commentModel.deleteComment(commentId);
     if (typeof result === 'object' || result === 0) {
       logger.error('댓글 삭제 중 에러 : ', result, commentId);
       return res.status(500).json({ message: `댓글을 삭제하는 중에 오류가 발생했습니다.[${result.code || ''}]` });

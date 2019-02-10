@@ -467,8 +467,7 @@ exports.getCommentAttach = async (commentId, attachId) => {
             'ATTACH_ID': '"attachId"',
             'ATTACH_TYPE': '"attachType"',
             'ATTACH_NAME': '"attachName"',
-            'ATTACH_PATH': '"attachPath"',
-            'ORIGINAL_NAME': '"originalName"'
+            'ATTACH_PATH': '"attachPath"'
         })
         .from('SS_MST_COMMENT_ATTACH')
         .where('COMMENT_ID = ?', commentId);

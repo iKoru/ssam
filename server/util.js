@@ -5,7 +5,7 @@ const util = require('util'),
     logger = require('./logger');
 const fs = require('fs'),
     path = require('path'),
-    { attachBasePath } = require('../config');
+    { attachBasePath, s3Bucket } = require('../config');
 
 const rename = util.promisify(fs.rename)
     , mkdir = util.promisify(fs.mkdir)
@@ -13,6 +13,12 @@ const rename = util.promisify(fs.rename)
     , copyFile = util.promisify(fs.copyFile)
     , unlink = util.promisify(fs.unlink);
 
+let aws, s3;
+if(process.env.NODE_ENV === 'production'){
+    aws = require('aws-sdk');
+    aws.config.update({region:'ap-northeast-2'})
+    s3 = new aws.S3({params:{Bucket:s3Bucket},apiVersion:'2006-03-01'})
+}
 exports.rename = rename;
 exports.mkdir = mkdir;
 exports.chmod = chmod;
@@ -73,77 +79,130 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
         let i = 0,
             result, errors = [];
         try {
-            while (i < files.length) {
-                try {
-                    result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
-                } catch (error) {
-                    if (error.code === 'ENOENT') {
-                        try {
-                            result = await mkdir(attachBasePath + targetPath + '/' + targetDirectory, 0o744);
-                        } catch (error2) {
-                            logger.error('파일 저장경로 생성 중 에러 : ', error2)
-                            errors.push({ index: i, message: '파일 저장경로 생성에 실패하였습니다.' });
+            if(process.env.NODE_ENV === 'production'){
+                let upload = {Bucket:s3Bucket};
+                while(i < files.length){
+                    try{
+                        upload.Body = fs.createReadStream(files[i].path);
+                        upload.Body.on('error', (error) => {
+                            logger.error('파일 업로드를 위한 스트림 생성 중 에러 : ', error);
+                        })
+                        upload.Key = targetPath + '/' + targetDirectory + '/' + files[i].filename
+                        await s3.upload(upload).promise()
+                        if(typeof saveFunction === 'function'){
                             try {
-                                await unlink(files[i].path);
-                            } catch (error3) {
-                                logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
+                                result = await saveFunction(saveFunctionCondition, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `/${targetPath}/${targetDirectory}/${files[i].filename}`);
+                                if (typeof result === 'object' || result === 0) {
+                                    logger.error('파일 업로드 이후 save function 실행 중 에러 : ', result)
+                                    errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
+                                    try {
+                                        await s3.deleteObject(upload).promise();
+                                        await unlink(files[i].path)
+                                    } catch (error3) {
+                                        logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
+                                    }
+                                }
+                            } catch (error) {
+                                logger.error('파일 업로드 이후 save function 실행 중 에러 : ', error)
+                                errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
+                                try {
+                                    await s3.deleteObject(upload).promise();
+                                    await unlink(files[i].path)
+                                } catch (error3) {
+                                    logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
+                                }
                             }
-                            i++;
-                            continue;
                         }
-                        try {
-                            result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
-                        } catch (error2) {
-                            logger.error('파일 이동 중 에러 : ', error2)
-                            errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
-                            try {
-                                await unlink(files[i].path);
-                            } catch (error3) {
-                                logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
-                            }
-                            i++;
-                            continue;
+                    }catch(error){
+                        if(error){
+                            logger.error('파일 업로드 중 에러 : ', error)
+                            await unlink(files[i].path)
+                            errors.push({index:i, message:`파일 업로드 중 에러 [${error.code}]`})
                         }
-                    } else if (error.code === 'EACCES') {
-                        try {
-                            result = await chmod(attachBasePath + targetPath + '/' + targetDirectory, 0o744);
-                        } catch (error2) {
-                            logger.error('파일 업로드를 위한 권한 변경 중 에러 : ', error2)
-                            errors.push({ index: i, message: '파일 저장경로 접근에 실패하였습니다.' });
-                            await unlink(files[i].path);
-                            i++;
-                            continue;
-                        }
-                        try {
-                            result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
-                        } catch (error2) {
-                            logger.error('파일 업로드 후 이동 중 에러 : ', error2)
-                            errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
-                            try {
-                                await unlink(files[i].path);
-                            } catch (error3) {
-                                logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
-                            }
-                            i++;
-                            continue;
-                        }
-                    } else {
-                        logger.error('파일 업로드 실패 : ', error)
-                        errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
-                        try {
-                            await unlink(files[i].path);
-                        } catch (error2) {
-                            logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error2)
-                        }
-                        i++;
-                        continue;
                     }
+                    i++;
                 }
-                if(typeof saveFunction === 'function'){
+            }else{
+                while (i < files.length) {
                     try {
-                        result = await saveFunction(saveFunctionCondition, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `/${targetPath}/${targetDirectory}/${files[i].filename}`);
-                        if (typeof result === 'object' || result === 0) {
-                            logger.error('파일 업로드 이후 save function 실행 중 에러 : ', result)
+                        result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
+                    } catch (error) {
+                        if (error.code === 'ENOENT') {
+                            try {
+                                result = await mkdir(attachBasePath + targetPath + '/' + targetDirectory, 0o744);
+                            } catch (error2) {
+                                logger.error('파일 저장경로 생성 중 에러 : ', error2)
+                                errors.push({ index: i, message: '파일 저장경로 생성에 실패하였습니다.' });
+                                try {
+                                    await unlink(files[i].path);
+                                } catch (error3) {
+                                    logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
+                                }
+                                i++;
+                                continue;
+                            }
+                            try {
+                                result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
+                            } catch (error2) {
+                                logger.error('파일 이동 중 에러 : ', error2)
+                                errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
+                                try {
+                                    await unlink(files[i].path);
+                                } catch (error3) {
+                                    logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
+                                }
+                                i++;
+                                continue;
+                            }
+                        } else if (error.code === 'EACCES') {
+                            try {
+                                result = await chmod(attachBasePath + targetPath + '/' + targetDirectory, 0o744);
+                            } catch (error2) {
+                                logger.error('파일 업로드를 위한 권한 변경 중 에러 : ', error2)
+                                errors.push({ index: i, message: '파일 저장경로 접근에 실패하였습니다.' });
+                                await unlink(files[i].path);
+                                i++;
+                                continue;
+                            }
+                            try {
+                                result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
+                            } catch (error2) {
+                                logger.error('파일 업로드 후 이동 중 에러 : ', error2)
+                                errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
+                                try {
+                                    await unlink(files[i].path);
+                                } catch (error3) {
+                                    logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
+                                }
+                                i++;
+                                continue;
+                            }
+                        } else {
+                            logger.error('파일 업로드 실패 : ', error)
+                            errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
+                            try {
+                                await unlink(files[i].path);
+                            } catch (error2) {
+                                logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error2)
+                            }
+                            i++;
+                            continue;
+                        }
+                    }
+                    if(typeof saveFunction === 'function'){
+                        try {
+                            result = await saveFunction(saveFunctionCondition, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `/${targetPath}/${targetDirectory}/${files[i].filename}`);
+                            if (typeof result === 'object' || result === 0) {
+                                logger.error('파일 업로드 이후 save function 실행 중 에러 : ', result)
+                                errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
+                                try {
+                                    await unlink(attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
+                                } catch (error3) {
+                                    logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
+                                }
+                            }
+                        } catch (error) {
+                            logger.error('파일 업로드 이후 save function 실행 중 에러 : ', error)
                             errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
                             try {
                                 await unlink(attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
@@ -151,17 +210,9 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
                                 logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
                             }
                         }
-                    } catch (error) {
-                        logger.error('파일 업로드 이후 save function 실행 중 에러 : ', error)
-                        errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
-                        try {
-                            await unlink(attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
-                        } catch (error3) {
-                            logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
-                        }
                     }
+                    i++;
                 }
-                i++;
             }
         } catch (error) {
             logger.error('파일 업로드 중 에러 :', error);
@@ -177,7 +228,11 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
 }
 
 exports.removeUploadedFile = async(targetPath) => {
-    return await unlink(attachBasePath + targetPath);
+    if(process.end.NODE_ENV === 'production'){
+        return await s3.deleteObject({Bucket:s3Bucket, Key:targetPath.substring(1)}).promise();
+    }else{
+        return await unlink(attachBasePath + targetPath);
+    }
 }
 
 exports.shallowArrayEquals = (a, b) => {
