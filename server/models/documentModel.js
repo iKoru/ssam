@@ -22,6 +22,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
             'COMMENT_COUNT': '"commentCount"',
             'VOTE_UP_COUNT': '"voteUpCount"',
             'VIEW_COUNT': '"viewCount"',
+            'PREVIEW_CONTENTS':'"previewContents"',
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
             'count(*) OVER()': '"totalCount"'
@@ -150,6 +151,7 @@ exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarg
             'DOCUMENT.BOARD_ID': '"boardId"',
             'COMMENT_COUNT': '"commentCount"',
             'VOTE_UP_COUNT': '"voteUpCount"',
+            'PREVIEW_CONTENTS':'"previewContents"',
             'VIEW_COUNT': '"viewCount"',
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
@@ -263,6 +265,9 @@ exports.updateDocument = async (document) => {
     if (document.contents !== undefined) {
         query.set('CONTENTS', document.contents)
     }
+    if (document.previewContents !== undefined) {
+        query.set('PREVIEW_CONTENTS', document.previewContents)
+    }
     if (document.boardId) {
         const doc = (await getDocument(document.documentId))[0];
         const isWritable = await boardModel.checkUserBoardWritable(doc.userId, document.boardId);
@@ -328,6 +333,7 @@ exports.createDocument = async (document) => {
                 'WRITE_DATETIME': util.getYYYYMMDDHH24MISS(),
                 'TITLE': document.title,
                 'CONTENTS': document.contents,
+                'PREVIEW_CONTENTS':document.previewContents,
                 'ALLOW_ANONYMOUS': document.allowAnonymous,
                 'RESTRICTION': JSON.stringify(document.restriction),
                 'HAS_SURVEY': !!document.survey,
@@ -398,6 +404,7 @@ exports.getUserDocument = async (userId, isAdmin, page = 1) => {
             'BEST_DATETIME': '"bestDateTime"',
             'TITLE': '"title"',
             'CONTENTS': '"contents"',
+            'PREVIEW_CONTENTS':'"previewContents"',
             'RESTRICTION': '"restriction"',
             'HAS_SURVEY': '"hasSurvey"',
             'HAS_ATTACH': '"hasAttach"',
@@ -440,6 +447,7 @@ exports.getNickNameDocument = async (nickName, boardType, page = 1) => {
                 'WRITE_DATETIME': '"writeDateTime"',
                 'TITLE': '"title"',
                 'CONTENTS': '"contents"',
+                'PREVIEW_CONTENTS':'"previewContents"',
                 'RESTRICTION': '"restriction"',
                 'HAS_SURVEY': '"hasSurvey"',
                 'HAS_ATTACH': '"hasAttach"',

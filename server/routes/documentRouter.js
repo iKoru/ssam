@@ -42,7 +42,8 @@ router.post('/', requiredSignin, async (req, res) => {
             isAnonymous: (req.body.isAnonymous === 'true'),
             allowAnonymous: req.body.isAnonymous === 'true' ? true : (req.body.allowAnonymous === 'true'),
             restriction: req.body.restriction,
-            survey: req.body.survey
+            survey: req.body.survey,
+            previewContents:req.body.previewContents
         };
         if (typeof document.boardId !== 'string' || document.boardId === '') {
             return res.status(400).json({ target: 'boardId', message: '게시물을 작성할 라운지/토픽을 선택해주세요.' })
@@ -66,6 +67,9 @@ router.post('/', requiredSignin, async (req, res) => {
                 logger.error('게시물 제한조건 파싱 중 에러 : '.document.restriction, error);
                 return res.status(400).json({ target: 'restriction', message: '첨부파일 다운로드 조건 형식이 올바르지 않습니다.' })
             }
+        }
+        if(document.previewContents && document.previewContents.length > 100){
+            document.previewContents = document.previewContents.substring(0, 99);
         }
 
         let result = await boardModel.getBoard(document.boardId);
@@ -130,6 +134,7 @@ router.put('/', requiredSignin, async (req, res) => {
         isDeleted: req.body.isDeleted,
         title: req.body.title,
         contents: req.body.contents,
+        previewContents: req.body.previewContents,
         restriction: req.body.restriction,
         hasSurvey: req.body.hasSurvey !== undefined ? !!req.body.hasSurvey : undefined
     };
@@ -160,6 +165,9 @@ router.put('/', requiredSignin, async (req, res) => {
     }
     if (document.contents === original.contents) {
         delete document.contents;
+    }
+    if(document.previewContents === original.previewContents){
+        delete document.previewContents;
     }
     if (document.isDeleted === original.isDeleted) {
         delete document.isDeleted;
