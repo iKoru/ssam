@@ -89,7 +89,7 @@ router.post('/popup', adminOnly, async (req, res) => {
             if(typeof result === 'object' && result.status === 500){
                 return res.status(500).json({ message: `팝업을 만들지 못했습니다.[${result.code || ''}]` })
             }
-            popup.popupContents = `attach/popup/${req.file.filename}`
+            popup.popupContents = `/attach/popup/${req.file.filename}`
         }
     
         result = await notificationModel.createPopup(popup);
@@ -132,7 +132,7 @@ router.put('/popup', adminOnly, async (req, res) => {
     if (popup.popupEnd && !moment(popup.popupEnd, 'YYYYMMDD').isValid()) {
         return res.status(400).json({ target: 'popupEnd', message: '팝업 게시 종료일이 올바르지 않습니다.' })
     }
-    if (popup.popupHref && (typeof popup.popupHref !== 'string' || popup.variable2.length > 100)) {
+    if (popup.popupHref && (typeof popup.popupHref !== 'string' || popup.popupHref.length > 100)) {
         return res.status(400).json({ target: 'popupHref', message: '팝업 링크가 100자를 넘거나 형태가 올바르지 않습니다.' })
     }
     if (popup.popupActivated !== undefined && typeof popup.popupActivated !== 'boolean') {
