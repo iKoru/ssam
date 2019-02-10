@@ -193,6 +193,24 @@ exports.clearNotification = async (userId) => {
     )
 }
 
+exports.getPopup = async (popupId) => {
+    return await pool.executeQuery('getPopup',
+        builder.select()
+            .fields({
+                'POPUP_ID': '"popupId"',
+                'POPUP_START': '"popupStart"',
+                'POPUP_END': '"popupEnd"',
+                'POPUP_ACTIVATED': '"popupActivated"',
+                'POPUP_CONTENTS': '"popupContents"',
+                'POPUP_TYPE': '"popupType"',
+                'POPUP_HREF': '"popupHref"'
+            })
+            .from('SS_MST_POPUP')
+            .where('POPUP_ID = ?', popupId)
+            .toParam()
+    )
+}
+
 exports.getPopups = async () => {
     return await pool.executeQuery('getPopups',
         builder.select()
@@ -284,6 +302,7 @@ exports.createPopup = async (popup) => {
                 'POPUP_CONTENTS': popup.popupContents,
                 'POPUP_HREF': popup.popupHref
             })
+            .returning('POPUP_ID', '"popupId"')
             .toParam()
     )
     if (result === 1) {

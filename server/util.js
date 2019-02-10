@@ -139,24 +139,26 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction) =>
                         continue;
                     }
                 }
-                try {
-                    result = await saveFunction(targetDirectory, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `${targetPath}/${targetDirectory}/${files[i].filename}`);
-                    if (typeof result === 'object' || result === 0) {
-                        logger.error('파일 업로드 이후 save function 실행 중 에러 : ', result)
+                if(typeof saveFunction === 'function'){
+                    try {
+                        result = await saveFunction(targetDirectory, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `${targetPath}/${targetDirectory}/${files[i].filename}`);
+                        if (typeof result === 'object' || result === 0) {
+                            logger.error('파일 업로드 이후 save function 실행 중 에러 : ', result)
+                            errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
+                            try {
+                                await unlink(attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
+                            } catch (error3) {
+                                logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
+                            }
+                        }
+                    } catch (error) {
+                        logger.error('파일 업로드 이후 save function 실행 중 에러 : ', error)
                         errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
                         try {
                             await unlink(attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
                         } catch (error3) {
                             logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
                         }
-                    }
-                } catch (error) {
-                    logger.error('파일 업로드 이후 save function 실행 중 에러 : ', error)
-                    errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
-                    try {
-                        await unlink(attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
-                    } catch (error3) {
-                        logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
                     }
                 }
                 i++;
@@ -172,6 +174,10 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction) =>
     } else {
         return { status: 200, message: '저장할 파일이 없습니다.' };
     }
+}
+
+exports.removeUploadedFile = async(targetPath) => {
+    return await unlink(attachBasePath + targetPath);
 }
 
 exports.shallowArrayEquals = (a, b) => {

@@ -2,9 +2,20 @@ const router = require('express').Router();
 const requiredSignin = require('../middlewares/requiredSignin'),
     adminOnly = require('../middlewares/adminOnly'),
     logger = require('../logger'),
-    { moment } = require('../util');
+    path = require('path'),
+    { UUID, moment, uploadFile, removeUploadedFile } = require('../util');
 const notificationModel = require('../models/notificationModel'),
-    userModel = require('../models/userModel');
+    userModel = require('../models/userModel'),
+    constants = require('../constants'),
+    config = require('../../config');
+let multerLib = require('multer');
+let multer = multerLib({
+    dest: config.profileBasePath + 'public/popup/', limits: { fileSize: 1024 * 200 }, fileFilter: function (req, file, cb) {
+        let ext = path.extname(file.originalname).substring(1).toLowerCase();
+        cb(null, constants.imageExtensions.includes(ext));
+    }, storage: multerLib.diskStorage({ destination: config.profileBasePath + 'public/popup/', filename: function (req, file, cb) { cb(null, UUID() + path.extname(file.originalname)) } })
+});
+
 //based on /notification
 
 router.get('/popup', adminOnly, async (req, res) => {
@@ -18,42 +29,79 @@ router.get('/popup', adminOnly, async (req, res) => {
 })
 
 router.post('/popup', adminOnly, async (req, res) => {
-    let popup = {
-        popupType: req.body.popupType,
-        popupStart: req.body.popupStart,
-        popupEnd: req.body.popupEnd,
-        popupContents: req.body.popupContents,
-        popupHref: req.body.popupHref,
-        popupActivated: req.body.popupActivated
-    };
-    if (!['image', 'html', 'text'].includes(popup.popupType)) {
-        return res.status(400).json({ target: 'popupType', message: '팝업 타입이 올바르지 않습니다.' })
-    }
-    if (typeof popup.popupContents !== 'string') {
-        return res.status(400).json({ target: 'popupContents', message: '팝업 내용이 올바르지 않습니다.' })
-    }
-    if (!popup.popupStart || !moment(popup.popupStart, 'YYYYMMDD').isValid()) {
-        return res.status(400).json({ target: 'popupStart', message: '팝업 게시 시작일이 올바르지 않습니다.' })
-    }
-    if (!popup.popupEnd || !moment(popup.popupEnd, 'YYYYMMDD').isValid()) {
-        return res.status(400).json({ target: 'popupEnd', message: '팝업 게시 종료일이 올바르지 않습니다.' })
-    }
-    if (popup.popupHref && (typeof popup.popupHref !== 'string' || popup.variable2.length > 100)) {
-        return res.status(400).json({ target: 'popupHref', message: '팝업 링크가 100자를 넘거나 형태가 올바르지 않습니다.' })
-    }
-    if (popup.popupActivated !== undefined && typeof popup.popupActivated !== 'boolean') {
-        return res.status(400).json({ target: 'popupActivated', message: '팝업 활성화 여부가 올바르지 않습니다.' })
-    }
-
-    let result = await notificationModel.createPopup(popup);
-    if (typeof result === 'object') {
-        logger.error('팝업 생성 시 에러 : ', result, popup);
-        return res.status(500).json({ message: `팝업을 만들지 못했습니다.[${result.code || ''}]` })
-    } else if (result === 0) {
-        return res.status(500).json({ message: '팝업을 만들지 못했습니다.' })
-    } else {
-        return res.status(200).json({ message: '팝업을 만들었습니다.' })
-    }
+    multer.single('attach')(req, res, async function (error) {
+        if (error instanceof multerLib.MulterError) {
+            switch (error.code) {
+                case 'LIMIT_FILE_SIZE':
+                    return res.status(400).json({ target: 'picture', message: '최대 크기 8MB를 초과하였습니다.' });
+                case 'LIMIT_PART_COUNT':
+                    return res.status(400).json({ target: 'picture', message: '최대 분할크기를 초과하였습니다.' });
+                case 'LIMIT_FILE_COUNT':
+                    return res.status(400).json({ target: 'picture', message: '팝업 이미지는 1개만 등록해주세요.' });
+                case 'LIMIT_FIELD_KEY':
+                    return res.status(400).json({ target: 'picture', message: '파일 이름의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
+                case 'LIMIT_FIELD_VALUE':
+                    return res.status(400).json({ target: 'picture', message: '파일 필드의 길이가 너무 깁니다. 길이를 짧게 변경해주세요.' })
+                case 'LIMIT_FIELD_COUNT':
+                    return res.status(400).json({ target: 'picture', message: '파일 필드가 너무 많습니다. 필드 수를 줄여주세요.' })
+                case 'LIMIT_UNEXPECTED_FILE':
+                    return res.status(400).json({ target: 'picture', message: '업로드할 수 없는 파일 종류입니다.' })
+            }
+        } else if (error) {
+            logger.error('팝업 이미지 업로드 중 에러!! ', error);
+            return res.status(500).json({ target: 'picture', message: `이미지를 업로드하는 도중 오류가 발생하였습니다.[${error.message || ''}]` })
+        }
+        
+        let popup = {
+            popupType: req.body.popupType,
+            popupStart: req.body.popupStart,
+            popupEnd: req.body.popupEnd,
+            popupContents: typeof req.file === 'object'?null:req.body.popupContents,
+            popupHref: req.body.popupHref,
+            popupActivated: (req.body.popupActivated === 'true')
+        };
+        if (!['image', 'html', 'text'].includes(popup.popupType)) {
+            return res.status(400).json({ target: 'popupType', message: '팝업 타입이 올바르지 않습니다.' })
+        }
+        if (popup.popupType !== 'image' && typeof popup.popupContents !== 'string') {
+            return res.status(400).json({ target: 'popupContents', message: '팝업 내용이 올바르지 않습니다.' })
+        }
+        if (!popup.popupStart || !moment(popup.popupStart, 'YYYYMMDD').isValid()) {
+            return res.status(400).json({ target: 'popupStart', message: '팝업 게시 시작일이 올바르지 않습니다.' })
+        }
+        if (!popup.popupEnd || !moment(popup.popupEnd, 'YYYYMMDD').isValid()) {
+            return res.status(400).json({ target: 'popupEnd', message: '팝업 게시 종료일이 올바르지 않습니다.' })
+        }
+        if (popup.popupHref && (typeof popup.popupHref !== 'string' || popup.popupHref.length > 100)) {
+            return res.status(400).json({ target: 'popupHref', message: '팝업 링크가 100자를 넘거나 형태가 올바르지 않습니다.' })
+        }
+        if (popup.popupActivated !== undefined && typeof popup.popupActivated !== 'boolean') {
+            return res.status(400).json({ target: 'popupActivated', message: '팝업 활성화 여부가 올바르지 않습니다.' })
+        }
+        let result;
+        if(popup.popupType === 'image'){
+            try{
+                result = await uploadFile([req.file], 'attach', 'popup', null)
+            }catch(error){
+                logger.error('팝업 이미지 업로드 중 에러 : ', error, result, popup);
+                return res.status(500).json({ message: `팝업을 만들지 못했습니다.[${result.code || ''}]` })
+            }
+            if(typeof result === 'object' && result.status === 500){
+                return res.status(500).json({ message: `팝업을 만들지 못했습니다.[${result.code || ''}]` })
+            }
+            popup.popupContents = `attach/popup/${req.file.filename}`
+        }
+    
+        result = await notificationModel.createPopup(popup);
+        if (result.error) {
+            logger.error('팝업 생성 시 에러 : ', result, popup);
+            return res.status(500).json({ message: `팝업을 만들지 못했습니다.[${result.code || ''}]` })
+        } else if (result.rowCount === 0) {
+            return res.status(500).json({ message: '팝업을 만들지 못했습니다.' })
+        } else {
+            return res.status(200).json({ message: '팝업을 만들었습니다.', popupId:result.rows[0].popupId, popupContents:popup.popupContents })
+        }
+    })
 })
 
 router.put('/popup', adminOnly, async (req, res) => {
@@ -91,12 +139,24 @@ router.put('/popup', adminOnly, async (req, res) => {
         return res.status(400).json({ target: 'popupActivated', message: '팝업 활성화 여부가 올바르지 않습니다.' })
     }
 
-    let result = await notificationModel.updatePopup(popup);
+    let result = await notificationModel.getPopup(popup.popupId);
+    if(Array.isArray(result) && result.length > 0){
+        if(result[0].popupType === 'image' && result[0].popupContents !== popup.popupContents){
+            return res.status(400).json({message:'이미지 형식의 팝업은 경로를 변경할 수 없습니다. 팝업 삭제 후 새로 업로드하셔야합니다.'});
+        }
+    }else if(Array.isArray(result)){
+        return res.status(404).json({target:'popupId', message:'변경할 팝업을 찾을 수 없습니다.'});
+    }else{
+        logger.error('팝업 변경 시 에러 : ', result, popup);
+        return res.status(500).json({ message: `팝업을 변경하지 못했습니다.[${result.code || ''}]` })
+    }
+    
+    result = await notificationModel.updatePopup(popup);
     if (typeof result === 'object') {
         logger.error('팝업 변경 시 에러 : ', result, popup);
         return res.status(500).json({ message: `팝업을 변경하지 못했습니다.[${result.code || ''}]` })
     } else if (result === 0) {
-        return res.status(500).json({ message: '팝업을 변경하지 못했습니다.' })
+        return res.status(404).json({ message: '팝업을 변경하지 못했습니다.' })
     } else {
         return res.status(200).json({ message: '팝업을 변경했습니다.' })
     }
@@ -110,7 +170,25 @@ router.delete('/popup/:popupId', adminOnly, async (req, res) => {
     if (!Number.isInteger(popupId) || popupId === 0) {
         return res.status(400).json({ target: 'popupId', message: '삭제할 팝업을 찾을 수 없습니다.' });
     }
-    let result = await notificationModel.deletePopup(popupId);
+    
+    let result = await notificationModel.getPopup(popupId);
+    if(Array.isArray(result) && result.length > 0){
+        if(result[0].popupType === 'image' && result[0].popupContents){
+            try{
+                result = await removeUploadedFile(result[0].popupContents)
+            }catch(error){
+                logger.error('팝업 삭제 중 에러(이미지 삭제 도중) : ', result, req.userObject.userId, popupId)
+                return res.status(500).json({ message: `팝업을 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });
+            }
+        }
+    }else if(Array.isArray(result)){
+        return res.status(404).json({ target: 'popupId', message: '삭제할 팝업을 찾을 수 없습니다.' });
+    }else{
+        logger.error('팝업 삭제 중 에러 : ', result, req.userObject.userId, popupId)
+        return res.status(500).json({ message: `팝업을 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });
+    }
+    
+    result = await notificationModel.deletePopup(popupId);
     if (typeof result === 'object') {
         logger.error('팝업 삭제 중 에러 : ', result, req.userObject.userId, popupId)
         return res.status(500).json({ message: `팝업을 삭제하던 중 오류가 발생했습니다.[${result.code || ''}]` });
