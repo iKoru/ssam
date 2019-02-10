@@ -141,7 +141,7 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
                 }
                 if(typeof saveFunction === 'function'){
                     try {
-                        result = await saveFunction(saveFunctionCondition, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `${targetPath}/${targetDirectory}/${files[i].filename}`);
+                        result = await saveFunction(saveFunctionCondition, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `/${targetPath}/${targetDirectory}/${files[i].filename}`);
                         if (typeof result === 'object' || result === 0) {
                             logger.error('파일 업로드 이후 save function 실행 중 에러 : ', result)
                             errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });

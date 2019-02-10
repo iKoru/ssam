@@ -107,6 +107,7 @@ exports.getScrapGroupByUserId = async(userId) => {
         })
         .from('SS_MST_USER_SCRAP_GROUP')
         .where('USER_ID = ?', userId)
+        .order('SCRAP_GROUP_ID')
         .toParam()
     )
 }

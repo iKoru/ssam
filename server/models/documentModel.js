@@ -9,7 +9,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
     if (!boardId) {
         return [];
     }
-    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category && !targetYear) {
+    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category && !targetYear && !isAdmin) {
         let cachedData = await cache.getAsync('[document]' + boardId + '@' + (page || '') + '/' + rowsPerPage);
         if (cachedData) {//array itself
             return cachedData;
@@ -130,7 +130,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
         query.limit(rowsPerPage).offset((page - 1) * rowsPerPage)
             .toParam()
     )
-    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category && !targetYear) {
+    if (!documentId && !searchQuery && !searchTarget && !sortTarget && !isAscending && !category && !targetYear && !isAdmin) {
         cache.setAsync('[document]' + boardId + '@' + (page || '') + '/' + rowsPerPage, result, 30);//maintain in 30 sec
     }
     return result;
