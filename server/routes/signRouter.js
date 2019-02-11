@@ -28,11 +28,11 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
       return res.status(500).json({ message: '서버 데이터 오류입니다. 관리자에게 문의 부탁드립니다.' });
     } else {
       if (user[0].status === 'DELETED') {
-        signModel.createSigninLog(userId, user[0].lastSigninDate, req.connection.remoteAddress, false);
+        signModel.createSigninLog(userId, user[0].lastSigninDate, req.headers['x-forwarded-for'] || req.connection.remoteAddress, false);
         return res.status(404).json({ target: 'userId', message: '존재하지 않는 아이디입니다.' });
       } else if (await bcrypt.compare(password, user[0].password)) {
         if (user[0].status !== 'NORMAL') {
-          signModel.createSigninLog(userId, user[0].lastSigninDate, req.connection.remoteAddress, false);
+          signModel.createSigninLog(userId, user[0].lastSigninDate, req.headers['x-forwarded-for'] || req.connection.remoteAddress, false);
           return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
         }
         const auth = await userModel.checkUserAuth(userId);
@@ -41,17 +41,17 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
           return res.status(500).json({ message: `로그인에 실패하였습니다.[${auth.code || ''}]` })
         }
         if (auth.length > 0 && auth.some(x => x.groupType === 'D')) {//인증 불가 그룹
-          signModel.createSigninLog(userId, user[0].lastSigninDate, req.connection.remoteAddress, false);
+          signModel.createSigninLog(userId, user[0].lastSigninDate, req.headers['x-forwarded-for'] || req.connection.remoteAddress, false);
           return res.status(403).json({ target: 'userId', message: '이용이 불가능한 아이디입니다.' });
         }
 
         jwt.sign({ userId: userId }, config.jwtKey, { expiresIn: (req.body.rememberMe ? "7d" : "3h"), ...config.jwtOptions }, (err, token) => {
           if (err) {
-            signModel.createSigninLog(userId, user[0].lastSigninDate, req.connection.remoteAddress, false);
+            signModel.createSigninLog(userId, user[0].lastSigninDate, req.headers['x-forwarded-for'] || req.connection.remoteAddress, false);
             logger.error('로그인 진행 중 에러 : ', err, userId)
             return res.status(500).json({ message: '로그인에 실패하였습니다.', ...err });
           } else {
-            signModel.createSigninLog(userId, user[0].lastSigninDate, req.connection.remoteAddress, true);
+            signModel.createSigninLog(userId, user[0].lastSigninDate, req.headers['x-forwarded-for'] || req.connection.remoteAddress, true);
             const today = util.moment();
             if (auth.some(x => x.groupType === 'A' && (x.expireDate === '99991231' || util.moment(x.expireDate, 'YYYYMMDD').add(-1, 'months').isAfter(today))) || auth.some(x => x.groupType === 'E') && !user[0].emailVerifiedDate) {//인증 그룹이 존재하고, 인증 만료기간이 1달 이상 남은 인증그룹도 존재하거나, 전직교사로서 영구적으로 인증하지 않겠다고 선택한 경우(emailVerifiedDate가 없는 경우)
               return res.cookie('token', token, { secure: true }).json({ userId: userId });
@@ -60,7 +60,7 @@ router.post('/signin', visitorOnly('/'), async (req, res) => {
           }
         })
       } else {
-        signModel.createSigninLog(userId, user[0].lastSigninDate, req.connection.remoteAddress, false);
+        signModel.createSigninLog(userId, user[0].lastSigninDate, req.headers['x-forwarded-for'] || req.connection.remoteAddress, false);
         return res.status(400).json({ target: 'password', message: '비밀번호가 일치하지 않습니다.' });
       }
     }
