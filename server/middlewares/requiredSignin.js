@@ -69,13 +69,13 @@ const auth = (req, res, next) => {
 }
 
 const token = (req, res, next) => {
-  res.cookie('CSRF-TOKEN', req.csrfToken(), {secure:true});
+  res.cookie('CSRF-TOKEN', req.csrfToken(), {secure:true, httpOnly:false});
   next();
 }
 
 const combine = (function() {
   var chain = connect();
-  [csrf({cookie:{secure:true, httpOnly:true}}), auth, token].forEach(function(middleware) {
+  [csrf({cookie:{secure:true, httpOnly:false}}), auth, token].forEach(function(middleware) {
     chain.use(middleware);
   });
   return chain;
