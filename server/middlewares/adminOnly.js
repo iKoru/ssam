@@ -53,14 +53,14 @@ const auth = (req, res, next) => {
     }).catch(onError)
 }
 const token = (req, res, next) => {
-  res.setHeader('Access-Control-Allow-Headers', 'Set-Cookie');
+  res.setHeader('Access-Control-Allow-Headers', 'set-cookie');
   res.cookie('CSRF-TOKEN', req.csrfToken(), {secure:true, httpOnly:false});
   next();
 }
 
 const combine = (function() {
   var chain = connect();
-  [auth, csrf({cookie:{secure:true, httpOnly:false}}), auth, token].forEach(function(middleware) {
+  [csrf({cookie:{secure:true, httpOnly:false}}), token, auth].forEach(function(middleware) {
     chain.use(middleware);
   });
   return chain;
