@@ -57,13 +57,13 @@ const auth = (req, res, next) => {
 }
 const token = (req, res, next) => {
   res.setHeader('Access-Control-Allow-Headers', 'set-cookie');
-  res.cookie('CSRF-TOKEN', req.csrfToken(), {secure:true, httpOnly:false});
+  res.cookie('CSRF-TOKEN', req.csrfToken(), {secure:true, httpOnly:false, domain:process.env.NODE_ENV === 'production'?'.pedagy.com':undefined});
   next();
 }
 
 const combine = (function() {
   var chain = connect();
-  [csrf({cookie:{key:'CSRF-TOKEN', secure:true, httpOnly:false}}), token, auth].forEach(function(middleware) {
+  [csrf({cookie:{secure:true, httpOnly:false}}), token, auth].forEach(function(middleware) {
     chain.use(middleware);
   });
   return chain;
