@@ -317,7 +317,7 @@ router.delete('/attach/:commentId/:attachId', requiredSignin, async (req, res) =
     return res.status(400).json({ target: 'attachId', message: '삭제할 첨부파일이 올바르지 않습니다.' })
   }
 
-  let comment = await commentModel.getDocument(commentId);
+  let comment = await commentModel.getComment(commentId);
   if (!Array.isArray(comment) || comment.length < 1) {
     return res.status(404).json({ target: 'commentId', message: '대상 댓글을 찾을 수 없습니다.' })
   } else {
@@ -327,7 +327,7 @@ router.delete('/attach/:commentId/:attachId', requiredSignin, async (req, res) =
     }
   }
 
-  let attach = await commentModel.getDocumentAttach(commentId, attachId);
+  let attach = await commentModel.getCommentAttach(commentId, attachId);
   if (!Array.isArray(attach) || attach.length < 1) {
     return res.status(404).json({ target: 'attachId', message: '삭제할 첨부파일을 찾을 수 없습니다.' })
   } else {
@@ -336,7 +336,7 @@ router.delete('/attach/:commentId/:attachId', requiredSignin, async (req, res) =
 
   let result;
   try {
-    result = await util.unlink(attach.attachPath);
+    result = await util.removeUploadedFile(attach.attachPath);
   } catch (error) {
     if (result && result !== 'ENOENT') {
       logger.error('첨부파일 삭제 중 에러 : ', error, commentId);

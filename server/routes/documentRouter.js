@@ -232,7 +232,7 @@ router.delete('/attach/:documentId/:attachId', requiredSignin, async (req, res) 
 
     let result;
     try {
-        result = await util.unlink(attach.attachPath);
+        result = await util.removeUploadedFile(attach.attachPath);
     } catch (error) {
         if (result && result !== 'ENOENT') {
             logger.error('첨부파일 삭제 중 에러 : ', error, documentId);
