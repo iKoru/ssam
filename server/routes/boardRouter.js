@@ -413,7 +413,7 @@ router.post('/', requiredAuth, async (req, res) => {
     }
 });
 
-router.delete('/:boardId([a-zA-z]+)', adminOnly, async (req, res) => {
+router.delete('/:boardId(\\w*[a-zA-Z]+\\w*)', adminOnly, async (req, res) => {
     let boardId = req.params.boardId;
     if (typeof boardId !== 'string' || boardId === '') {
         return res.status(400).json({ target: 'boardId', message: '삭제할 게시판 ID값이 없습니다.' });
