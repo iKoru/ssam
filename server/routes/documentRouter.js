@@ -44,6 +44,7 @@ router.post('/', requiredSignin, async (req, res) => {
             allowAnonymous: req.body.isAnonymous === 'true' ? true : (req.body.allowAnonymous === 'true'),
             restriction: req.body.restriction,
             survey: req.body.survey,
+            category:req.body.category,
             previewContents:req.body.previewContents
         };
         if (typeof document.boardId !== 'string' || document.boardId === '') {
@@ -60,6 +61,8 @@ router.post('/', requiredSignin, async (req, res) => {
             return res.status(400).json({ target: 'allowAnonymous', message: '익명댓글 허용여부가 올바르지 않습니다.' })
         } else if (document.survey !== undefined && Array.isArray(document.survey)) {
             return res.status(400).json({ target: 'survey', message: '설문조사 내용이 올바르지 않습니다.' })
+        } else if(document.category && typeof document.category !== 'string'){
+            return res.status(400).json({ target: 'category', message: '카테고리가 올바르지 않습니다.' })
         }
         if (typeof document.restriction === 'string' && document.restriction !== '') {
             try {
@@ -71,6 +74,9 @@ router.post('/', requiredSignin, async (req, res) => {
         }
         if(document.previewContents && document.previewContents.length > 100){
             document.previewContents = document.previewContents.substring(0, 99);
+        }
+        if(document.category && document.category.length > 30){
+            document.category = document.category.substring(0,29);
         }
 
         let result = await boardModel.getBoard(document.boardId);
@@ -137,6 +143,7 @@ router.put('/', requiredSignin, async (req, res) => {
         contents: req.body.contents,
         previewContents: req.body.previewContents,
         restriction: req.body.restriction,
+        category: req.body.category,
         hasSurvey: req.body.hasSurvey !== undefined ? !!req.body.hasSurvey : undefined
     };
     if (typeof document.documentId === 'string') {
@@ -166,6 +173,11 @@ router.put('/', requiredSignin, async (req, res) => {
     }
     if (document.contents === original.contents) {
         delete document.contents;
+    }
+    if(document.category === original.category){
+        delete document.category;
+    }else if(document.category && document.category.length > 30){
+        document.category = document.category.substring(0,29);
     }
     if(document.previewContents === original.previewContents){
         delete document.previewContents;

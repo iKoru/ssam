@@ -23,6 +23,7 @@ exports.getDocuments = async (boardId, documentId, searchQuery, searchTarget, so
             'VOTE_UP_COUNT': '"voteUpCount"',
             'VIEW_COUNT': '"viewCount"',
             'PREVIEW_CONTENTS':'"previewContents"',
+            'CATEGORY':'"category"',
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
             'count(*) OVER()': '"totalCount"'
@@ -153,6 +154,7 @@ exports.getBestDocuments = async (documentId, boardType, searchQuery, searchTarg
             'VOTE_UP_COUNT': '"voteUpCount"',
             'PREVIEW_CONTENTS':'"previewContents"',
             'VIEW_COUNT': '"viewCount"',
+            'CATEGORY':'"category"',
             'WRITE_DATETIME': '"writeDateTime"',
             'TITLE': '"title"',
             'count(*) OVER()': '"totalCount"'
@@ -338,7 +340,7 @@ exports.createDocument = async (document) => {
                 'RESTRICTION': JSON.stringify(document.restriction),
                 'HAS_SURVEY': !!document.survey,
                 'HAS_ATTACH': !!document.hasAttach,
-                'CATEGORY_NAME': document.categoryName,
+                'CATEGORY': document.category,
                 'RESERVED1': document.reserved1,
                 'RESERVED2': document.reserved2,
                 'RESERVED3': document.reserved3,
@@ -368,7 +370,7 @@ const getDocument = async (documentId) => {
                 'ALLOW_ANONYMOUS': '"allowAnonymous"',
                 'HAS_SURVEY': '"hasSurvey"',
                 'HAS_ATTACH': '"hasAttach"',
-                'CATEGORY_NAME': '"categoryName"',
+                'CATEGORY': '"category"',
                 'RESERVED1': '"reserved1"',
                 'RESERVED2': '"reserved2"',
                 'RESERVED3': '"reserved3"',
