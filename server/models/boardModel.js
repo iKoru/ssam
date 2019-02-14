@@ -725,3 +725,58 @@ exports.getBoardMember = async (boardId, boardType) => {
             .toParam()
     )
 }
+
+exports.getTopicRatings = async() => {
+    let lastweek = util.moment().add(-7, 'days').format('YMMDD') + '000000';
+    let lastmonth = util.moment().add(-1, 'months').format('YMM') + '00';
+    return await pool.executeQuery('getTopicRatings', 
+        builder.select()
+            .fields({
+                'U.BOARD_ID':'"boardId"',
+                'coalesce(U.USER_COUNT, 0)':'"userCount"',
+                'coalesce(C.RECENT_USER_COUNT, 0)':'"recentUserCount"',
+                'coalesce(D.DOCUMENT_COUNT, 0)':'"documentCount"'
+            })
+            .from(
+                builder.select()
+                    .fields({
+                        'BOARD.BOARD_ID':'BOARD_ID',
+                        'COUNT(*)':'USER_COUNT'
+                    })
+                    .from('SS_MST_BOARD', 'BOARD')
+                    .left_join('SS_MST_USER_BOARD', 'UBOARD', 'BOARD.BOARD_ID = UBOARD.BOARD_ID')
+                    .where('BOARD.BOARD_TYPE = \'T\'')
+                    .where('BOARD.BOARD_ID <> \'topicBest\'')
+                    .group('BOARD.BOARD_ID')
+                , 'U'
+            )
+            .left_join(
+                builder.select()
+                    .fields({
+                        'BOARD2.BOARD_ID':'BOARD_ID',
+                        'COUNT(*)':'RECENT_USER_COUNT'
+                    })
+                    .from('SS_MST_BOARD', 'BOARD2')
+                    .left_join('SS_MST_USER_BOARD', 'UBOARD2', 'BOARD2.BOARD_ID = UBOARD2.BOARD_ID')
+                    .where('BOARD2.BOARD_TYPE = \'T\'')
+                    .where('BOARD2.BOARD_ID <> \'topicBest\'')
+                    .where('UBOARD2.JOIN_DATE > ?', lastmonth)
+                    .group('BOARD2.BOARD_ID')
+                , 'C', 'U.BOARD_ID = C.BOARD_ID'
+            )
+            .left_join(
+                builder.select()
+                    .fields({
+                        'BOARD3.BOARD_ID':'BOARD_ID',
+                        'COUNT(*)':'DOCUMENT_COUNT'
+                    })
+                    .from('SS_MST_BOARD', 'BOARD3')
+                    .left_join(builder.select().fields(['DOCUMENT_ID', 'BOARD_ID']).from('SS_MST_DOCUMENT', 'DOC').where('WRITE_DATETIME > ?', lastweek), 'DOCS', 'DOCS.BOARD_ID = BOARD3.BOARD_ID')
+                    .where('BOARD3.BOARD_TYPE = \'T\'')
+                    .where('BOARD3.BOARD_ID <> \'topicBest\'')
+                    .group('BOARD3.BOARD_ID')
+                , 'D', 'U.BOARD_ID = D.BOARD_ID'
+            )
+        .toParam()
+    );
+}
