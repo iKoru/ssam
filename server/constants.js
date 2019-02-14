@@ -7,7 +7,8 @@ exports.reserved = ['document', 'documents', 'profile',
     'notification', 'notifications', 'survey', 'list', 'admin', 'ADMIN',
     'ADMINISTRATOR', 'administrator', 'attach', 'profiles', 'animal',
     'lounge', 'topic', 'type', 'best', 'sanction', 'userId', 'nickName',
-    'myPage', 'myBoard', 'myCommunity', 'pedagy', 'myPedagy', 'Pedagy'
+    'myPage', 'myBoard', 'myCommunity', 'pedagy', 'myPedagy', 'Pedagy',
+    'tools', 'privacy', 'contract', 'rules', 'error', 'search', 'searchBoard', 'searchDocument', 'myBoard', 'myDocument', 'myComment', 'authSubmit'
 ];
 
 exports.dbErrorCode = {
