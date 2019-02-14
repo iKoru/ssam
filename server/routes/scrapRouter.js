@@ -57,6 +57,9 @@ router.delete(/\/group\/(\d+)(?:\/.*|\?.*)?$/, requiredSignin, async (req, res) 
 router.put('/group', requiredSignin, async (req, res) => {
     let result;
     if(req.body.scrapGroups && Array.isArray(req.body.scrapGroups)){//일괄 처리
+        if(req.body.scrapGroups.every(x=>x.status === 'DELETED')){
+            return res.status(400).json({message:'최소 한 개 이상의 그룹은 남아있어야 합니다.'})
+        }
         let currentScrapGroups = await scrapModel.getScrapGroupByUserId(req.userObject.userId);
         let scrapGroups = req.body.scrapGroups;
         let failedScrapGroup = [], processed = 0;
