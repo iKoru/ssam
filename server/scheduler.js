@@ -83,8 +83,8 @@ const shuffleArray = (array) => {
                     array[random] = temp;
                 }
             }
-            start = start - 10;
-            end = end - 10;
+            start = start - 5;
+            end = end - 5;
             if(start < 0){
                 start = 0;
             }
