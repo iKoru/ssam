@@ -10,10 +10,10 @@ const notificationModel = require('../models/notificationModel'),
     config = require('../../config');
 let multerLib = require('multer');
 let multer = multerLib({
-    dest: config.attachBasePath + 'popup/', limits: { fileSize: 1024 * 200 }, fileFilter: function (req, file, cb) {
+    dest: config.attachBasePath + 'attach/popup/', limits: { fileSize: 1024 * 200 }, fileFilter: function (req, file, cb) {
         let ext = path.extname(file.originalname).substring(1).toLowerCase();
         cb(null, constants.imageExtensions.includes(ext));
-    }, storage: multerLib.diskStorage({ destination: config.attachBasePath + 'popup/', filename: function (req, file, cb) { cb(null, UUID() + path.extname(file.originalname)) } })
+    }, storage: multerLib.diskStorage({ destination: config.attachBasePath + 'attach/popup/', filename: function (req, file, cb) { cb(null, UUID() + path.extname(file.originalname)) } })
 });
 
 //based on /notification

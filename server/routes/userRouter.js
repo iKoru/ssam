@@ -8,10 +8,10 @@ const constants = require('../constants'),
     mailer = require('../mailer');
 let multerLib = require('multer');
 let multer = multerLib({
-    dest: config.attachBasePath + 'profiles/', limits: { fileSize: 1024 * 400 }, fileFilter: function (req, file, cb) {
+    dest: config.attachBasePath + 'attach/profiles/', limits: { fileSize: 1024 * 400 }, fileFilter: function (req, file, cb) {
         let ext = path.extname(file.originalname).substring(1).toLowerCase();
         cb(null, constants.imageExtensions.includes(ext));
-    }, storage: multerLib.diskStorage({ destination: config.attachBasePath + 'profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })
+    }, storage: multerLib.diskStorage({ destination: config.attachBasePath + 'attach/profiles/', filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } })
 });
 const adminOnly = require('../middlewares/adminOnly'),
     requiredSignin = require('../middlewares/requiredSignin'),
@@ -381,6 +381,13 @@ router.post('/picture', requiredSignin, async (req, res) => { //사진 업로드
                 return res.status(500).json({ message: '이미지 저장에 실패하였습니다. 다시 시도해주세요.' });
             }
             if (result.status === 200) {
+                if(req.userObject.picturePath){//originally existed picture
+                    try{
+                        result = await util.removeUploadedFile(req.userObject.picturePath);
+                    }catch(error){
+                        logger.error('기존 프로필 이미지 삭제 중 에러 : ', error)
+                    }
+                }
                 return res.status(200).json({ message: '정상적으로 반영되었습니다.', picturePath: `/attach/profiles/${req.file.filename}` })
             } else {
                 logger.error('프로필 이미지 저장 중 에러 : ', result, userId);
@@ -578,7 +585,7 @@ router.get('/board', requiredSignin, async (req, res) => {
     if (Array.isArray(result)) {
         return res.status(200).json(result);
     } else {
-        logger.error('���용자 게시판 조회 중 에러 : ', result, userId);
+        logger.error('사용자 게시판 조회 중 에러 : ', result, userId);
         return res.status(500).json({ message: '정보를 읽어오던 중 오류가 발생했습니다.' + result.code ? `(${result.code})` : '' })
     }
 });
