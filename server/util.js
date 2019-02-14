@@ -79,6 +79,7 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
         let i = 0,
             result, errors = [];
         try {
+            const attachPath = targetPath + '/' + (targetDirectory?targetDirectory + '/':'');
             if(process.env.NODE_ENV === 'production'){
                 let upload = {Bucket:s3Bucket};
                 while(i < files.length){
@@ -87,11 +88,11 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
                         upload.Body.on('error', (error) => {
                             logger.error('파일 업로드를 위한 스트림 생성 중 에러 : ', error);
                         })
-                        upload.Key = targetPath + '/' + targetDirectory + '/' + files[i].filename
+                        upload.Key = attachPath + files[i].filename
                         await s3.upload(upload).promise()
                         if(typeof saveFunction === 'function'){
                             try {
-                                result = await saveFunction(saveFunctionCondition, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `/${targetPath}/${targetDirectory}/${files[i].filename}`);
+                                result = await saveFunction(saveFunctionCondition, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `/${attachPath}${files[i].filename}`);
                                 if (typeof result === 'object' || result === 0) {
                                     logger.error('파일 업로드 이후 save function 실행 중 에러 : ', result)
                                     errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
@@ -125,11 +126,11 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
             }else{
                 while (i < files.length) {
                     try {
-                        result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
+                        result = await rename(files[i].path, attachBasePath + attachPath + files[i].filename);
                     } catch (error) {
                         if (error.code === 'ENOENT') {
                             try {
-                                result = await mkdir(attachBasePath + targetPath + '/' + targetDirectory, 0o744);
+                                result = await mkdir(attachBasePath + targetPath + (targetDirectory?'/' + targetDirectory:''), 0o744);
                             } catch (error2) {
                                 logger.error('파일 저장경로 생성 중 에러 : ', error2)
                                 errors.push({ index: i, message: '파일 저장경로 생성에 실패하였습니다.' });
@@ -142,7 +143,7 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
                                 continue;
                             }
                             try {
-                                result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
+                                result = await rename(files[i].path, attachBasePath + attachPath + files[i].filename);
                             } catch (error2) {
                                 logger.error('파일 이동 중 에러 : ', error2)
                                 errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
@@ -156,7 +157,7 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
                             }
                         } else if (error.code === 'EACCES') {
                             try {
-                                result = await chmod(attachBasePath + targetPath + '/' + targetDirectory, 0o744);
+                                result = await chmod(attachBasePath + targetPath + (targetDirectory?'/' + targetDirectory:''), 0o744);
                             } catch (error2) {
                                 logger.error('파일 업로드를 위한 권한 변경 중 에러 : ', error2)
                                 errors.push({ index: i, message: '파일 저장경로 접근에 실패하였습니다.' });
@@ -165,7 +166,7 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
                                 continue;
                             }
                             try {
-                                result = await rename(files[i].path, attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
+                                result = await rename(files[i].path, attachBasePath + attachPath + files[i].filename);
                             } catch (error2) {
                                 logger.error('파일 업로드 후 이동 중 에러 : ', error2)
                                 errors.push({ index: i, message: '임시파일 이동에 실패하였습니다.' });
@@ -191,12 +192,12 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
                     }
                     if(typeof saveFunction === 'function'){
                         try {
-                            result = await saveFunction(saveFunctionCondition, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `/${targetPath}/${targetDirectory}/${files[i].filename}`);
+                            result = await saveFunction(saveFunctionCondition, path.parse(files[i].filename).name, files[i].originalname, path.extname(files[i].filename), `/${attachPath}${files[i].filename}`);
                             if (typeof result === 'object' || result === 0) {
                                 logger.error('파일 업로드 이후 save function 실행 중 에러 : ', result)
                                 errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
                                 try {
-                                    await unlink(attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
+                                    await unlink(attachBasePath + attachPath + files[i].filename);
                                 } catch (error3) {
                                     logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
                                 }
@@ -205,7 +206,7 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
                             logger.error('파일 업로드 이후 save function 실행 중 에러 : ', error)
                             errors.push({ index: i, message: '파일 정보 저장에 실패하였습니다.' });
                             try {
-                                await unlink(attachBasePath + targetPath + '/' + targetDirectory + '/' + files[i].filename);
+                                await unlink(attachBasePath + attachPath + files[i].filename);
                             } catch (error3) {
                                 logger.error('파일 업로드 실패 후 삭제 중 에러 : ', error3)
                             }
@@ -228,7 +229,7 @@ exports.uploadFile = async (files, targetPath, targetDirectory, saveFunction, sa
 }
 
 exports.removeUploadedFile = async(targetPath) => {
-    if(process.end.NODE_ENV === 'production'){
+    if(process.env.NODE_ENV === 'production'){
         return await s3.deleteObject({Bucket:s3Bucket, Key:targetPath.substring(1)}).promise();
     }else{
         return await unlink(attachBasePath + targetPath);
