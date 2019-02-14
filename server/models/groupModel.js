@@ -167,6 +167,7 @@ const createUserGroup = async (userId, groupId) => {
     );
     if (cachedData === 1) {
         cache.delAsync('[getUserGroup]@' + util.getYYYYMMDD() + userId);
+        cache.delAsync('[checkUserAuth]@'+userId);
     }
     return cachedData;
 }
@@ -182,6 +183,7 @@ const deleteUserGroup = async (userId, groupId) => {
     );
     if (result === 1) {
         cache.delAsync('[getUserGroup]@' + util.getYYYYMMDD() + userId);
+        cache.delAsync('[checkUserAuth]@'+userId);
     }
     return result;
 }
@@ -208,6 +210,7 @@ exports.deleteExpiredUserGroup = async () => {
                 await createUserGroup(result[i].userId, authExpiredGroupId);
             }
             await deleteUserGroup(result[i].userId, result[i].groupId)
+            await cache.delAsync('[checkUserAuth]@'+result[i].userId);
             i++;
         }
     }
