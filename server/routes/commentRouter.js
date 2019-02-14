@@ -4,13 +4,14 @@ const requiredSignin = require('../middlewares/requiredSignin'),
   logger = require('../logger'),
   path = require('path'),
   util = require('../util'),
+  {attachBasePath} = require('../../config'),
   { dbErrorCode, commentNotificationTemplate, childCommentNotificationTemplate, boardTypeDomain } = require('../constants');
 const commentModel = require('../models/commentModel'),
   documentModel = require('../models/documentModel'),
   boardModel = require('../models/boardModel'),
   notificationModel = require('../models/notificationModel')
 let multerLib = require('multer');
-let multer = multerLib({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 8 }, storage: multerLib.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }).array('attach') //max 8MB)
+let multer = multerLib({ dest: attachBasePath + 'attach/', limits: { fileSize: 1024 * 1024 * 8 }, storage: multerLib.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }).array('attach') //max 8MB)
 //based on /comment
 
 router.get('/', requiredSignin, async (req, res) => {

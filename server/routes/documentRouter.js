@@ -5,10 +5,11 @@ const boardModel = require('../models/boardModel'),
     documentModel = require('../models/documentModel'),
     util = require('../util'),
     path = require('path'),
+    {attachBasePath} = require('../../config'),
     { boardTypeDomain } = require('../constants'),
     logger = require('../logger')
 let multerLib = require('multer'),
-    multer = multerLib({ dest: 'attach/', limits: { fileSize: 1024 * 1024 * 8 }, storage: multerLib.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }).array('attach') //max 8MB)
+    multer = multerLib({ dest: attachBasePath + 'attach/', limits: { fileSize: 1024 * 1024 * 8 }, storage: multerLib.diskStorage({ filename: function (req, file, cb) { cb(null, util.UUID() + path.extname(file.originalname)) } }) }).array('attach') //max 8MB)
 //based on /document
 
 router.post('/', requiredSignin, async (req, res) => {
