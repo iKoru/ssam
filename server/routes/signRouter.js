@@ -14,7 +14,7 @@ const signModel = require('../models/signModel'),
 
 //based on /
 
-router.post('/signin', visitorOnly('/'), async (req, res) => {
+router.post('/signin', async (req, res) => {
   let userId = req.body.userId;
   let password = req.body.password;
   if (!userId || !password) {
