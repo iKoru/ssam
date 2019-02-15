@@ -475,6 +475,7 @@ router.post('/animal', adminOnly, async (req, res) => {
   if (!Array.isArray(animalNames) || animalNames.length === 0) {
     return res.status(400).json({ target: 'animalNames', message: '등록할 동물이름을 입력해주세요.' })
   }
+  animalNames = animalNames.map(x=>x.trim());
   let result = await commentModel.createAnimalNames(animalNames);
   if (result > 0) {
     return res.status(200).json({ message: '동물이름을 등록하였습니다.' })
