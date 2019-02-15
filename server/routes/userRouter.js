@@ -117,11 +117,11 @@ router.put('/', requiredSignin, async (req, res) => {
                     original.region = result2.find(x => x.groupType === 'R').groupId
                 }
             }
-            if (process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && util.moment().month() !== 2) { //month() === 2 is March
+            if (original.infoModifiedDate && process.env.NODE_ENV !== 'development' && !req.userObject.isAdmin && util.moment().month() !== 2) { //month() === 2 is March
                 return res.status(400).json({ message: '학년, 전공, 이메일은 매년 3월에만 변경이 가능합니다.' })
             }
             if (!req.userObject.isAdmin && original.infoModifiedDate && util.moment(original.infoModifiedDate, 'YYYYMMDD').isValid()) {
-                if (util.moment(original.infoModifiedDate, 'YYYYMMDD').year() >= util.moment().year()) {
+                if (util.moment(original.infoModifiedDate, 'YYYYMMDD').isSameOrAfter(util.moment().date(1).month(2))) {
                     return res.status(400).json({ message: '올해 이미 내역을 변경하셨습니다.' });
                 }
             }
