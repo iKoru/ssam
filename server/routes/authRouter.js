@@ -26,6 +26,9 @@ router.post('/', requiredSignin, async (req, res) => {
     let userId = req.userObject.userId;
     let email = req.userObject.email;
     let authKey;
+    if(!email){
+        return res.status(400).json({message:'등록된 이메일이 없습니다.', target:'email'});
+    }
     result = await authModel.getUserAuth(userId, 'NORMAL');
     if (Array.isArray(result) && result.length > 0) {
         authKey = result[0].authKey;

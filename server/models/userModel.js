@@ -181,39 +181,7 @@ exports.updateUserInfo = async (param) => {
                     result += await groupModel.createUserGroup(user.userId, user.region);
                 }
             }
-            let cachedData = await cache.getAsync('[user]' + user.userId);
-            if (cachedData) {
-                if (user.loungeNickName) {
-                    cachedData.loungeNickName = user.loungeNickName
-                    cachedData.loungeNickNameModifiedDate = user.loungeNickNameModifiedDate
-                }
-                if (user.topicNickName) {
-                    cachedData.topicNickName = user.topicNickName
-                    cachedData.topicNickNameModifiedDate = user.topicNickNameModifiedDate
-                }
-                if (user.picturePath !== undefined) {
-                    cachedData.picturePath = user.picturePath
-                }
-                if (typeof user.isOpenInfo === 'boolean') {
-                    cachedData.isOpenInfo = user.isOpenInfo
-                }
-                if ((user.grade !== undefined) || (user.major !== undefined) || (user.region !== undefined)) {
-                    cachedData.infoModifiedDate = user.infoModifiedDate
-                }
-                if (user.memo !== undefined) {
-                    cachedData.memo = user.memo
-                }
-                if (user.email !== undefined) {
-                    cachedData.email = user.email
-                }
-                if (user.status !== undefined) {
-                    cachedData.status = user.status
-                }
-                if (user.emailVerifiedDate !== undefined) {
-                    cachedData.emailVerifiedDate = user.emailVerifiedDate
-                }
-                cache.setAsync('[user]' + user.userId, cachedData, 3600);
-            }
+            await cache.delAsync('[user]' + user.userId);
         }
         return result;
     } catch (e) {
