@@ -23,12 +23,7 @@ router.get('/', requiredSignin, async (req, res) => {
     } else {
         return res.status(404).json({ target: 'boardId', message: '존재하지 않는 라운지/토픽입니다.' });
     }
-    let owner = await userModel.getUser(board.ownerId);
-    if (Array.isArray(owner) && owner.length > 0) {
-        board.owner = board.boardType === 'T' ? owner[0].topicNickName : owner[0].loungeNickName;
-    } else {
-        board.owner = null;
-    }
+
     if (req.userObject.isAdmin || req.userObject.userId === board.ownerId) {
         board.isOwner = true;
     }
