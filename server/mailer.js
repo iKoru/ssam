@@ -143,7 +143,7 @@ const getPasswordResetText = function (newPassword) {
   <tr>
   <td style="padding-top:30px;font-size:15px;line-height:27px;color:#303030">감사합니다.<br>
   <br>
-  <strong style="color:#333">Pedagy 드림</strong>
+  <strong style="color:#333">교실 밖 선생님들의 이야기, Pedagy 드림</strong>
   </td>
   </tr>
   </tbody>
