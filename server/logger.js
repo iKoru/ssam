@@ -27,6 +27,7 @@ const logger = createLogger({
         new (require('winston-daily-rotate-file'))({
             filename: `${logDirectory}/ssam.log`,
             timestamp: timestamp,
+            maxFiles: '30d'
         })
     ]
 });
