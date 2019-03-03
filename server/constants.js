@@ -8,7 +8,8 @@ exports.reserved = ['document', 'documents', 'profile',
     'ADMINISTRATOR', 'administrator', 'attach', 'profiles', 'animal',
     'lounge', 'topic', 'type', 'best', 'sanction', 'userId', 'nickName',
     'myPage', 'myBoard', 'myCommunity', 'pedagy', 'myPedagy', 'Pedagy',
-    'tools', 'privacy', 'contract', 'rules', 'error', 'search', 'searchBoard', 'searchDocument', 'myBoard', 'myDocument', 'myComment', 'authSubmit'
+    'tools', 'privacy', 'contract', 'rules', 'error', 'search', 'searchBoard',
+    'searchDocument', 'myBoard', 'myDocument', 'myComment', 'authSubmit', 'recent'
 ];
 
 exports.dbErrorCode = {
